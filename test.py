@@ -1,3 +1,3 @@
 import urllib
-d = urllib.urlopen('http://localhost:8080').read()
-print d
+assert "Hello World!" ==  urllib.urlopen('http://localhost:8080').read()
+assert "About Flask example." ==  urllib.urlopen('http://localhost:8080/about').read()

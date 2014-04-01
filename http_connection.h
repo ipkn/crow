@@ -27,8 +27,8 @@ namespace flask
 
         void handle()
         {
-            // request = make_request_from_parser
-            res = handler_->handle();
+            request req = parser_.to_request();
+            res = handler_->handle(req);
 
             static std::string seperator = ": ";
             static std::string crlf = "\r\n";

@@ -20,17 +20,22 @@ namespace flask
         {
         }
 
-        response handle()
+        response handle(const request& req)
         {
-            return yameHandler_();
+            if (yameHandlers_.count(req.url) == 0)
+            {
+                return response(404);
+            }
+            return yameHandlers_[req.url]();
         }
 
         template <typename F>
         void route(const std::string& url, F f)
         {
-            yameHandler_ = [f]{
+            auto yameHandler = [f]{
                 return response(f());
             };
+            yameHandlers_.emplace(url, yameHandler);
         }
 
         Flask& port(std::uint16_t port)
@@ -48,7 +53,7 @@ namespace flask
         uint16_t port_ = 80;
 
         // Someday I will become real handler!
-        std::function<response()> yameHandler_;
+        std::unordered_map<std::string, std::function<response()>> yameHandlers_;
     };
 };
 

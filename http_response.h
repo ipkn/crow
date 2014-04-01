@@ -32,6 +32,7 @@ namespace flask
         std::string body;
         std::unordered_map<std::string, std::string> headers;
         response() {}
+        response(int status) : status(status) {}
         response(const std::string& body) : body(body) {}
         response(std::string&& body) : body(std::move(body)) {}
         response(const std::string& body, int status) : body(body), status(status) {}

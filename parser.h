@@ -1,5 +1,9 @@
+#pragma once
+
 #include <string>
 #include <unordered_map>
+
+#include "http_request.h"
 
 namespace flask
 {
@@ -96,14 +100,12 @@ namespace flask
 
         bool feed(const char* buffer, int length)
         {
-            std::cerr << "<|" << std::string(buffer, buffer+length) << "|>" << std::endl;
             int nparsed = http_parser_execute(this, &settings_, buffer, length);
             return nparsed == length;
         }
 
         bool done()
         {
-            std::cerr << "(done)" << std::endl;
             int nparsed = http_parser_execute(this, &settings_, nullptr, 0);
             return nparsed == 0;
         }
@@ -120,12 +122,12 @@ namespace flask
 
         void process_message()
         {
-            //std::cout << "URL: "<< url << std::endl;
-            //for(auto& kv : headers)
-            //{
-                //std::cout << kv.first << ": " << kv.second << std::endl;
-            //}
             handler_->handle();
+        }
+
+        request to_request()
+        {
+            return request{std::move(url), std::move(headers), std::move(body)};
         }
 
         std::string url;

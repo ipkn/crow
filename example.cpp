@@ -11,6 +11,11 @@ int main()
         return "Hello World!";
     });
 
+    app.route("/about",
+    []{
+        return "About Flask example.";
+    });
+
     app.port(8080)
        .run();
 }
