@@ -5,6 +5,7 @@
 #include <future>
 #include <stdint.h>
 
+#include "http_response.h"
 #include "http_server.h"
 
 // TEST
@@ -19,12 +20,17 @@ namespace flask
         {
         }
 
-        void handle()
+        response handle()
         {
+            return yameHandler_();
         }
 
-        void route(const std::string& url, std::function<std::string()> f)
+        template <typename F>
+        void route(const std::string& url, F f)
         {
+            yameHandler_ = [f]{
+                return response(f());
+            };
         }
 
         Flask& port(std::uint16_t port)
@@ -40,6 +46,9 @@ namespace flask
         }
     private:
         uint16_t port_ = 80;
+
+        // Someday I will become real handler!
+        std::function<response()> yameHandler_;
     };
 };
 
