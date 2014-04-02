@@ -14,37 +14,36 @@ namespace flask
 		}
 
 		// from http://akrzemi1.wordpress.com/2011/05/11/parsing-strings-at-compile-time-part-i/
-		class StrWrap
+		class const_str
 		{
 			const char * const begin_;
 			unsigned size_;
 
 			public:
 			template< unsigned N >
-				constexpr StrWrap( const char(&arr)[N] ) : begin_(arr), size_(N - 1) {
+				constexpr const_str( const char(&arr)[N] ) : begin_(arr), size_(N - 1) {
 					static_assert( N >= 1, "not a string literal");
 				}
-
-			constexpr char operator[]( unsigned i ) { 
+			constexpr char operator[]( unsigned i ) const { 
 				return requires_in_range(i, size_), begin_[i]; 
 			}
 
-			constexpr operator const char *() { 
+			constexpr operator const char *() const { 
 				return begin_; 
 			}
 
-			constexpr unsigned size() { 
+			constexpr unsigned size() const { 
 				return size_; 
 			}
 		};
 
 
-		constexpr int find_closing_tag(StrWrap s, std::size_t p)
+		constexpr unsigned find_closing_tag(const_str s, unsigned p)
 		{
 			return s[p] == '>' ? p : find_closing_tag(s, p+1);
 		}
 
-		constexpr int count(StrWrap s, int i=0)
+		constexpr int count(const_str s, int i=0)
 		{
 			return i == s.size() ? 0 : s[i] == '<' ? 1+count(s,i+1) : count(s,i+1);
 		}
