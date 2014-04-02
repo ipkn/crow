@@ -32,7 +32,7 @@ namespace flask
         template <typename F>
         void route(const std::string& url, F f)
         {
-            auto yameHandler = [f]{
+            auto yameHandler = [f = std::move(f)]{
                 return response(f());
             };
             yameHandlers_.emplace(url, yameHandler);
