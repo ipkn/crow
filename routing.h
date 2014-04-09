@@ -5,127 +5,94 @@
 #include <string>
 #include <tuple>
 
-#include "utility.h"
+#include "http_response.h"
 
 namespace flask
 {
-    namespace black_magic
+    class Rule
     {
-        constexpr bool is_equ_n(const_str a, int ai, const_str b, int bi, int n)
+    public:
+        explicit Rule(std::string&& rule)
+            : rule_(std::move(rule))
         {
-            return 
-                ai + n > a.size() || bi + n > b.size() 
-                    ? false :
-                n == 0 
-                    ? true : 
-                a[ai] != b[bi] 
-                    ? false : 
-                is_equ_n(a,ai+1,b,bi+1,n-1);
+        }
+        
+        template <typename Func>
+        void operator()(Func&& f)
+        {
+            handler_ = [f = std::move(f)]{
+                return response(f());
+            };
         }
 
-        constexpr bool is_int(const_str s, int i)
+        template <typename Func>
+        void operator()(std::string&& name, Func&& f)
         {
-            return is_equ_n(s, i, "<int>", 0, 5);
+            name_ = std::move(name);
+            handler_ = [f = std::move(f)]{
+                return response(f());
+            };
         }
 
-        constexpr bool is_float(const_str s, int i)
+        bool match(const request& req)
         {
-            return is_equ_n(s, i, "<float>", 0, 7) ||
-                is_equ_n(s, i, "<double>", 0, 8);
+            // FIXME need url parsing
+            return req.url == rule_;
         }
 
-        constexpr bool is_str(const_str s, int i)
+        Rule& name(const std::string& name)
         {
-            return is_equ_n(s, i, "<str>", 0, 5);
+            name_ = name;
+            return *this;
         }
-
-        constexpr bool is_path(const_str s, int i)
+        void validate()
         {
-            return is_equ_n(s, i, "<path>", 0, 6);
-        }
-
-        template <typename ...Args>
-        struct Caller
-        {
-            template <typename F>
-            void operator()(F f, Args... args)
+            if (!handler_)
             {
-                f(args...);
+                throw std::runtime_error("no handler for url " + rule_);
             }
-        };
-
-
-        template <int N, typename ... Args> struct S;
-        template <int N, typename Arg, typename ... Args> struct S<N, Arg, Args...> {
-            static_assert(N <= 4+1, "too many routing arguments (maximum 5)");
-            template <typename T>
-            using push = typename std::conditional<(N>4), S<N, Arg, Args...>, S<N+1, Arg, Args..., T>>::type;
-            using pop = S<N-1, Args...>;
-        };
-        template <> struct S<0>
-        {
-            template <typename T>
-            using push = S<1, T>;
-        };
-
-        template <typename F, typename Set>
-        struct CallHelper;
-        template <typename F, int N, typename ...Args>
-        struct CallHelper<F, S<N, Args...>>
-        {
-            template <typename F1, typename ...Args1, typename = 
-                decltype(std::declval<F1>()(std::declval<Args1>()...))
-                >
-            static char __test(int);
-
-            template <typename ...>
-            static int __test(...);
-
-            static constexpr bool value = sizeof(__test<F, Args...>(0)) == sizeof(char);
-        };
-
-        static_assert(CallHelper<void(), S<0>>::value, "");
-        static_assert(CallHelper<void(int), S<1, int>>::value, "");
-        static_assert(!CallHelper<void(int), S<0>>::value, "");
-        static_assert(!CallHelper<void(int), S<2, int, int>>::value, "");
-
-        template <typename F, 
-            typename Set = S<0>>
-        constexpr bool validate_helper(const_str rule, unsigned i=0)
-        {
-            return 
-                i == rule.size() 
-                    ? CallHelper<F, Set>::value :
-                is_int(rule, i)
-                    ? validate_helper<F, typename Set::template push<int>>(rule, find_closing_tag(rule, i+1)+1) :
-                is_float(rule, i)
-                    ? validate_helper<F, typename Set::template push<double>>(rule, find_closing_tag(rule, i+1)+1) :
-                is_str(rule, i)
-                    ? validate_helper<F, typename Set::template push<std::string>>(rule, find_closing_tag(rule, i+1)+1) :
-                is_path(rule, i)
-                    ? validate_helper<F, typename Set::template push<std::string>>(rule, find_closing_tag(rule, i+1)+1) :
-                validate_helper<F, Set>(rule, i+1)
-            ;
         }
 
-        static_assert(validate_helper<void()>("/"),"");
-        static_assert(validate_helper<void(int)>("/<int>"),"");
-        static_assert(!validate_helper<void()>("/<int>"),"");
-    }
+        response handle(const request&)
+        {
+            return handler_();
+        }
+
+    private:
+        std::string rule_;
+        std::string name_;
+        std::function<response()> handler_;
+    };
 
     class Router
     {
     public:
-        constexpr Router(black_magic::const_str rule) : rule(rule)
+        Rule& new_rule(std::string&& rule)
         {
+            rules_.emplace_back(std::move(rule));
+            return rules_.back();
         }
 
-        template <typename F>
-        constexpr bool validate() const
+        void validate()
         {
-            return black_magic::validate_helper<F>(rule);
+            for(auto& rule:rules_)
+            {
+                rule.validate();
+            }
+        }
+
+        response handle(const request& req)
+        {
+            for(auto& rule : rules_)
+            {
+                if (rule.match(req))
+                {
+                    return rule.handle(req);
+                }
+            }
+            return response(404);
         }
     private:
-        black_magic::const_str rule;
+        std::vector<Rule> rules_;
     };
 }

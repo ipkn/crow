@@ -4,9 +4,10 @@
 #include <memory>
 #include <future>
 #include <stdint.h>
+#include <type_traits>
 
-#include "http_response.h"
 #include "http_server.h"
+#include "routing.h"
 
 // TEST
 #include <iostream>
@@ -22,20 +23,13 @@ namespace flask
 
         response handle(const request& req)
         {
-            if (yameHandlers_.count(req.url) == 0)
-            {
-                return response(404);
-            }
-            return yameHandlers_[req.url]();
+            return router_.handle(req);
         }
 
-        template <typename F>
-        void route(const std::string& url, F f)
+        auto route(std::string&& rule)
+            -> typename std::result_of<decltype(&Router::new_rule)(Router, std::string&&)>::type
         {
-            auto yameHandler = [f = std::move(f)]{
-                return response(f());
-            };
-            yameHandlers_.emplace(url, yameHandler);
+            return router_.new_rule(std::move(rule));
         }
 
         Flask& port(std::uint16_t port)
@@ -44,16 +38,21 @@ namespace flask
             return *this;
         }
 
+        void validate()
+        {
+            router_.validate();
+        }
+
         void run()
         {
+            validate();
             Server<Flask> server(this, port_);
             server.run();
         }
     private:
         uint16_t port_ = 80;
 
-        // Someday I will become real handler!
-        std::unordered_map<std::string, std::function<response()>> yameHandlers_;
+        Router router_;
     };
 };
 

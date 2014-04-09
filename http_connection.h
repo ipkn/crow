@@ -4,6 +4,7 @@
 #include <atomic>
 #include <boost/asio.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/array.hpp>
 
 #include "parser.h"
 #include "http_response.h"
@@ -118,7 +119,7 @@ namespace flask
         tcp::socket socket_;
         Handler* handler_;
 
-        std::array<char, 8192> buffer_;
+        boost::array<char, 8192> buffer_;
 
         HTTPParser<Connection> parser_;
         response res;
