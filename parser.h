@@ -83,7 +83,6 @@ namespace flask
             return 0;
         }
         HTTPParser(Handler* handler) :
-            handler_(handler),
             settings_ {
                 on_message_begin,
                 on_url,
@@ -93,7 +92,8 @@ namespace flask
                 on_headers_complete,
                 on_body,
                 on_message_complete,
-            }
+            },
+            handler_(handler)
         {
             http_parser_init(this, HTTP_REQUEST);
         }

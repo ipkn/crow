@@ -69,11 +69,22 @@ namespace flask
                     if (!ec)
                     {
                         bool ret = parser_.feed(buffer_.data(), bytes_transferred);
-                        do_read();
+						if (ret)
+							do_read();
+						else
+						{
+							socket_.close();
+
+							life_--;
+							if ((int)life_ == 0)
+							{
+								delete this;
+							}
+						}
                     }
                     else
                     {
-                        bool ret = parser_.done();
+                        parser_.done();
                         socket_.close();
 
                         life_--;
