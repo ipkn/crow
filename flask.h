@@ -7,10 +7,13 @@
 #include <type_traits>
 
 #include "http_server.h"
+#include "utility.h"
 #include "routing.h"
 
 // TEST
 #include <iostream>
+
+#define FLASK_ROUTE(app, url) app.route<flask::black_magic::get_parameter_tag(url)>(url)
 
 namespace flask
 {
@@ -24,6 +27,13 @@ namespace flask
         response handle(const request& req)
         {
             return router_.handle(req);
+        }
+
+        template <uint64_t Tag>
+        auto route(std::string&& rule)
+            -> typename std::result_of<decltype(&Router::new_rule_tagged<Tag>)(Router, std::string&&)>::type
+        {
+            return router_.new_rule_tagged<Tag>(std::move(rule));
         }
 
         auto route(std::string&& rule)

@@ -29,11 +29,11 @@ namespace flask
     struct response
     {
         std::string body;
-        int status = 200;
+        int status{200};
         std::unordered_map<std::string, std::string> headers;
         response() {}
         explicit response(int status) : status(status) {}
         response(std::string body) : body(std::move(body)) {}
-        response(std::string body, int status) : body(std::move(body)), status(status) {}
+        response(int status, std::string body) : body(std::move(body)), status(status) {}
     };
 }
