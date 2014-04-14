@@ -94,7 +94,8 @@ namespace flask
 
         constexpr bool is_str(const_str s, unsigned i)
         {
-            return is_equ_n(s, i, "<str>", 0, 5);
+            return is_equ_n(s, i, "<str>", 0, 5) ||
+                is_equ_n(s, i, "<string>", 0, 8);
         }
 
         constexpr bool is_path(const_str s, unsigned i)

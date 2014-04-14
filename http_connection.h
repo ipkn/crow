@@ -36,7 +36,10 @@ namespace flask
 
             std::vector<boost::asio::const_buffer> buffers;
 
-            buffers.push_back(boost::asio::buffer(statusCodes[res.status]));
+            buffers.push_back(boost::asio::buffer(statusCodes[res.code]));
+
+            if (res.code > 400 && res.body.empty())
+                res.body = statusCodes[res.code].substr(9);
 
             bool has_content_length = false;
             for(auto& kv : res.headers)

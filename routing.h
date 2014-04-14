@@ -309,6 +309,7 @@ public:
                         { ParamType::DOUBLE, "<float>" },
                         { ParamType::DOUBLE, "<double>" },
                         { ParamType::STRING, "<str>" },
+                        { ParamType::STRING, "<string>" },
                         { ParamType::PATH, "<path>" },
                     };
 

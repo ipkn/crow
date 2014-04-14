@@ -6,8 +6,6 @@ namespace flask
 {
     enum class ParamType
     {
-        INVALID, 
-
         INT,
         UINT,
         DOUBLE,
