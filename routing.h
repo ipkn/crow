@@ -9,6 +9,8 @@
 
 #include "common.h"
 #include "http_response.h"
+#include "http_request.h"
+#include "utility.h"
 
 //TEST
 #include <iostream>
@@ -66,6 +68,8 @@ namespace flask
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<>>::value, 
                 "Handler type is mismatched with URL paramters");
+            static_assert(!std::is_same<void, decltype(f())>::value, 
+                "Handler function cannot have void return type; valid return types: string, int, flask::resposne");
             handler_ = [f = std::move(f)]{
                 return response(f());
             };
@@ -308,7 +312,7 @@ public:
                         { ParamType::PATH, "<path>" },
                     };
 
-                    for(auto it = begin(paramTraits); it != end(paramTraits); ++it)
+                    for(auto it = std::begin(paramTraits); it != std::end(paramTraits); ++it)
                     {
                         if (url.compare(i, it->name.size(), it->name) == 0)
                         {
