@@ -128,6 +128,8 @@ namespace flask
         {
             template <typename U>
             using push = S<U, T...>;
+            template <typename U>
+            using push_back = S<T..., U>;
             template <template<typename ... Args> class U>
             using rebind = U<T...>;
         };

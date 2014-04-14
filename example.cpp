@@ -6,7 +6,7 @@ int main()
 {
     flask::Flask app;
 
-    app.route("/")
+    FLASK_ROUTE(app, "/")
        .name("hello")
     ([]{
         return "Hello World!";

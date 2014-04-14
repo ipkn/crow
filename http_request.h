@@ -1,5 +1,7 @@
 #pragma once
 
+#include "common.h"
+
 namespace flask
 {
     struct request
