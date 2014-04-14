@@ -34,6 +34,9 @@ namespace flask
 				return begin_; 
 			}
 
+			constexpr const char* begin() const { return begin_; }
+			constexpr const char* end() const { return begin_ + size_; }
+
 			constexpr unsigned size() const { 
 				return size_; 
 			}
@@ -58,11 +61,6 @@ namespace flask
                     ? is_valid(s, i+1, f-1) :
                 is_valid(s, i+1, f);
         }
-
-		constexpr int count(const_str s, unsigned i=0)
-		{
-			return i == s.size() ? 0 : s[i] == '<' ? 1+count(s,i+1) : count(s,i+1);
-		}
 
         constexpr bool is_equ_n(const_str a, unsigned ai, const_str b, unsigned bi, unsigned n)
         {

@@ -2,6 +2,7 @@
 #include <vector>
 #include "routing.h"
 #include "utility.h"
+#include "flask.h"
 using namespace std;
 using namespace flask;
 
@@ -60,6 +61,9 @@ TEST(Rule)
 
 TEST(ParameterTagging)
 {
+    static_assert(black_magic::is_valid("<int><int><int>"), "valid url");
+    static_assert(!black_magic::is_valid("<int><int<<int>"), "invalid url");
+    static_assert(!black_magic::is_valid("nt>"), "invalid url");
     ASSERT_EQUAL(1, black_magic::get_parameter_tag("<int>"));
     ASSERT_EQUAL(2, black_magic::get_parameter_tag("<uint>"));
     ASSERT_EQUAL(3, black_magic::get_parameter_tag("<float>"));
@@ -72,13 +76,25 @@ TEST(ParameterTagging)
     ASSERT_EQUAL(6*6+6*3+2, black_magic::get_parameter_tag("<uint><double><int>"));
 
     // url definition parsed in compile time, build into *one number*, and given to template argument
-    static_assert(is_same<black_magic::S<uint64_t, double, int64_t>, black_magic::arguments<6*6+6*3+2>::type>::value, "tag to type container");
+    static_assert(std::is_same<black_magic::S<uint64_t, double, int64_t>, black_magic::arguments<6*6+6*3+2>::type>::value, "tag to type container");
 }
 
-TEST(response)
+TEST(simple_response_routing_params)
 {
     ASSERT_EQUAL(100, response(100).code);
     ASSERT_EQUAL(200, response("Hello there").code);
+
+    routing_params rp;
+    rp.int_params.push_back(1);
+    rp.int_params.push_back(5);
+    rp.uint_params.push_back(2);
+    rp.double_params.push_back(3);
+    rp.string_params.push_back("hello");
+    ASSERT_EQUAL(1, rp.get<int64_t>(0));
+    ASSERT_EQUAL(5, rp.get<int64_t>(1));
+    ASSERT_EQUAL(2, rp.get<uint64_t>(0));
+    ASSERT_EQUAL(3, rp.get<double>(0));
+    ASSERT_EQUAL("hello", rp.get<string>(0));
 }
 
 int testmain()
