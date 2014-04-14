@@ -32,24 +32,24 @@ namespace flask
     template<>
     int64_t routing_params::get<int64_t>(unsigned index) const
     {
-        return int_params.at(index);
+        return int_params[index];
     }
 
     template<>
     uint64_t routing_params::get<uint64_t>(unsigned index) const
     {
-        return uint_params.at(index);
+        return uint_params[index];
     }
 
     template<>
     double routing_params::get<double>(unsigned index) const
     {
-        return double_params.at(index);
+        return double_params[index];
     }
 
     template<>
     std::string routing_params::get<std::string>(unsigned index) const
     {
-        return string_params.at(index);
+        return string_params[index];
     }
 }
