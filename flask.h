@@ -59,6 +59,12 @@ namespace flask
             Server<Flask> server(this, port_);
             server.run();
         }
+        void debug_print()
+        {
+            std::cerr << "Routing:" << std::endl;
+            router_.debug_print();
+        }
+
     private:
         uint16_t port_ = 80;
 

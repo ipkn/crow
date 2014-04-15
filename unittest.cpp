@@ -30,6 +30,8 @@ void fail(Args...args) { error_print(args...);failed__ = true; }
 #define ASSERT_NOTEQUAL(a, b) if (a != b) fail("Assert fail: not expected ", (a), ", " #a " != " #b ", at " __FILE__ ":",__LINE__)
 #define TEST(x) struct test##x:public Test{void test();}x##_; \
     void test##x::test()
+#define DISABLE_TEST(x) struct test##x{void test();}x##_; \
+    void test##x::test()
 
 TEST(Rule)
 {
@@ -77,6 +79,99 @@ TEST(ParameterTagging)
 
     // url definition parsed in compile time, build into *one number*, and given to template argument
     static_assert(std::is_same<black_magic::S<uint64_t, double, int64_t>, black_magic::arguments<6*6+6*3+2>::type>::value, "tag to type container");
+}
+
+TEST(RoutingTest)
+{
+    Flask app;
+    int A{};
+    uint32_t B{};
+    double C{};
+    string D{};
+    string E{};
+
+    FLASK_ROUTE(app, "/0/<uint>")
+    ([&](uint32_t b){
+        B = b;
+        return "OK";
+    });
+
+    FLASK_ROUTE(app, "/1/<int>/<uint>")
+    ([&](int a, uint32_t b){
+        A = a; B = b;
+        return "OK";
+    });
+
+    FLASK_ROUTE(app, "/4/<int>/<uint>/<double>/<string>")
+    ([&](int a, uint32_t b, double c, string d){
+        A = a; B = b; C = c; D = d;
+        return "OK";
+    });
+
+    FLASK_ROUTE(app, "/5/<int>/<uint>/<double>/<string>/<path>")
+    ([&](int a, uint32_t b, double c, string d, string e){
+        A = a; B = b; C = c; D = d; E = e;
+        return "OK";
+    });
+
+    app.validate();
+    app.debug_print();
+
+    {
+        request req;
+
+        req.url = "/0/1001999";
+
+        auto res = app.handle(req);
+
+        ASSERT_EQUAL(200, res.code);
+
+        ASSERT_EQUAL(1001999, B);
+    }
+
+    {
+        request req;
+
+        req.url = "/1/-100/1999";
+
+        auto res = app.handle(req);
+
+        ASSERT_EQUAL(200, res.code);
+
+        ASSERT_EQUAL(-100, A);
+        ASSERT_EQUAL(1999, B);
+    }
+    {
+        request req;
+
+        req.url = "/4/5000/3/-2.71828/hellhere";
+        req.headers["TestHeader"] = "Value";
+
+        auto res = app.handle(req);
+
+        ASSERT_EQUAL(200, res.code);
+
+        ASSERT_EQUAL(5000, A);
+        ASSERT_EQUAL(3, B);
+        ASSERT_EQUAL(-2.71828, C);
+        ASSERT_EQUAL("hellhere", D);
+    }
+    {
+        request req;
+
+        req.url = "/5/-5/999/3.141592/hello_there/a/b/c/d";
+        req.headers["TestHeader"] = "Value";
+
+        auto res = app.handle(req);
+
+        ASSERT_EQUAL(200, res.code);
+
+        ASSERT_EQUAL(-5, A);
+        ASSERT_EQUAL(999, B);
+        ASSERT_EQUAL(3.141592, C);
+        ASSERT_EQUAL("hello_there", D);
+        ASSERT_EQUAL("a/b/c/d", E);
+    }
 }
 
 TEST(simple_response_routing_params)

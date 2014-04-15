@@ -27,8 +27,5 @@ unittest
 *.gcov
 
 covtest
-unittest.gcda
-unittest.gcno
-
-http_parser.gcda
-http_parser.gcno
+*.gcda
+*.gcno

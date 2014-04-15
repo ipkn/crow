@@ -122,7 +122,7 @@ namespace flask
         {
             response operator()(F& handler, const routing_params& params)
             {
-                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<uint64_t, NInt>>;
+                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<uint64_t, NUint>>;
                 return call<F, NInt, NUint+1, NDouble, NString,
                        black_magic::S<Args1...>, pushed>()(handler, params);
             }
@@ -133,7 +133,7 @@ namespace flask
         {
             response operator()(F& handler, const routing_params& params)
             {
-                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<double, NInt>>;
+                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<double, NDouble>>;
                 return call<F, NInt, NUint, NDouble+1, NString,
                        black_magic::S<Args1...>, pushed>()(handler, params);
             }
@@ -144,7 +144,7 @@ namespace flask
         {
             response operator()(F& handler, const routing_params& params)
             {
-                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<std::string, NInt>>;
+                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<std::string, NString>>;
                 return call<F, NInt, NUint, NDouble, NString+1,
                        black_magic::S<Args1...>, pushed>()(handler, params);
             }
@@ -158,7 +158,6 @@ namespace flask
                 return handler(
                     params.get<typename Args1::type>(Args1::pos)... 
                 );
-                //return response(500);
             }
         };
     public:
@@ -182,6 +181,8 @@ namespace flask
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value, 
                 "Handler type is mismatched with URL paramters");
+            static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value, 
+                "Handler function cannot have void return type; valid return types: string, int, flask::resposne");
             handler_ = [f = std::move(f)](Args ... args){
                 return response(f(args...));
             };
@@ -192,6 +193,8 @@ namespace flask
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value, 
                 "Handler type is mismatched with URL paramters");
+            static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value, 
+                "Handler function cannot have void return type; valid return types: string, int, flask::resposne");
             name_ = std::move(name);
             handler_ = [f = std::move(f)](Args ... args){
                 return response(f(args...));
@@ -222,9 +225,10 @@ namespace flask
     public:
         struct Node
         {
-            std::unordered_map<std::string, unsigned> children;
             unsigned rule_index{};
             std::array<unsigned, (int)ParamType::MAX> param_childrens{};
+            std::unordered_map<std::string, unsigned> children;
+
             bool IsSimpleNode() const
             {
                 return 
@@ -243,10 +247,46 @@ namespace flask
 private:
         void optimizeNode(Node* node)
         {
+            for(auto x : node->param_childrens)
+            {
+                if (!x)
+                    continue;
+                Node* child = &nodes_[x];
+                optimizeNode(child);
+            }
+            if (node->children.empty())
+                return;
+            bool mergeWithChild = true;
             for(auto& kv : node->children)
             {
                 Node* child = &nodes_[kv.second];
-                optimizeNode(child);
+                if (!child->IsSimpleNode())
+                {
+                    mergeWithChild = false;
+                    break;
+                }
+            }
+            if (mergeWithChild)
+            {
+                decltype(node->children) merged;
+                for(auto& kv : node->children)
+                {
+                    Node* child = &nodes_[kv.second];
+                    for(auto& child_kv : child->children)
+                    {
+                        merged[kv.first + child_kv.first] = child_kv.second;
+                    }
+                }
+                node->children = std::move(merged);
+                optimizeNode(node);
+            }
+            else
+            {
+                for(auto& kv : node->children)
+                {
+                    Node* child = &nodes_[kv.second];
+                    optimizeNode(child);
+                }
             }
         }
 
@@ -383,7 +423,7 @@ public:
                 }
             }
 
-            return {found, std::move(match_params)};
+            return {found, match_params};
         }
 
         void add(const std::string& url, unsigned rule_index)
@@ -416,7 +456,12 @@ public:
                     {
                         if (url.compare(i, it->name.size(), it->name) == 0)
                         {
-                            idx = nodes_[idx].param_childrens[(int)it->type] = new_node();
+                            if (!nodes_[idx].param_childrens[(int)it->type])
+                            {
+                                auto new_node_idx = new_node();
+                                nodes_[idx].param_childrens[(int)it->type] = new_node_idx;
+                            }
+                            idx = nodes_[idx].param_childrens[(int)it->type];
                             i += it->name.size();
                             found = true;
                             break;
@@ -425,7 +470,8 @@ public:
 
                     if (!found)
                     {
-                        throw std::runtime_error("Invalid parameter type: " + url + " (" + boost::lexical_cast<std::string>(i) + ")");
+                        throw std::runtime_error("Invalid parameter type: " + url + 
+                            " (" + boost::lexical_cast<std::string>(i) + ")");
                     }
                     i --;
                 }
@@ -434,7 +480,8 @@ public:
                     std::string piece(&c, 1);
                     if (!nodes_[idx].children.count(piece))
                     {
-                        nodes_[idx].children.emplace(piece, new_node());
+                        auto new_node_idx = new_node();
+                        nodes_[idx].children.emplace(piece, new_node_idx);
                     }
                     idx = nodes_[idx].children[piece];
                 }
@@ -443,6 +490,52 @@ public:
                 throw std::runtime_error("handler already exists for " + url);
             nodes_[idx].rule_index = rule_index;
         }
+    private:
+        void debug_node_print(Node* n, int level)
+        {
+            for(int i = 0; i < (int)ParamType::MAX; i ++)
+            {
+                if (n->param_childrens[i])
+                {
+                    std::cerr << std::string(2*level, ' ') /*<< "("<<n->param_childrens[i]<<") "*/;
+                    switch((ParamType)i)
+                    {
+                        case ParamType::INT:
+                            std::cerr << "<int>";
+                            break;
+                        case ParamType::UINT:
+                            std::cerr << "<uint>";
+                            break;
+                        case ParamType::DOUBLE:
+                            std::cerr << "<float>";
+                            break;
+                        case ParamType::STRING:
+                            std::cerr << "<str>";
+                            break;
+                        case ParamType::PATH:
+                            std::cerr << "<path>";
+                            break;
+                        default:
+                            std::cerr << "<ERROR>";
+                            break;
+                    }
+                    std::cerr << std::endl;
+                    debug_node_print(&nodes_[n->param_childrens[i]], level+1);
+                }
+            }
+            for(auto& kv : n->children)
+            {
+                std::cerr << std::string(2*level, ' ') /*<< "(" << kv.second << ") "*/ << kv.first << std::endl;
+                debug_node_print(&nodes_[kv.second], level+1);
+            }
+        }
+
+    public:
+        void debug_print()
+        {
+            debug_node_print(head(), 0);
+        }
+
     private:
         const Node* head() const
         {
@@ -498,6 +591,7 @@ public:
         response handle(const request& req)
         {
             auto found = trie_.find(req);
+
             unsigned rule_index = found.first;
 
             if (!rule_index)
@@ -508,6 +602,12 @@ public:
 
             return rules_[rule_index]->handle(req, found.second);
         }
+
+        void debug_print()
+        {
+            trie_.debug_print();
+        }
+
     private:
         std::vector<std::unique_ptr<BaseRule>> rules_;
         Trie trie_;
