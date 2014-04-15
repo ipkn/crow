@@ -35,14 +35,9 @@ namespace flask
             return *this;
         }
 
-        virtual void validate()
-        {
-        }
+        virtual void validate() = 0;
 
-        virtual response handle(const request&, const routing_params&)
-        {
-            return response(400);
-        }
+        virtual response handle(const request&, const routing_params&) = 0;
 
     protected:
         std::string rule_;
@@ -122,6 +117,39 @@ namespace flask
             }
         };
 
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+        struct call<F, NInt, NUint, NDouble, NString, black_magic::S<uint64_t, Args1...>, black_magic::S<Args2...>>
+        {
+            response operator()(F& handler, const routing_params& params)
+            {
+                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<uint64_t, NInt>>;
+                return call<F, NInt, NUint+1, NDouble, NString,
+                       black_magic::S<Args1...>, pushed>()(handler, params);
+            }
+        };
+
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+        struct call<F, NInt, NUint, NDouble, NString, black_magic::S<double, Args1...>, black_magic::S<Args2...>>
+        {
+            response operator()(F& handler, const routing_params& params)
+            {
+                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<double, NInt>>;
+                return call<F, NInt, NUint, NDouble+1, NString,
+                       black_magic::S<Args1...>, pushed>()(handler, params);
+            }
+        };
+
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+        struct call<F, NInt, NUint, NDouble, NString, black_magic::S<std::string, Args1...>, black_magic::S<Args2...>>
+        {
+            response operator()(F& handler, const routing_params& params)
+            {
+                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<std::string, NInt>>;
+                return call<F, NInt, NUint, NDouble, NString+1,
+                       black_magic::S<Args1...>, pushed>()(handler, params);
+            }
+        };
+
         template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1> 
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<>, black_magic::S<Args1...>>
         {
@@ -143,6 +171,10 @@ namespace flask
         {
             name_ = std::move(name);
             return *this;
+        }
+
+        void validate()
+        {
         }
 
         template <typename Func>
@@ -269,6 +301,73 @@ public:
                         update_found(ret);
                         params->int_params.pop_back();
                     }
+                }
+            }
+
+            if (node->param_childrens[(int)ParamType::UINT])
+            {
+                char c = req.url[pos];
+                if ((c >= '0' && c <= '9') || c == '+')
+                {
+                    char* eptr;
+                    errno = 0;
+                    unsigned long long int value = strtoull(req.url.data()+pos, &eptr, 10);
+                    if (errno != ERANGE && eptr != req.url.data()+pos)
+                    {
+                        params->uint_params.push_back(value);
+                        auto ret = find(req, &nodes_[node->param_childrens[(int)ParamType::UINT]], eptr - req.url.data(), params);
+                        update_found(ret);
+                        params->uint_params.pop_back();
+                    }
+                }
+            }
+
+            if (node->param_childrens[(int)ParamType::DOUBLE])
+            {
+                char c = req.url[pos];
+                if ((c >= '0' && c <= '9') || c == '+' || c == '-' || c == '.')
+                {
+                    char* eptr;
+                    errno = 0;
+                    double value = strtod(req.url.data()+pos, &eptr);
+                    if (errno != ERANGE && eptr != req.url.data()+pos)
+                    {
+                        params->double_params.push_back(value);
+                        auto ret = find(req, &nodes_[node->param_childrens[(int)ParamType::DOUBLE]], eptr - req.url.data(), params);
+                        update_found(ret);
+                        params->double_params.pop_back();
+                    }
+                }
+            }
+
+            if (node->param_childrens[(int)ParamType::STRING])
+            {
+                size_t epos = pos;
+                for(; epos < req.url.size(); epos ++)
+                {
+                    if (req.url[epos] == '/')
+                        break;
+                }
+
+                if (epos != pos)
+                {
+                    params->string_params.push_back(req.url.substr(pos, epos-pos));
+                    auto ret = find(req, &nodes_[node->param_childrens[(int)ParamType::STRING]], epos, params);
+                    update_found(ret);
+                    params->string_params.pop_back();
+                }
+            }
+
+            if (node->param_childrens[(int)ParamType::PATH])
+            {
+                size_t epos = req.url.size();
+
+                if (epos != pos)
+                {
+                    params->string_params.push_back(req.url.substr(pos, epos-pos));
+                    auto ret = find(req, &nodes_[node->param_childrens[(int)ParamType::PATH]], epos, params);
+                    update_found(ret);
+                    params->string_params.pop_back();
                 }
             }
 
