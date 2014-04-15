@@ -83,6 +83,7 @@ TEST(simple_response_routing_params)
 {
     ASSERT_EQUAL(100, response(100).code);
     ASSERT_EQUAL(200, response("Hello there").code);
+    ASSERT_EQUAL(500, response(500, "Internal Error?").code);
 
     routing_params rp;
     rp.int_params.push_back(1);
@@ -97,13 +98,63 @@ TEST(simple_response_routing_params)
     ASSERT_EQUAL("hello", rp.get<string>(0));
 }
 
+TEST(multi_server)
+{
+    static char buf[2048];
+    Flask app1, app2;
+    app1.route("/")([]{return "A";});
+    app2.route("/")([]{return "B";});
+
+    Server<Flask> server1(&app1, 45451);
+    Server<Flask> server2(&app2, 45452);
+
+    auto _ = async(launch::async, [&]{server1.run();});
+    auto _2 = async(launch::async, [&]{server2.run();});
+
+    asio::io_service is;
+    {
+        asio::ip::tcp::socket c(is);
+        c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
+
+        std::string sendmsg = "GET /\r\n\r\n";
+
+        c.send(asio::buffer(sendmsg));
+
+        size_t recved = c.receive(asio::buffer(buf, 2048));
+        ASSERT_EQUAL('A', buf[recved-1]);
+    }
+
+    {
+        asio::ip::tcp::socket c(is);
+        c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45452));
+
+        std::string sendmsg = "GET /\r\n\r\n";
+
+        c.send(asio::buffer(sendmsg));
+
+        size_t recved = c.receive(asio::buffer(buf, 2048));
+        ASSERT_EQUAL('B', buf[recved-1]);
+    }
+
+    server1.stop();
+    server2.stop();
+}
+
 int testmain()
 {
     bool failed = false;
     for(auto t:tests)
     {
         failed__ = false;
-        t->test();
+        try
+        {
+            //cerr << typeid(*t).name() << endl;
+            t->test();
+        }
+        catch(std::exception& e)
+        {
+            fail(e.what());
+        }
         if (failed__)
         {
             cerr << "F";

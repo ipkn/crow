@@ -27,6 +27,11 @@ namespace flask
             auto _ = std::async(std::launch::async, [this]{io_service_.run();});
         }
 
+        void stop()
+        {
+            io_service_.stop();
+        }
+
     private:
         void do_accept()
         {
