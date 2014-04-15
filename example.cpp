@@ -12,7 +12,7 @@ int main()
         return "Hello World!";
     });
 
-    app.route("/about")
+    FLASK_ROUTE(app, "/about")
     ([](){
         return "About Flask example.";
     });
