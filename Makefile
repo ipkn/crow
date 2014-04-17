@@ -1,6 +1,6 @@
 all: covtest example
 example: example.cpp flask.h http_server.h http_connection.h parser.h http_response.h routing.h common.h utility.h
-	g++ -Wall -g -O2 -std=c++11 -o example example.cpp http-parser/http_parser.c -pthread -lboost_system -lboost_thread -I http-parser/
+	g++ -Wall -g -O3 -std=c++11 -o example example.cpp http-parser/http_parser.c -pthread -lboost_system -lboost_thread -I http-parser/
 
 test: covtest
 

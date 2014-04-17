@@ -5,6 +5,7 @@
 #include <future>
 #include <stdint.h>
 #include <type_traits>
+#include <thread>
 
 #include "http_server.h"
 #include "utility.h"
@@ -48,6 +49,19 @@ namespace flask
             return *this;
         }
 
+        Flask& multithreaded()
+        {
+            return concurrency(std::thread::hardware_concurrency());
+        }
+
+        Flask& concurrency(std::uint16_t concurrency)
+        {
+            if (concurrency < 1)
+                concurrency = 1;
+            concurrency_ = concurrency;
+            return *this;
+        }
+
         void validate()
         {
             router_.validate();
@@ -56,7 +70,7 @@ namespace flask
         void run()
         {
             validate();
-            Server<Flask> server(this, port_);
+            Server<Flask> server(this, port_, concurrency_);
             server.run();
         }
         void debug_print()
@@ -67,6 +81,7 @@ namespace flask
 
     private:
         uint16_t port_ = 80;
+        uint16_t concurrency_ = 1;
 
         Router router_;
     };

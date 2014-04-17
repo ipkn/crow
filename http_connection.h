@@ -5,6 +5,7 @@
 #include <boost/asio.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/array.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "parser.h"
 #include "http_response.h"
@@ -17,7 +18,7 @@ namespace flask
     class Connection
     {
     public:
-        Connection(tcp::socket&& socket, Handler* handler) : socket_(std::move(socket)), handler_(handler), parser_(this)
+        Connection(tcp::socket&& socket, Handler* handler, const std::string& server_name) : socket_(std::move(socket)), handler_(handler), parser_(this), server_name_(server_name)
         {
         }
 
@@ -34,32 +35,62 @@ namespace flask
             static std::string seperator = ": ";
             static std::string crlf = "\r\n";
 
-            std::vector<boost::asio::const_buffer> buffers;
+            buffers_.clear();
+            buffers_.reserve(4*(res.headers.size()+4)+3);
 
-            buffers.push_back(boost::asio::buffer(statusCodes[res.code]));
+            if (!statusCodes.count(res.code))
+                res.code = 500;
+            {
+                auto& status = statusCodes.find(res.code)->second;
+                buffers_.emplace_back(status.data(), status.size());
+            }
 
             if (res.code > 400 && res.body.empty())
                 res.body = statusCodes[res.code].substr(9);
 
             bool has_content_length = false;
+            bool has_date = false;
+            bool has_server = false;
+
             for(auto& kv : res.headers)
             {
-                buffers.push_back(boost::asio::buffer(kv.first));
-                buffers.push_back(boost::asio::buffer(seperator));
-                buffers.push_back(boost::asio::buffer(kv.second));
-                buffers.push_back(boost::asio::buffer(crlf));
+                buffers_.emplace_back(kv.first.data(), kv.first.size());
+                buffers_.emplace_back(seperator.data(), seperator.size());
+                buffers_.emplace_back(kv.second.data(), kv.second.size());
+                buffers_.emplace_back(crlf.data(), crlf.size());
 
                 if (boost::iequals(kv.first, "content-length"))
                     has_content_length = true;
+                if (boost::iequals(kv.first, "date"))
+                    has_date = true;
+                if (boost::iequals(kv.first, "server"))
+                    has_server = true;
             }
 
             if (!has_content_length)
-                close_connection_ = true;
+            {
+                auto ret = res.headers.emplace("Content-Length", boost::lexical_cast<std::string>(res.body.size()));
+                buffers_.emplace_back(ret.first->first.data(), ret.first->first.size());
+                buffers_.emplace_back(seperator.data(), seperator.size());
+                buffers_.emplace_back(ret.first->second.data(), ret.first->second.size());
+                buffers_.emplace_back(crlf.data(), crlf.size());
+            }
+            if (!has_server)
+            {
+                auto ret = res.headers.emplace("Server", server_name_);
+                buffers_.emplace_back(ret.first->first.data(), ret.first->first.size());
+                buffers_.emplace_back(seperator.data(), seperator.size());
+                buffers_.emplace_back(ret.first->second.data(), ret.first->second.size());
+                buffers_.emplace_back(crlf.data(), crlf.size());
+            }
+            if (!has_date)
+            {
+            }
 
-            buffers.push_back(boost::asio::buffer(crlf));
-            buffers.push_back(boost::asio::buffer(res.body));
+            buffers_.emplace_back(crlf.data(), crlf.size());
+            buffers_.emplace_back(res.body.data(), res.body.size());
 
-            do_write(buffers);
+            do_write();
         }
 
     private:
@@ -99,10 +130,10 @@ namespace flask
                 });
         }
 
-        void do_write(const std::vector<boost::asio::const_buffer>& buffers)
+        void do_write()
         {
             life_++;
-            boost::asio::async_write(socket_, buffers, 
+            boost::asio::async_write(socket_, buffers_, 
                 [this](const boost::system::error_code& ec, std::size_t bytes_transferred)
                 {
                     bool should_close = false;
@@ -140,5 +171,8 @@ namespace flask
 
         std::atomic<int> life_;
         bool close_connection_ = false;
+
+        const std::string& server_name_;
+        std::vector<boost::asio::const_buffer> buffers_;
     };
 }

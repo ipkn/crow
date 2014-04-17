@@ -7,9 +7,14 @@ int main()
     flask::Flask app;
 
     FLASK_ROUTE(app, "/")
-       .name("hello")
+        .name("hello")
     ([]{
         return "Hello World!";
+    });
+
+    FLASK_ROUTE(app, "/json")
+    ([]{
+        return "{\"message\":\"Hello, World!\"}";
     });
 
     FLASK_ROUTE(app, "/about")
@@ -32,6 +37,7 @@ int main()
         //return flask::response(500);
     //});
 
-    app.port(8080)
-       .run();
+    app.port(18080)
+        .multithreaded()
+        .run();
 }
