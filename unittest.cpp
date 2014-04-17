@@ -3,6 +3,7 @@
 #include "routing.h"
 #include "utility.h"
 #include "flask.h"
+#include "json.h"
 using namespace std;
 using namespace flask;
 
@@ -233,6 +234,19 @@ TEST(multi_server)
 
     server1.stop();
     server2.stop();
+}
+
+TEST(json_write)
+{
+    json::wvalue x;
+    x["message"] = "hello world";
+    ASSERT_EQUAL(R"({"message":"hello world"})", json::encode(x));
+
+    json::wvalue y;
+    y["scores"][0] = 1;
+    y["scores"][1] = "king";
+    y["scores"][2] = 3.5;
+    ASSERT_EQUAL(R"({"scores":[1,"king",3.5]})", json::encode(y));
 }
 
 int testmain()
