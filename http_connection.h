@@ -60,6 +60,11 @@ namespace flask
             buffers_.clear();
             buffers_.reserve(4*(res.headers.size()+4)+3);
 
+            if (res.body.empty() && res.json_value.t == json::type::Object)
+            {
+                res.body = json::encode(res.json_value);
+            }
+
             if (!statusCodes.count(res.code))
                 res.code = 500;
             {

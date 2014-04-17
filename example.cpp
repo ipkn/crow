@@ -1,4 +1,5 @@
 #include "flask.h"
+#include "json.h"
 
 #include <sstream>
 
@@ -14,7 +15,9 @@ int main()
 
     FLASK_ROUTE(app, "/json")
     ([]{
-        return "{\"message\":\"Hello, World!\"}";
+        flask::json::wvalue x;
+        x["message"] = "Hello, World!";
+        return x;
     });
 
     FLASK_ROUTE(app, "/about")

@@ -220,13 +220,18 @@ namespace flask
             wvalue() {}
 
             wvalue(wvalue&& r)
-                : 
-                t(r.t),
-                d(r.d),
-                s{std::move(r.s)},
-                l{std::move(r.l)},
-                o{std::move(r.o)}
             {
+                *this = std::move(r);
+            }
+
+            wvalue& operator = (wvalue&& r)
+            {
+                t = r.t;
+                d = r.d;
+                s = std::move(r.s);
+                l = std::move(r.l);
+                o = std::move(r.o);
+                return *this;
             }
 
             void clear()
