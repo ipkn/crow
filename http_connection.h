@@ -9,6 +9,7 @@
 
 #include "parser.h"
 #include "http_response.h"
+#include "datetime.h"
 
 namespace flask
 {
@@ -112,6 +113,12 @@ namespace flask
             }
             if (!has_date)
             {
+                std::string date_str = DateTime().str();
+                auto ret = res.headers.emplace("Date", date_str);
+                buffers_.emplace_back(ret.first->first.data(), ret.first->first.size());
+                buffers_.emplace_back(seperator.data(), seperator.size());
+                buffers_.emplace_back(ret.first->second.data(), ret.first->second.size());
+                buffers_.emplace_back(crlf.data(), crlf.size());
             }
 
             buffers_.emplace_back(crlf.data(), crlf.size());
