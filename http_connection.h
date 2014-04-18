@@ -62,7 +62,7 @@ namespace flask
 
             if (res.body.empty() && res.json_value.t == json::type::Object)
             {
-                res.body = json::encode(res.json_value);
+                res.body = json::dump(res.json_value);
             }
 
             if (!statusCodes.count(res.code))

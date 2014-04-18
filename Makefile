@@ -15,7 +15,7 @@ unittest: unittest.cpp routing.h
 	./unittest
 
 covtest: unittest.cpp routing.h utility.h flask.h http_server.h http_connection.h parser.h http_response.h common.h json.h
-	g++ -O2 -Wall -g -std=c++11 -o covtest unittest.cpp http-parser/http_parser.c -pthread -lboost_system -lboost_thread -I http-parser/
+	g++ -Wall -g -std=c++11 -o covtest --coverage unittest.cpp http-parser/http_parser.c -pthread -lboost_system -lboost_thread -I http-parser/
 	./covtest
 	gcov -r unittest.cpp
 

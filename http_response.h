@@ -15,7 +15,7 @@ namespace flask
         explicit response(int code) : code(code) {}
         response(std::string body) : body(std::move(body)) {}
         response(json::wvalue&& json_value) : json_value(std::move(json_value)) {}
-        response(const json::wvalue& json_value) : body(json::encode(json_value)) {}
+        response(const json::wvalue& json_value) : body(json::dump(json_value)) {}
         response(int code, std::string body) : body(std::move(body)), code(code) {}
         response(response&& r)
         {

@@ -18,7 +18,7 @@ void error_print()
 }
 
 template <typename A, typename ...Args>
-void error_print(A a, Args...args)
+void error_print(const A& a, Args...args)
 {
     cerr<<a;
     error_print(args...);
@@ -27,8 +27,21 @@ void error_print(A a, Args...args)
 template <typename ...Args>
 void fail(Args...args) { error_print(args...);failed__ = true; }
 
-#define ASSERT_EQUAL(a, b) if (a != b) fail("Assert fail: expected ", (a), " actual " , b,  ", " #a " == " #b ", at " __FILE__ ":",__LINE__)
-#define ASSERT_NOTEQUAL(a, b) if (a != b) fail("Assert fail: not expected ", (a), ", " #a " != " #b ", at " __FILE__ ":",__LINE__)
+#define ASSERT_TRUE(x) if (!(x)) fail("Assert fail: expected ", #x, " is true, at " __FILE__ ":",__LINE__)
+#define ASSERT_EQUAL(a, b) if ((a) != (b)) fail("Assert fail: expected ", (a), " actual " , (b),  ", " #a " == " #b ", at " __FILE__ ":",__LINE__)
+#define ASSERT_NOTEQUAL(a, b) if ((a) != (b)) fail("Assert fail: not expected ", (a), ", " #a " != " #b ", at " __FILE__ ":",__LINE__)
+#define ASSERT_THROW(x) \
+    try \
+    { \
+        x; \
+        fail("Assert fail: exception should be thrown"); \
+    } \
+    catch(std::exception&) \
+    { \
+    } 
+
+
+
 #define TEST(x) struct test##x:public Test{void test();}x##_; \
     void test##x::test()
 #define DISABLE_TEST(x) struct test##x{void test();}x##_; \
@@ -236,17 +249,69 @@ TEST(multi_server)
     server2.stop();
 }
 
+TEST(json_read)
+{
+	{
+		auto x = json::load_copy("{} 3");
+		if (x)
+			fail("should fail to parse");
+	}
+
+    auto x = json::load_copy(R"({"message":"hello, world"})");
+    if (!x)
+        fail("fail to parse");
+    ASSERT_EQUAL("hello, world", x["message"]);
+    ASSERT_EQUAL(1, x.size());
+    ASSERT_EQUAL(false, x.has("mess"));
+    ASSERT_THROW(x["mess"]);
+    ASSERT_THROW(3 == x["message"]);
+    ASSERT_THROW(x["message"].size());
+
+    std::string s = R"({"int":3,     "ints"  :[1,2,3,4,5]		})";
+    auto y = json::load_nocopy(s);
+    ASSERT_EQUAL(3, y["int"]);
+	ASSERT_EQUAL(5, y["ints"].size());
+	ASSERT_EQUAL(1, y["ints"][0]);
+	ASSERT_EQUAL(2, y["ints"][1]);
+	ASSERT_EQUAL(3, y["ints"][2]);
+	ASSERT_EQUAL(4, y["ints"][3]);
+	ASSERT_EQUAL(5, y["ints"][4]);
+	ASSERT_EQUAL(1u, y["ints"][0]);
+	ASSERT_EQUAL(1.f, y["ints"][0]);
+
+	int q = (int)y["ints"][1];
+	ASSERT_EQUAL(2, q);
+	q = y["ints"][2].i();
+	ASSERT_EQUAL(3, q);
+
+}
+
 TEST(json_write)
 {
     json::wvalue x;
     x["message"] = "hello world";
-    ASSERT_EQUAL(R"({"message":"hello world"})", json::encode(x));
+    ASSERT_EQUAL(R"({"message":"hello world"})", json::dump(x));
+    x["message"] = std::string("string value");
+    ASSERT_EQUAL(R"({"message":"string value"})", json::dump(x));
+    x["message"]["x"] = 3;
+    ASSERT_EQUAL(R"({"message":{"x":3}})", json::dump(x));
+    x["message"]["y"] = 5;
+    ASSERT_TRUE(R"({"message":{"x":3,"y":5}})" == json::dump(x) || R"({"message":{"y":5,"x":3}})" == json::dump(x));
+    x["message"] = 5.5;
+    ASSERT_EQUAL(R"({"message":5.5})", json::dump(x));
 
     json::wvalue y;
     y["scores"][0] = 1;
     y["scores"][1] = "king";
     y["scores"][2] = 3.5;
-    ASSERT_EQUAL(R"({"scores":[1,"king",3.5]})", json::encode(y));
+    ASSERT_EQUAL(R"({"scores":[1,"king",3.5]})", json::dump(y));
+
+    y["scores"][2][0] = "real";
+    y["scores"][2][1] = false;
+    ASSERT_EQUAL(R"({"scores":[1,"king",["real",false]]})", json::dump(y));
+
+    y["scores"]["a"]["b"]["c"] = nullptr;
+    ASSERT_EQUAL(R"({"scores":{"a":{"b":{"c":null}}}})", json::dump(y));
 }
 
 int testmain()
