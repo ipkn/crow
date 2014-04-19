@@ -252,12 +252,12 @@ TEST(multi_server)
 TEST(json_read)
 {
 	{
-		auto x = json::load_copy("{} 3");
+		auto x = json::load("{} 3");
 		if (x)
 			fail("should fail to parse");
 	}
 
-    auto x = json::load_copy(R"({"message":"hello, world"})");
+    auto x = json::load(R"({"message":"hello, world"})");
     if (!x)
         fail("fail to parse");
     ASSERT_EQUAL("hello, world", x["message"]);
@@ -268,7 +268,7 @@ TEST(json_read)
     ASSERT_THROW(x["message"].size());
 
     std::string s = R"({"int":3,     "ints"  :[1,2,3,4,5]		})";
-    auto y = json::load_nocopy(s);
+    auto y = json::load(s);
     ASSERT_EQUAL(3, y["int"]);
 	ASSERT_EQUAL(5, y["ints"].size());
 	ASSERT_EQUAL(1, y["ints"][0]);

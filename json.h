@@ -53,7 +53,7 @@ namespace flask
         };
 
         class rvalue;
-        rvalue load_copy(const char* data, size_t size);
+        rvalue load(const char* data, size_t size);
 
         namespace detail 
         {
@@ -135,7 +135,7 @@ namespace flask
                     length_ = length;
                     owned_ = 1;
                 }
-                friend rvalue flask::json::load_copy(const char* data, size_t size);
+                friend rvalue flask::json::load(const char* data, size_t size);
             };
 
             bool operator < (const r_string& l, const r_string& r)
@@ -470,8 +470,8 @@ namespace flask
             type t_;
             mutable uint8_t option_{0};
 
-            friend rvalue load_nocopy(const char* data, size_t size);
-            friend rvalue load_copy(const char* data, size_t size);
+            friend rvalue load_nocopy_internal(const char* data, size_t size);
+            friend rvalue load(const char* data, size_t size);
             friend std::ostream& operator <<(std::ostream& os, const rvalue& r)
             {
                 switch(r.t_)
@@ -560,7 +560,7 @@ namespace flask
         //inline rvalue decode(const std::string& s)
         //{
         //}
-        inline rvalue load_nocopy(const char* data, size_t size)
+        inline rvalue load_nocopy_internal(const char* data, size_t size)
         {
             //static const char* escaped = "\"\\/\b\f\n\r\t";
 			struct Parser
@@ -905,9 +905,8 @@ namespace flask
 
 				rvalue parse()
 				{
-					//auto ret = decode_object();
                     ws_skip();
-					auto ret = decode_value();
+					auto ret = decode_object(); // or decode value?
 					ws_skip();
                     if (*data != '\0')
                         ret.set_error();
@@ -918,11 +917,11 @@ namespace flask
 			};
 			return Parser(data, size).parse();
         }
-        inline rvalue load_copy(const char* data, size_t size)
+        inline rvalue load(const char* data, size_t size)
         {
             char* s = new char[size+1];
             memcpy(s, data, size+1);
-            auto ret = load_nocopy(s, size);
+            auto ret = load_nocopy_internal(s, size);
             if (ret)
                 ret.key_.force(s, size);
             else
@@ -930,26 +929,15 @@ namespace flask
             return ret;
         }
 
-        inline rvalue load_copy(const char* data)
+        inline rvalue load(const char* data)
         {
-            return load_copy(data, strlen(data));
+            return load(data, strlen(data));
         }
 
-        inline rvalue load_copy(const std::string& str)
+        inline rvalue load(const std::string& str)
         {
-            return load_copy(str.data(), str.size());
+            return load(str.data(), str.size());
         }
-
-        inline rvalue load_nocopy(const char* data)
-        {
-            return load_nocopy(data, strlen(data));
-        }
-
-        inline rvalue load_nocopy(const std::string& str)
-        {
-            return load_nocopy(str.data(), str.size());
-        }
-
 
         class wvalue
         {
