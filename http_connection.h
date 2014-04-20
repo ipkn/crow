@@ -53,7 +53,27 @@ namespace flask
             };
 
             request req = parser_.to_request();
+            if (parser_.http_major == 1 && parser_.http_minor == 0)
+            {
+                // HTTP/1.0
+                if (!(req.headers.count("connection") && boost::iequals(req.headers["connection"],"Keep-Alive")))
+                    close_connection_ = true;
+            }
+            else
+            {
+                // HTTP/1.1
+                if (req.headers.count("connection") && req.headers["connection"] == "close")
+                    close_connection_ = true;
+            }
+
             res = handler_->handle(req);
+
+#ifdef FLASK_ENABLE_LOGGING
+            std::cerr << "HTTP/" << parser_.http_major << "." << parser_.http_minor << ' ';
+            std::cerr << method_name(req.method);
+            std::cerr << " " << res.code << std::endl;
+            std::cerr << "res body: " << res.body << std::endl;
+#endif
 
             static std::string seperator = ": ";
             static std::string crlf = "\r\n";

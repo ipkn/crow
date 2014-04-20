@@ -1,9 +1,47 @@
 #pragma once
 
 #include <string>
+#include <stdexcept>
+#include "utility.h"
 
 namespace flask
 {
+    enum class HTTPMethod
+    {
+        DELETE,
+        GET,
+        HEAD,
+        POST,
+        PUT,
+        CONNECT,
+        OPTIONS,
+        TRACE,
+    };
+
+    std::string method_name(HTTPMethod method)
+    {
+        switch(method)
+        {
+            case HTTPMethod::DELETE:
+                return "DELETE";
+            case HTTPMethod::GET:
+                return "GET";
+            case HTTPMethod::HEAD:
+                return "HEAD";
+            case HTTPMethod::POST:
+                return "POST";
+            case HTTPMethod::PUT:
+                return "PUT";
+            case HTTPMethod::CONNECT:
+                return "CONNECT";
+            case HTTPMethod::OPTIONS:
+                return "OPTIONS";
+            case HTTPMethod::TRACE:
+                return "TRACE";
+        }
+        return "invalid";
+    }
+
     enum class ParamType
     {
         INT,
@@ -68,3 +106,18 @@ namespace flask
         return string_params[index];
     }
 }
+
+constexpr flask::HTTPMethod operator "" _method(const char* str, size_t len)
+{
+    return
+        flask::black_magic::is_equ_p(str, "GET", 3) ? flask::HTTPMethod::GET :
+        flask::black_magic::is_equ_p(str, "DELETE", 6) ? flask::HTTPMethod::DELETE :
+        flask::black_magic::is_equ_p(str, "HEAD", 4) ? flask::HTTPMethod::HEAD :
+        flask::black_magic::is_equ_p(str, "POST", 4) ? flask::HTTPMethod::POST :
+        flask::black_magic::is_equ_p(str, "PUT", 3) ? flask::HTTPMethod::PUT :
+        flask::black_magic::is_equ_p(str, "OPTIONS", 7) ? flask::HTTPMethod::OPTIONS :
+        flask::black_magic::is_equ_p(str, "CONNECT", 7) ? flask::HTTPMethod::CONNECT :
+        flask::black_magic::is_equ_p(str, "TRACE", 5) ? flask::HTTPMethod::TRACE :
+        throw std::runtime_error("invalid http method");
+};
+

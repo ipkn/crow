@@ -20,7 +20,7 @@ namespace flask
     class BaseRule
     {
     public:
-        BaseRule(std::string rule)
+        BaseRule(std::string rule) noexcept
             : rule_(std::move(rule))
         {
         }
@@ -29,7 +29,7 @@ namespace flask
         {
         }
         
-        BaseRule& name(std::string name)
+        BaseRule& name(std::string name) noexcept
         {
             name_ = std::move(name);
             return *this;
@@ -42,17 +42,19 @@ namespace flask
     protected:
         std::string rule_;
         std::string name_;
+
+        friend class Router;
     };
 
     class Rule : public BaseRule
     {
     public:
-        Rule(std::string rule)
+        Rule(std::string rule) noexcept
             : BaseRule(std::move(rule))
         {
         }
         
-        Rule& name(std::string name)
+        Rule& name(std::string name) noexcept
         {
             name_ = std::move(name);
             return *this;
@@ -73,12 +75,8 @@ namespace flask
         template <typename Func>
         void operator()(std::string name, Func&& f)
         {
-            static_assert(black_magic::CallHelper<Func, black_magic::S<>>::value, 
-                "Handler type is mismatched with URL paramters");
             name_ = std::move(name);
-            handler_ = [f = std::move(f)]{
-                return response(f());
-            };
+            this->operator()<Func>(f);
         }
 
         void validate()
@@ -102,62 +100,82 @@ namespace flask
     class TaggedRule : public BaseRule
     {
     private:
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2> struct call
+        template <typename H1, typename H2>
+        struct call_params
+        {
+            H1& handler;
+            H2& handler_with_req;
+            const routing_params& params;
+            const request& req;
+        };
+
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2> 
+        struct call
         {
         };
 
         template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<int64_t, Args1...>, black_magic::S<Args2...>>
         {
-            response operator()(F& handler, const routing_params& params)
+            response operator()(F cparams)
             {
                 using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<int64_t, NInt>>;
                 return call<F, NInt+1, NUint, NDouble, NString,
-                       black_magic::S<Args1...>, pushed>()(handler, params);
+                       black_magic::S<Args1...>, pushed>()(cparams);
             }
         };
 
         template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<uint64_t, Args1...>, black_magic::S<Args2...>>
         {
-            response operator()(F& handler, const routing_params& params)
+            response operator()(F cparams)
             {
                 using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<uint64_t, NUint>>;
                 return call<F, NInt, NUint+1, NDouble, NString,
-                       black_magic::S<Args1...>, pushed>()(handler, params);
+                       black_magic::S<Args1...>, pushed>()(cparams);
             }
         };
 
         template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<double, Args1...>, black_magic::S<Args2...>>
         {
-            response operator()(F& handler, const routing_params& params)
+            response operator()(F cparams)
             {
                 using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<double, NDouble>>;
                 return call<F, NInt, NUint, NDouble+1, NString,
-                       black_magic::S<Args1...>, pushed>()(handler, params);
+                       black_magic::S<Args1...>, pushed>()(cparams);
             }
         };
 
         template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<std::string, Args1...>, black_magic::S<Args2...>>
         {
-            response operator()(F& handler, const routing_params& params)
+            response operator()(F cparams)
             {
                 using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<std::string, NString>>;
                 return call<F, NInt, NUint, NDouble, NString+1,
-                       black_magic::S<Args1...>, pushed>()(handler, params);
+                       black_magic::S<Args1...>, pushed>()(cparams);
             }
         };
 
         template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1> 
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<>, black_magic::S<Args1...>>
         {
-            response operator()(F& handler, const routing_params& params)
+            response operator()(F cparams)
             {
-                return handler(
-                    params.get<typename Args1::type>(Args1::pos)... 
-                );
+                if (cparams.handler) 
+                    return cparams.handler(
+                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
+                    );
+                if (cparams.handler_with_req)
+                    return cparams.handler_with_req(
+                        cparams.req,
+                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
+                    );
+#ifdef FLASK_ENABLE_LOGGING
+                std::cerr << "ERROR cannot find handler" << std::endl;
+#endif
+                return response(500);
             }
         };
     public:
@@ -166,7 +184,7 @@ namespace flask
         {
         }
         
-        TaggedRule<Args...>& name(std::string name)
+        TaggedRule<Args...>& name(std::string name) noexcept
         {
             name_ = std::move(name);
             return *this;
@@ -177,39 +195,67 @@ namespace flask
         }
 
         template <typename Func>
-        void operator()(Func&& f)
+        typename std::enable_if<black_magic::CallHelper<Func, black_magic::S<Args...>>::value, void>::type
+        operator()(Func&& f)
         {
-            static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value, 
+            static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
+            black_magic::CallHelper<Func, black_magic::S<flask::request, Args...>>::value
+            , 
                 "Handler type is mismatched with URL paramters");
             static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value, 
-                "Handler function cannot have void return type; valid return types: string, int, flask::resposne");
-            handler_ = [f = std::move(f)](Args ... args){
-                return response(f(args...));
-            };
+                "Handler function cannot have void return type; valid return types: string, int, flask::resposne, flask::json::wvalue");
+
+                handler_ = [f = std::move(f)](Args ... args){
+                    return response(f(args...));
+                };
+        }
+
+        template <typename Func>
+        typename std::enable_if<!black_magic::CallHelper<Func, black_magic::S<Args...>>::value, void>::type
+        operator()(Func&& f)
+        {
+            static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
+            black_magic::CallHelper<Func, black_magic::S<flask::request, Args...>>::value
+            , 
+                "Handler type is mismatched with URL paramters");
+            static_assert(!std::is_same<void, decltype(f(std::declval<flask::request>(), std::declval<Args>()...))>::value, 
+                "Handler function cannot have void return type; valid return types: string, int, flask::resposne, flask::json::wvalue");
+
+                handler_with_req_ = [f = std::move(f)](const flask::request& request, Args ... args){
+                    return response(f(request, args...));
+                };
         }
 
         template <typename Func>
         void operator()(std::string name, Func&& f)
         {
-            static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value, 
-                "Handler type is mismatched with URL paramters");
-            static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value, 
-                "Handler function cannot have void return type; valid return types: string, int, flask::resposne");
             name_ = std::move(name);
-            handler_ = [f = std::move(f)](Args ... args){
-                return response(f(args...));
-            };
+            (*this).operator()<Func>(std::forward(f));
         }
 
-        response handle(const request&, const routing_params& params)
+        response handle(const request& req, const routing_params& params)
         {
             //return handler_();
-            return call<decltype(handler_), 0, 0, 0, 0, black_magic::S<Args...>, black_magic::S<>>()(handler_, params);
+            return 
+                call<
+                    call_params<
+                        decltype(handler_), 
+                        decltype(handler_with_req_)>, 
+                    0, 0, 0, 0, 
+                    black_magic::S<Args...>, 
+                    black_magic::S<>
+                >()(
+                    call_params<
+                        decltype(handler_), 
+                        decltype(handler_with_req_)>
+                    {handler_, handler_with_req_, params, req}
+                );
             //return response(500);
         }
 
     private:
         std::function<response(Args...)> handler_;
+        std::function<response(flask::request, Args...)> handler_with_req_;
 
         template <typename T, int Pos>
         struct call_pair
@@ -599,7 +645,10 @@ public:
 
             if (rule_index >= rules_.size())
                 throw std::runtime_error("Trie internal structure corrupted!");
-
+#ifdef FLASK_ENABLE_LOGGING
+            std::cerr << req.url << std::endl;
+            std::cerr << rules_[rule_index]->rule_ << std::endl;
+#endif
             return rules_[rule_index]->handle(req, found.second);
         }
 

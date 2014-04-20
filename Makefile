@@ -11,7 +11,7 @@ runtest: example
 	pkill example
 
 unittest: unittest.cpp routing.h
-	g++ -Wall -g -std=c++11 -o unittest unittest.cpp
+	g++ -Wall -g -std=c++11 -o unittest unittest.cpp http-parser/http_parser.c -pthread -lboost_system -lboost_thread -I http-parser/
 	./unittest
 
 covtest: unittest.cpp routing.h utility.h flask.h http_server.h http_connection.h parser.h http_response.h common.h json.h

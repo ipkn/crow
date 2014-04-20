@@ -7,6 +7,8 @@
 #include <type_traits>
 #include <thread>
 
+#define FLASK_ENABLE_LOGGING
+
 #include "http_server.h"
 #include "utility.h"
 #include "routing.h"

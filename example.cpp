@@ -13,6 +13,17 @@ int main()
         return "Hello World!";
     });
 
+    FLASK_ROUTE(app, "/add_json")
+    ([](const flask::request& req){
+        auto x = flask::json::load(req.body);
+        if (!x)
+            return flask::response(400);
+        int sum = x["a"].i()+x["b"].i();
+        std::ostringstream os;
+        os << sum;
+        return flask::response{os.str()};
+    });
+
     FLASK_ROUTE(app, "/json")
     ([]{
         flask::json::wvalue x;
@@ -41,6 +52,5 @@ int main()
     //});
 
     app.port(18080)
-        .multithreaded()
         .run();
 }

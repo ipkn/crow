@@ -2,6 +2,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <boost/algorithm/string.hpp>
 
 #include "http_request.h"
 
@@ -35,6 +36,7 @@ namespace flask
                 case 0:
                     if (!self->header_value.empty())
                     {
+                        boost::algorithm::to_lower(self->header_field);
                         self->headers.emplace(std::move(self->header_field), std::move(self->header_value));
                     }
                     self->header_field.assign(at, at+length);
@@ -66,6 +68,7 @@ namespace flask
             HTTPParser* self = static_cast<HTTPParser*>(self_);
             if (!self->header_field.empty())
             {
+                boost::algorithm::to_lower(self->header_field);
                 self->headers.emplace(std::move(self->header_field), std::move(self->header_value));
             }
             return 0;
@@ -127,7 +130,7 @@ namespace flask
 
         request to_request()
         {
-            return request{std::move(url), std::move(headers), std::move(body)};
+            return request{(HTTPMethod)method, std::move(url), std::move(headers), std::move(body)};
         }
 
         std::string url;

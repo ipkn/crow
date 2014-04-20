@@ -129,7 +129,7 @@ TEST(RoutingTest)
     });
 
     app.validate();
-    app.debug_print();
+    //app.debug_print();
 
     {
         request req;
