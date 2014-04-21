@@ -267,15 +267,6 @@ namespace flask
                 return boost::lexical_cast<double>(start_, end_-start_);
             }
 
-            detail::r_string s_raw() const
-            {
-#ifndef FLASKPP_JSON_NO_ERROR_CHECK
-                if (t() != type::String)
-                    throw std::runtime_error("value is not string");
-#endif
-                return detail::r_string{start_, (uint32_t)(end_-start_), has_escaping()};
-            }
-
             detail::r_string s() const
             {
 #ifndef FLASKPP_JSON_NO_ERROR_CHECK
@@ -481,7 +472,7 @@ namespace flask
                 case type::False: os << "false"; break;
                 case type::True: os << "true"; break;
                 case type::Number: os << r.d(); break;
-                case type::String: os << '"' << r.s_raw() << '"'; break;
+                case type::String: os << '"' << r.s() << '"'; break;
                 case type::List: 
                     {
                         os << '['; 
@@ -591,7 +582,7 @@ namespace flask
                     uint8_t has_escaping = 0;
                     while(1)
                     {
-                        if (flask_json_likely(*data != '"' && *data != '\\'))
+                        if (flask_json_likely(*data != '"' && *data != '\\' && *data != '\0'))
                         {
                             data ++;
                         }
@@ -625,6 +616,8 @@ namespace flask
                                     return {};
                             }
                         }
+                        else
+                            return {};
                     }
                     return {};
                 }
@@ -906,9 +899,9 @@ namespace flask
 				rvalue parse()
 				{
                     ws_skip();
-					auto ret = decode_object(); // or decode value?
+					auto ret = decode_value(); // or decode object?
 					ws_skip();
-                    if (*data != '\0')
+                    if (ret && *data != '\0')
                         ret.set_error();
 					return ret;
 				}
@@ -920,7 +913,8 @@ namespace flask
         inline rvalue load(const char* data, size_t size)
         {
             char* s = new char[size+1];
-            memcpy(s, data, size+1);
+            memcpy(s, data, size);
+            s[size] = 0;
             auto ret = load_nocopy_internal(s, size);
             if (ret)
                 ret.key_.force(s, size);

@@ -46,56 +46,6 @@ namespace flask
         friend class Router;
     };
 
-    class Rule : public BaseRule
-    {
-    public:
-        Rule(std::string rule) noexcept
-            : BaseRule(std::move(rule))
-        {
-        }
-        
-        Rule& name(std::string name) noexcept
-        {
-            name_ = std::move(name);
-            return *this;
-        }
-
-        template <typename Func>
-        void operator()(Func&& f)
-        {
-            static_assert(black_magic::CallHelper<Func, black_magic::S<>>::value, 
-                "Handler type is mismatched with URL paramters");
-            static_assert(!std::is_same<void, decltype(f())>::value, 
-                "Handler function cannot have void return type; valid return types: string, int, flask::resposne");
-            handler_ = [f = std::move(f)]{
-                return response(f());
-            };
-        }
-
-        template <typename Func>
-        void operator()(std::string name, Func&& f)
-        {
-            name_ = std::move(name);
-            this->operator()<Func>(f);
-        }
-
-        void validate()
-        {
-            if (!handler_)
-            {
-                throw std::runtime_error(name_ + (!name_.empty() ? ": " : "") + "no handler for url " + rule_);
-            }
-        }
-
-        response handle(const request&, const routing_params&)
-        {
-            return handler_();
-        }
-
-    protected:
-        std::function<response()> handler_;
-    };
-
     template <typename ... Args>
     class TaggedRule : public BaseRule
     {
@@ -192,6 +142,10 @@ namespace flask
 
         void validate()
         {
+            if (!handler_ && !handler_with_req_)
+            {
+                throw std::runtime_error(name_ + (!name_.empty() ? ": " : "") + "no handler for url " + rule_);
+            }
         }
 
         template <typename Func>
@@ -208,6 +162,7 @@ namespace flask
                 handler_ = [f = std::move(f)](Args ... args){
                     return response(f(args...));
                 };
+                handler_with_req_ = nullptr;
         }
 
         template <typename Func>
@@ -224,6 +179,7 @@ namespace flask
                 handler_with_req_ = [f = std::move(f)](const flask::request& request, Args ... args){
                     return response(f(request, args...));
                 };
+                handler_ = nullptr;
         }
 
         template <typename Func>
@@ -481,8 +437,6 @@ public:
                 char c = url[i];
                 if (c == '<')
                 {
-                    bool found = false;
-
                     static struct ParamTraits
                     {
                         ParamType type;
@@ -498,27 +452,21 @@ public:
                         { ParamType::PATH, "<path>" },
                     };
 
-                    for(auto it = std::begin(paramTraits); it != std::end(paramTraits); ++it)
+                    for(auto& x:paramTraits)
                     {
-                        if (url.compare(i, it->name.size(), it->name) == 0)
+                        if (url.compare(i, x.name.size(), x.name) == 0)
                         {
-                            if (!nodes_[idx].param_childrens[(int)it->type])
+                            if (!nodes_[idx].param_childrens[(int)x.type])
                             {
                                 auto new_node_idx = new_node();
-                                nodes_[idx].param_childrens[(int)it->type] = new_node_idx;
+                                nodes_[idx].param_childrens[(int)x.type] = new_node_idx;
                             }
-                            idx = nodes_[idx].param_childrens[(int)it->type];
-                            i += it->name.size();
-                            found = true;
+                            idx = nodes_[idx].param_childrens[(int)x.type];
+                            i += x.name.size();
                             break;
                         }
                     }
 
-                    if (!found)
-                    {
-                        throw std::runtime_error("Invalid parameter type: " + url + 
-                            " (" + boost::lexical_cast<std::string>(i) + ")");
-                    }
                     i --;
                 }
                 else
@@ -614,14 +562,6 @@ public:
             rules_.emplace_back(ruleObject);
             trie_.add(rule, rules_.size() - 1);
             return *ruleObject;
-        }
-
-        Rule& new_rule(const std::string& rule)
-        {
-            Rule* r(new Rule(rule));
-            rules_.emplace_back(r);
-            trie_.add(rule, rules_.size() - 1);
-            return *r;
         }
 
         void validate()

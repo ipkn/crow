@@ -29,7 +29,7 @@ void fail(Args...args) { error_print(args...);failed__ = true; }
 
 #define ASSERT_TRUE(x) if (!(x)) fail("Assert fail: expected ", #x, " is true, at " __FILE__ ":",__LINE__)
 #define ASSERT_EQUAL(a, b) if ((a) != (b)) fail("Assert fail: expected ", (a), " actual " , (b),  ", " #a " == " #b ", at " __FILE__ ":",__LINE__)
-#define ASSERT_NOTEQUAL(a, b) if ((a) != (b)) fail("Assert fail: not expected ", (a), ", " #a " != " #b ", at " __FILE__ ":",__LINE__)
+#define ASSERT_NOTEQUAL(a, b) if ((a) == (b)) fail("Assert fail: not expected ", (a), ", " #a " != " #b ", at " __FILE__ ":",__LINE__)
 #define ASSERT_THROW(x) \
     try \
     { \
@@ -49,14 +49,14 @@ void fail(Args...args) { error_print(args...);failed__ = true; }
 
 TEST(Rule)
 {
-    Rule r("/http/");
+    TaggedRule<> r("/http/");
     r.name("abc");
 
     // empty handler - fail to validate
     try 
     {
         r.validate();
-        fail();
+        fail("empty handler should fail to validate");
     }
     catch(runtime_error& e)
     {
@@ -73,6 +73,16 @@ TEST(Rule)
     ASSERT_EQUAL(0, x);
     r.handle(request(), routing_params());
     ASSERT_EQUAL(1, x);
+
+    // registering handler with request argument
+    r([&x](const flask::request&){x = 2;return "";});
+
+    r.validate();
+
+    // executing handler
+    ASSERT_EQUAL(1, x);
+    r.handle(request(), routing_params());
+    ASSERT_EQUAL(2, x);
 }
 
 TEST(ParameterTagging)
@@ -211,8 +221,8 @@ TEST(multi_server)
 {
     static char buf[2048];
     Flask app1, app2;
-    app1.route("/")([]{return "A";});
-    app2.route("/")([]{return "B";});
+    FLASK_ROUTE(app1, "/")([]{return "A";});
+    FLASK_ROUTE(app2, "/")([]{return "B";});
 
     Server<Flask> server1(&app1, 45451);
     Server<Flask> server2(&app2, 45452);
@@ -252,9 +262,29 @@ TEST(multi_server)
 TEST(json_read)
 {
 	{
-		auto x = json::load("{} 3");
-		if (x)
-			fail("should fail to parse");
+        const char* json_error_tests[] = 
+        {
+            "{} 3", "{{}", "{3}",
+            "3.4.5", "+3", "3-2", "00", "03", "1e3e3", "1e+.3",
+            "nll", "f", "t",
+            "{\"x\":3,}",
+            "{\"x\"}",
+            "{\"x\":3   q}",
+            "{\"x\":[3 4]}",
+            "{\"x\":[\"",
+            "{\"x\":[[], 4],\"y\",}",
+            "{\"x\":[3",
+            "{\"x\":[ null, false, true}",
+        };
+        for(auto s:json_error_tests)
+        {
+            auto x = json::load(s);
+            if (x)
+            {
+                fail("should fail to parse ", s);
+                return;
+            }
+        }
 	}
 
     auto x = json::load(R"({"message":"hello, world"})");
@@ -270,6 +300,8 @@ TEST(json_read)
     std::string s = R"({"int":3,     "ints"  :[1,2,3,4,5]		})";
     auto y = json::load(s);
     ASSERT_EQUAL(3, y["int"]);
+    ASSERT_EQUAL(3.0, y["int"]);
+    ASSERT_NOTEQUAL(3.01, y["int"]);
 	ASSERT_EQUAL(5, y["ints"].size());
 	ASSERT_EQUAL(1, y["ints"][0]);
 	ASSERT_EQUAL(2, y["ints"][1]);
@@ -308,7 +340,8 @@ TEST(json_write)
 
     y["scores"][2][0] = "real";
     y["scores"][2][1] = false;
-    ASSERT_EQUAL(R"({"scores":[1,"king",["real",false]]})", json::dump(y));
+    y["scores"][2][2] = true;
+    ASSERT_EQUAL(R"({"scores":[1,"king",["real",false,true]]})", json::dump(y));
 
     y["scores"]["a"]["b"]["c"] = nullptr;
     ASSERT_EQUAL(R"({"scores":{"a":{"b":{"c":null}}}})", json::dump(y));

@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <thread>
 
-#define FLASK_ENABLE_LOGGING
+//#define FLASK_ENABLE_LOGGING
 
 #include "http_server.h"
 #include "utility.h"
@@ -37,12 +37,6 @@ namespace flask
             -> typename std::result_of<decltype(&Router::new_rule_tagged<Tag>)(Router, std::string&&)>::type
         {
             return router_.new_rule_tagged<Tag>(std::move(rule));
-        }
-
-        auto route(std::string&& rule)
-            -> typename std::result_of<decltype(&Router::new_rule)(Router, std::string&&)>::type
-        {
-            return router_.new_rule(std::move(rule));
         }
 
         Flask& port(std::uint16_t port)
