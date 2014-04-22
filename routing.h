@@ -586,8 +586,7 @@ public:
             if (rule_index >= rules_.size())
                 throw std::runtime_error("Trie internal structure corrupted!");
 #ifdef FLASK_ENABLE_LOGGING
-            std::cerr << req.url << std::endl;
-            std::cerr << rules_[rule_index]->rule_ << std::endl;
+            std::cerr << req.url << ' ' << rules_[rule_index]->rule_ << std::endl;
 #endif
             return rules_[rule_index]->handle(req, found.second);
         }

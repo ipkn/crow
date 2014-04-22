@@ -23,11 +23,6 @@ namespace flask
             self->url.insert(self->url.end(), at, at+length);
             return 0;
         }
-        static int on_status(http_parser* self_, const char* at, size_t length)
-        {
-            // will not call while parsing request
-            return 0;
-        }
         static int on_header_field(http_parser* self_, const char* at, size_t length)
         {
             HTTPParser* self = static_cast<HTTPParser*>(self_);
@@ -43,7 +38,7 @@ namespace flask
                     self->header_building_state = 1;
                     break;
                 case 1:
-                    self->header_field.insert(self->header_value.end(), at, at+length);
+                    self->header_field.insert(self->header_field.end(), at, at+length);
                     break;
             }
             return 0;
@@ -89,7 +84,7 @@ namespace flask
             settings_ {
                 on_message_begin,
                 on_url,
-                on_status,
+                nullptr,
                 on_header_field,
                 on_header_value,
                 on_headers_complete,

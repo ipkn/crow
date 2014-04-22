@@ -936,8 +936,9 @@ namespace flask
         class wvalue
         {
         public:
-            type t{type::Null};
+            type t() { return t_; }
         private:
+            type t_{type::Null};
             double d;
             std::string s;
             std::unique_ptr<std::vector<wvalue>> l;
@@ -953,7 +954,7 @@ namespace flask
 
             wvalue& operator = (wvalue&& r)
             {
-                t = r.t;
+                t_ = r.t_;
                 d = r.d;
                 s = std::move(r.s);
                 l = std::move(r.l);
@@ -963,14 +964,14 @@ namespace flask
 
             void clear()
             {
-                t = type::Null;
+                t_ = type::Null;
                 l.reset();
                 o.reset();
             }
 
             void reset()
             {
-                t = type::Null;
+                t_ = type::Null;
                 l.reset();
                 o.reset();
             }
@@ -984,16 +985,16 @@ namespace flask
             {
                 reset();
                 if (value)
-                    t = type::True;
+                    t_ = type::True;
                 else
-                    t = type::False;
+                    t_ = type::False;
                 return *this;
             }
 
             wvalue& operator = (double value)
             {
                 reset();
-                t = type::Number;
+                t_ = type::Number;
                 d = value;
                 return *this;
             }
@@ -1001,7 +1002,7 @@ namespace flask
             wvalue& operator = (uint16_t value)
             {
                 reset();
-                t = type::Number;
+                t_ = type::Number;
                 d = (double)value;
                 return *this;
             }
@@ -1009,7 +1010,7 @@ namespace flask
             wvalue& operator = (int16_t value)
             {
                 reset();
-                t = type::Number;
+                t_ = type::Number;
                 d = (double)value;
                 return *this;
             }
@@ -1017,7 +1018,7 @@ namespace flask
             wvalue& operator = (uint32_t value)
             {
                 reset();
-                t = type::Number;
+                t_ = type::Number;
                 d = (double)value;
                 return *this;
             }
@@ -1025,7 +1026,7 @@ namespace flask
             wvalue& operator = (int32_t value)
             {
                 reset();
-                t = type::Number;
+                t_ = type::Number;
                 d = (double)value;
                 return *this;
             }
@@ -1033,7 +1034,7 @@ namespace flask
             wvalue& operator = (uint64_t value)
             {
                 reset();
-                t = type::Number;
+                t_ = type::Number;
                 d = (double)value;
                 return *this;
             }
@@ -1041,7 +1042,7 @@ namespace flask
             wvalue& operator = (int64_t value)
             {
                 reset();
-                t = type::Number;
+                t_ = type::Number;
                 d = (double)value;
                 return *this;
             }
@@ -1049,7 +1050,7 @@ namespace flask
             wvalue& operator=(const char* str)
             {
                 reset();
-                t = type::String;
+                t_ = type::String;
                 s = str;
                 return *this;
             }
@@ -1057,7 +1058,7 @@ namespace flask
             wvalue& operator=(const std::string& str)
             {
                 reset();
-                t = type::String;
+                t_ = type::String;
                 s = str;
                 return *this;
             }
@@ -1065,9 +1066,9 @@ namespace flask
             template <typename T>
             wvalue& operator[](const std::vector<T>& v)
             {
-                if (t != type::List)
+                if (t_ != type::List)
                     reset();
-                t = type::List;
+                t_ = type::List;
                 if (!l)
                     l = std::move(std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{}));
                 l->clear();
@@ -1082,9 +1083,9 @@ namespace flask
 
             wvalue& operator[](unsigned index)
             {
-                if (t != type::List)
+                if (t_ != type::List)
                     reset();
-                t = type::List;
+                t_ = type::List;
                 if (!l)
                     l = std::move(std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{}));
                 if (l->size() < index+1)
@@ -1094,9 +1095,9 @@ namespace flask
 
             wvalue& operator[](const std::string& str)
             {
-                if (t != type::Object)
+                if (t_ != type::Object)
                     reset();
-                t = type::Object;
+                t_ = type::Object;
                 if (!o)
                     o = std::move(
                         std::unique_ptr<
@@ -1108,7 +1109,7 @@ namespace flask
 
             size_t estimate_length() const
             {
-                switch(t)
+                switch(t_)
                 {
                     case type::Null: return 4;
                     case type::False: return 5;
@@ -1160,7 +1161,7 @@ namespace flask
         }
         void dump_internal(const wvalue& v, std::string& out)
         {
-            switch(v.t)
+            switch(v.t_)
             {
                 case type::Null: out += "null"; break;
                 case type::False: out += "false"; break;

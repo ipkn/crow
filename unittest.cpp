@@ -1,3 +1,4 @@
+//#define FLASK_ENABLE_LOGGING
 #include <iostream>
 #include <vector>
 #include "routing.h"
@@ -217,6 +218,35 @@ TEST(simple_response_routing_params)
     ASSERT_EQUAL("hello", rp.get<string>(0));
 }
 
+TEST(server_handling_error_request)
+{
+    static char buf[2048];
+    Flask app;
+    FLASK_ROUTE(app, "/")([]{return "A";});
+    Server<Flask> server(&app, 45451);
+    auto _ = async(launch::async, [&]{server.run();});
+    std::string sendmsg = "POX";
+    asio::io_service is;
+    {
+        asio::ip::tcp::socket c(is);
+        c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
+
+
+        c.send(asio::buffer(sendmsg));
+
+        try
+        {
+            c.receive(asio::buffer(buf, 2048));
+            fail();
+        }
+        catch(std::exception& e)
+        {
+            std::cerr << e.what() << std::endl;
+        }
+    }
+    server.stop();
+}
+
 TEST(multi_server)
 {
     static char buf[2048];
@@ -230,12 +260,12 @@ TEST(multi_server)
     auto _ = async(launch::async, [&]{server1.run();});
     auto _2 = async(launch::async, [&]{server2.run();});
 
+    std::string sendmsg = "POST /\r\nContent-Length:3\r\nX-HeaderTest: 123\r\n\r\nA=B\r\n";
     asio::io_service is;
     {
         asio::ip::tcp::socket c(is);
         c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
 
-        std::string sendmsg = "GET /\r\n\r\n";
 
         c.send(asio::buffer(sendmsg));
 
@@ -247,9 +277,12 @@ TEST(multi_server)
         asio::ip::tcp::socket c(is);
         c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45452));
 
-        std::string sendmsg = "GET /\r\n\r\n";
-
-        c.send(asio::buffer(sendmsg));
+        for(auto ch:sendmsg)
+        {
+            char buf[1] = {ch};
+            std::cerr << ch << '(' << (int)ch<<')'<<std::endl;
+            c.send(asio::buffer(buf));
+        }
 
         size_t recved = c.receive(asio::buffer(buf, 2048));
         ASSERT_EQUAL('B', buf[recved-1]);

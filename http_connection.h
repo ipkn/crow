@@ -72,7 +72,6 @@ namespace flask
             std::cerr << "HTTP/" << parser_.http_major << "." << parser_.http_minor << ' ';
             std::cerr << method_name(req.method);
             std::cerr << " " << res.code << std::endl;
-            std::cerr << "res body: " << res.body << std::endl;
 #endif
 
             static std::string seperator = ": ";
@@ -81,7 +80,7 @@ namespace flask
             buffers_.clear();
             buffers_.reserve(4*(res.headers.size()+4)+3);
 
-            if (res.body.empty() && res.json_value.t == json::type::Object)
+            if (res.body.empty() && res.json_value.t() == json::type::Object)
             {
                 res.body = json::dump(res.json_value);
             }
@@ -161,6 +160,7 @@ namespace flask
                             do_read();
                         else
                         {
+                            socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
                             socket_.close();
 
                             life_--;
