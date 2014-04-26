@@ -1,12 +1,12 @@
-//#define FLASK_ENABLE_LOGGING
+//#define CROW_ENABLE_LOGGING
 #include <iostream>
 #include <vector>
 #include "routing.h"
 #include "utility.h"
-#include "flask.h"
+#include "crow.h"
 #include "json.h"
 using namespace std;
-using namespace flask;
+using namespace crow;
 
 struct Test { Test(); virtual void test() = 0; };
 vector<Test*> tests;
@@ -76,7 +76,7 @@ TEST(Rule)
     ASSERT_EQUAL(1, x);
 
     // registering handler with request argument
-    r([&x](const flask::request&){x = 2;return "";});
+    r([&x](const crow::request&){x = 2;return "";});
 
     r.validate();
 
@@ -108,32 +108,32 @@ TEST(ParameterTagging)
 
 TEST(RoutingTest)
 {
-    Flask app;
+    Crow app;
     int A{};
     uint32_t B{};
     double C{};
     string D{};
     string E{};
 
-    FLASK_ROUTE(app, "/0/<uint>")
+    CROW_ROUTE(app, "/0/<uint>")
     ([&](uint32_t b){
         B = b;
         return "OK";
     });
 
-    FLASK_ROUTE(app, "/1/<int>/<uint>")
+    CROW_ROUTE(app, "/1/<int>/<uint>")
     ([&](int a, uint32_t b){
         A = a; B = b;
         return "OK";
     });
 
-    FLASK_ROUTE(app, "/4/<int>/<uint>/<double>/<string>")
+    CROW_ROUTE(app, "/4/<int>/<uint>/<double>/<string>")
     ([&](int a, uint32_t b, double c, string d){
         A = a; B = b; C = c; D = d;
         return "OK";
     });
 
-    FLASK_ROUTE(app, "/5/<int>/<uint>/<double>/<string>/<path>")
+    CROW_ROUTE(app, "/5/<int>/<uint>/<double>/<string>/<path>")
     ([&](int a, uint32_t b, double c, string d, string e){
         A = a; B = b; C = c; D = d; E = e;
         return "OK";
@@ -221,9 +221,9 @@ TEST(simple_response_routing_params)
 TEST(server_handling_error_request)
 {
     static char buf[2048];
-    Flask app;
-    FLASK_ROUTE(app, "/")([]{return "A";});
-    Server<Flask> server(&app, 45451);
+    Crow app;
+    CROW_ROUTE(app, "/")([]{return "A";});
+    Server<Crow> server(&app, 45451);
     auto _ = async(launch::async, [&]{server.run();});
     std::string sendmsg = "POX";
     asio::io_service is;
@@ -250,12 +250,12 @@ TEST(server_handling_error_request)
 TEST(multi_server)
 {
     static char buf[2048];
-    Flask app1, app2;
-    FLASK_ROUTE(app1, "/")([]{return "A";});
-    FLASK_ROUTE(app2, "/")([]{return "B";});
+    Crow app1, app2;
+    CROW_ROUTE(app1, "/")([]{return "A";});
+    CROW_ROUTE(app2, "/")([]{return "B";});
 
-    Server<Flask> server1(&app1, 45451);
-    Server<Flask> server2(&app2, 45452);
+    Server<Crow> server1(&app1, 45451);
+    Server<Crow> server2(&app2, 45452);
 
     auto _ = async(launch::async, [&]{server1.run();});
     auto _2 = async(launch::async, [&]{server2.run();});

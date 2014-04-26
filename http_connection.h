@@ -11,7 +11,7 @@
 #include "http_response.h"
 #include "datetime.h"
 
-namespace flask
+namespace crow
 {
     using namespace boost;
     using tcp = asio::ip::tcp;
@@ -68,7 +68,7 @@ namespace flask
 
             res = handler_->handle(req);
 
-#ifdef FLASK_ENABLE_LOGGING
+#ifdef CROW_ENABLE_LOGGING
             std::cerr << "HTTP/" << parser_.http_major << "." << parser_.http_minor << ' ';
             std::cerr << method_name(req.method);
             std::cerr << " " << res.code << std::endl;

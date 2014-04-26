@@ -12,36 +12,20 @@
 #include "http_request.h"
 #include "utility.h"
 
-//TEST
-#include <iostream>
-
-namespace flask
+namespace crow
 {
     class BaseRule
     {
     public:
-        BaseRule(std::string rule) noexcept
-            : rule_(std::move(rule))
-        {
-        }
-
         virtual ~BaseRule()
         {
         }
         
-        BaseRule& name(std::string name) noexcept
-        {
-            name_ = std::move(name);
-            return *this;
-        }
-
         virtual void validate() = 0;
 
         virtual response handle(const request&, const routing_params&) = 0;
 
     protected:
-        std::string rule_;
-        std::string name_;
 
         friend class Router;
     };
@@ -122,22 +106,35 @@ namespace flask
                         cparams.req,
                         cparams.params.template get<typename Args1::type>(Args1::pos)... 
                     );
-#ifdef FLASK_ENABLE_LOGGING
+#ifdef CROW_ENABLE_LOGGING
                 std::cerr << "ERROR cannot find handler" << std::endl;
 #endif
                 return response(500);
             }
         };
     public:
+        using self_t = TaggedRule<Args...>;
         TaggedRule(std::string rule)
-            : BaseRule(std::move(rule))
+            : rule_(std::move(rule))
         {
         }
         
-        TaggedRule<Args...>& name(std::string name) noexcept
+        self_t& name(std::string name) noexcept
         {
             name_ = std::move(name);
             return *this;
+        }
+
+        self_t& methods(HTTPMethod method)
+        {
+            methods_ = 1<<(int)method;
+        }
+
+        template <typename ... MethodArgs>
+        self_t& methods(HTTPMethod method, MethodArgs ... args_method)
+        {
+            methods(args_method...);
+            methods_ |= 1<<(int)method;
         }
 
         void validate()
@@ -153,11 +150,11 @@ namespace flask
         operator()(Func&& f)
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
-            black_magic::CallHelper<Func, black_magic::S<flask::request, Args...>>::value
+            black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value
             , 
                 "Handler type is mismatched with URL paramters");
             static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value, 
-                "Handler function cannot have void return type; valid return types: string, int, flask::resposne, flask::json::wvalue");
+                "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
 
                 handler_ = [f = std::move(f)](Args ... args){
                     return response(f(args...));
@@ -170,13 +167,13 @@ namespace flask
         operator()(Func&& f)
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
-            black_magic::CallHelper<Func, black_magic::S<flask::request, Args...>>::value
+            black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value
             , 
                 "Handler type is mismatched with URL paramters");
-            static_assert(!std::is_same<void, decltype(f(std::declval<flask::request>(), std::declval<Args>()...))>::value, 
-                "Handler function cannot have void return type; valid return types: string, int, flask::resposne, flask::json::wvalue");
+            static_assert(!std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<Args>()...))>::value, 
+                "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
 
-                handler_with_req_ = [f = std::move(f)](const flask::request& request, Args ... args){
+                handler_with_req_ = [f = std::move(f)](const crow::request& request, Args ... args){
                     return response(f(request, args...));
                 };
                 handler_ = nullptr;
@@ -191,7 +188,6 @@ namespace flask
 
         response handle(const request& req, const routing_params& params)
         {
-            //return handler_();
             return 
                 call<
                     call_params<
@@ -206,12 +202,15 @@ namespace flask
                         decltype(handler_with_req_)>
                     {handler_, handler_with_req_, params, req}
                 );
-            //return response(500);
         }
 
     private:
         std::function<response(Args...)> handler_;
-        std::function<response(flask::request, Args...)> handler_with_req_;
+        std::function<response(crow::request, Args...)> handler_with_req_;
+
+        std::string rule_;
+        std::string name_;
+        uint32_t methods_{1<<(int)HTTPMethod::GET};
 
         template <typename T, int Pos>
         struct call_pair
@@ -585,7 +584,7 @@ public:
 
             if (rule_index >= rules_.size())
                 throw std::runtime_error("Trie internal structure corrupted!");
-#ifdef FLASK_ENABLE_LOGGING
+#ifdef CROW_ENABLE_LOGGING
             std::cerr << req.url << ' ' << rules_[rule_index]->rule_ << std::endl;
 #endif
             return rules_[rule_index]->handle(req, found.second);

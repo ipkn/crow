@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdexcept>
 
-namespace flask
+namespace crow
 {
 	namespace black_magic
 	{

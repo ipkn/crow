@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <thread>
 
-//#define FLASK_ENABLE_LOGGING
+//#define CROW_ENABLE_LOGGING
 
 #include "http_server.h"
 #include "utility.h"
@@ -16,14 +16,15 @@
 // TEST
 #include <iostream>
 
-#define FLASK_ROUTE(app, url) app.route<flask::black_magic::get_parameter_tag(url)>(url)
+#define CROW_ROUTE(app, url) app.route<crow::black_magic::get_parameter_tag(url)>(url)
 
-namespace flask
+namespace crow
 {
-    class Flask
+    class Crow
     {
     public:
-        Flask()
+        using self_t = Crow;
+        Crow()
         {
         }
 
@@ -39,18 +40,18 @@ namespace flask
             return router_.new_rule_tagged<Tag>(std::move(rule));
         }
 
-        Flask& port(std::uint16_t port)
+        self_t& port(std::uint16_t port)
         {
             port_ = port;
             return *this;
         }
 
-        Flask& multithreaded()
+        self_t& multithreaded()
         {
             return concurrency(std::thread::hardware_concurrency());
         }
 
-        Flask& concurrency(std::uint16_t concurrency)
+        self_t& concurrency(std::uint16_t concurrency)
         {
             if (concurrency < 1)
                 concurrency = 1;
@@ -66,7 +67,7 @@ namespace flask
         void run()
         {
             validate();
-            Server<Flask> server(this, port_, concurrency_);
+            Server<self_t> server(this, port_, concurrency_);
             server.run();
         }
         void debug_print()

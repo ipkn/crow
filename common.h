@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include "utility.h"
 
-namespace flask
+namespace crow
 {
     enum class HTTPMethod
     {
@@ -107,17 +107,17 @@ namespace flask
     }
 }
 
-constexpr flask::HTTPMethod operator "" _method(const char* str, size_t len)
+constexpr crow::HTTPMethod operator "" _method(const char* str, size_t len)
 {
     return
-        flask::black_magic::is_equ_p(str, "GET", 3) ? flask::HTTPMethod::GET :
-        flask::black_magic::is_equ_p(str, "DELETE", 6) ? flask::HTTPMethod::DELETE :
-        flask::black_magic::is_equ_p(str, "HEAD", 4) ? flask::HTTPMethod::HEAD :
-        flask::black_magic::is_equ_p(str, "POST", 4) ? flask::HTTPMethod::POST :
-        flask::black_magic::is_equ_p(str, "PUT", 3) ? flask::HTTPMethod::PUT :
-        flask::black_magic::is_equ_p(str, "OPTIONS", 7) ? flask::HTTPMethod::OPTIONS :
-        flask::black_magic::is_equ_p(str, "CONNECT", 7) ? flask::HTTPMethod::CONNECT :
-        flask::black_magic::is_equ_p(str, "TRACE", 5) ? flask::HTTPMethod::TRACE :
+        crow::black_magic::is_equ_p(str, "GET", 3) ? crow::HTTPMethod::GET :
+        crow::black_magic::is_equ_p(str, "DELETE", 6) ? crow::HTTPMethod::DELETE :
+        crow::black_magic::is_equ_p(str, "HEAD", 4) ? crow::HTTPMethod::HEAD :
+        crow::black_magic::is_equ_p(str, "POST", 4) ? crow::HTTPMethod::POST :
+        crow::black_magic::is_equ_p(str, "PUT", 3) ? crow::HTTPMethod::PUT :
+        crow::black_magic::is_equ_p(str, "OPTIONS", 7) ? crow::HTTPMethod::OPTIONS :
+        crow::black_magic::is_equ_p(str, "CONNECT", 7) ? crow::HTTPMethod::CONNECT :
+        crow::black_magic::is_equ_p(str, "TRACE", 5) ? crow::HTTPMethod::TRACE :
         throw std::runtime_error("invalid http method");
 };
 

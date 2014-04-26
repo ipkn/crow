@@ -1,6 +1,6 @@
 #pragma once
 
-//#define FLASKPP_JSON_NO_ERROR_CHECK
+//#define CROW_JSON_NO_ERROR_CHECK
 
 #include <string>
 #include <unordered_map>
@@ -12,20 +12,20 @@
 #include <boost/operators.hpp>
 
 #ifdef __GNUG__
-#define flask_json_likely(x) __builtin_expect(x, 1)
-#define flask_json_unlikely(x) __builtin_expect(x, 0)
+#define crow_json_likely(x) __builtin_expect(x, 1)
+#define crow_json_unlikely(x) __builtin_expect(x, 0)
 #else
 #ifdef __clang__
-#define flask_json_likely(x) __builtin_expect(x, 1)
-#define flask_json_unlikely(x) __builtin_expect(x, 0)
+#define crow_json_likely(x) __builtin_expect(x, 1)
+#define crow_json_unlikely(x) __builtin_expect(x, 0)
 #else
-#define flask_json_likely(x) x
-#define flask_json_unlikely(x) x
+#define crow_json_likely(x) x
+#define crow_json_unlikely(x) x
 #endif
 #endif
 
 
-namespace flask
+namespace crow
 {
     namespace json
     {
@@ -135,7 +135,7 @@ namespace flask
                     length_ = length;
                     owned_ = 1;
                 }
-                friend rvalue flask::json::load(const char* data, size_t size);
+                friend rvalue crow::json::load(const char* data, size_t size);
             };
 
             bool operator < (const r_string& l, const r_string& r)
@@ -240,7 +240,7 @@ namespace flask
 
             type t() const
             {
-#ifndef FLASKPP_JSON_NO_ERROR_CHECK
+#ifndef CROW_JSON_NO_ERROR_CHECK
                 if (option_ & error_bit)
                 {
                     throw std::runtime_error("invalid json object");
@@ -251,7 +251,7 @@ namespace flask
 
             int64_t i() const
             {
-#ifndef FLASKPP_JSON_NO_ERROR_CHECK
+#ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::Number)
                     throw std::runtime_error("value is not number");
 #endif
@@ -260,7 +260,7 @@ namespace flask
 
             double d() const
             {
-#ifndef FLASKPP_JSON_NO_ERROR_CHECK
+#ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::Number)
                     throw std::runtime_error("value is not number");
 #endif
@@ -269,7 +269,7 @@ namespace flask
 
             detail::r_string s() const
             {
-#ifndef FLASKPP_JSON_NO_ERROR_CHECK
+#ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::String)
                     throw std::runtime_error("value is not string");
 #endif
@@ -309,7 +309,7 @@ namespace flask
 
             rvalue* begin() const 
 			{ 
-#ifndef FLASKPP_JSON_NO_ERROR_CHECK
+#ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::Object && t() != type::List)
                     throw std::runtime_error("value is not a container");
 #endif
@@ -317,7 +317,7 @@ namespace flask
 			}
             rvalue* end() const 
 			{ 
-#ifndef FLASKPP_JSON_NO_ERROR_CHECK
+#ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::Object && t() != type::List)
                     throw std::runtime_error("value is not a container");
 #endif
@@ -331,7 +331,7 @@ namespace flask
 
             size_t size() const
             {
-#ifndef FLASKPP_JSON_NO_ERROR_CHECK
+#ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::Object && t() != type::List)
                     throw std::runtime_error("value is not a container");
 #endif
@@ -340,7 +340,7 @@ namespace flask
 
 			const rvalue& operator[](int index) const
 			{
-#ifndef FLASKPP_JSON_NO_ERROR_CHECK
+#ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::List)
                     throw std::runtime_error("value is not a list");
 				if (index >= (int)lsize_ || index < 0)
@@ -351,7 +351,7 @@ namespace flask
 
 			const rvalue& operator[](size_t index) const
 			{
-#ifndef FLASKPP_JSON_NO_ERROR_CHECK
+#ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::List)
                     throw std::runtime_error("value is not a list");
 				if (index >= lsize_)
@@ -367,7 +367,7 @@ namespace flask
 
             const rvalue& operator[](const std::string& str) const
             {
-#ifndef FLASKPP_JSON_NO_ERROR_CHECK
+#ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::Object)
                     throw std::runtime_error("value is not an object");
 #endif
@@ -394,7 +394,7 @@ namespace flask
                 auto it = lower_bound(begin(), end(), str, Pred());
                 if (it != end() && it->key_ == str)
                     return *it;
-#ifndef FLASKPP_JSON_NO_ERROR_CHECK
+#ifndef CROW_JSON_NO_ERROR_CHECK
                 throw std::runtime_error("cannot find key");
 #else
                 static rvalue nullValue;
@@ -563,7 +563,7 @@ namespace flask
 
             	bool consume(char c)
                 {
-                    if (flask_json_unlikely(*data != c))
+                    if (crow_json_unlikely(*data != c))
                         return false;
                     data++;
                     return true;
@@ -576,13 +576,13 @@ namespace flask
 
             	rvalue decode_string()
                 {
-                    if (flask_json_unlikely(!consume('"')))
+                    if (crow_json_unlikely(!consume('"')))
                         return {};
                     const char* start = data;
                     uint8_t has_escaping = 0;
                     while(1)
                     {
-                        if (flask_json_likely(*data != '"' && *data != '\\' && *data != '\0'))
+                        if (crow_json_likely(*data != '"' && *data != '\\' && *data != '\0'))
                         {
                             data ++;
                         }
@@ -625,13 +625,13 @@ namespace flask
             	rvalue decode_list()
                 {
 					rvalue ret(type::List);
-					if (flask_json_unlikely(!consume('[')))
+					if (crow_json_unlikely(!consume('[')))
                     {
                         ret.set_error();
 						return ret;
                     }
 					ws_skip();
-					if (flask_json_unlikely(*data == ']'))
+					if (crow_json_unlikely(*data == ']'))
 					{
 						data++;
 						return ret;
@@ -640,7 +640,7 @@ namespace flask
 					while(1)
 					{
                         auto v = decode_value();
-						if (flask_json_unlikely(!v))
+						if (crow_json_unlikely(!v))
                         {
                             ret.set_error();
                             break;
@@ -652,7 +652,7 @@ namespace flask
                             data++;
                             break;
                         }
-                        if (flask_json_unlikely(!consume(',')))
+                        if (crow_json_unlikely(!consume(',')))
                         {
                             ret.set_error();
                             break;
@@ -677,7 +677,7 @@ namespace flask
                         DigitsAfterE,
                         Invalid,
                     } state{Minus};
-                    while(flask_json_likely(state != Invalid))
+                    while(crow_json_likely(state != Invalid))
                     {
                         switch(*data)
                         {
@@ -766,7 +766,7 @@ namespace flask
                                     return {};*/
                                 break;
                             default:
-                                if (flask_json_likely(state == NumberParsingState::ZeroFirst || 
+                                if (crow_json_likely(state == NumberParsingState::ZeroFirst || 
                                         state == NumberParsingState::Digits || 
                                         state == NumberParsingState::DigitsAfterPoints || 
                                         state == NumberParsingState::DigitsAfterE))
@@ -837,7 +837,7 @@ namespace flask
 				rvalue decode_object()
                 {
                     rvalue ret(type::Object);
-                    if (flask_json_unlikely(!consume('{')))
+                    if (crow_json_unlikely(!consume('{')))
                     {
                         ret.set_error();
                         return ret;
@@ -845,7 +845,7 @@ namespace flask
 
 					ws_skip();
 
-                    if (flask_json_unlikely(*data == '}'))
+                    if (crow_json_unlikely(*data == '}'))
                     {
                         data++;
                         return ret;
@@ -854,14 +854,14 @@ namespace flask
                     while(1)
                     {
                         auto t = decode_string();
-                        if (flask_json_unlikely(!t))
+                        if (crow_json_unlikely(!t))
                         {
                             ret.set_error();
                             break;
                         }
 
 						ws_skip();
-                        if (flask_json_unlikely(!consume(':')))
+                        if (crow_json_unlikely(!consume(':')))
                         {
                             ret.set_error();
                             break;
@@ -872,7 +872,7 @@ namespace flask
 
 						ws_skip();
                         auto v = decode_value();
-                        if (flask_json_unlikely(!v))
+                        if (crow_json_unlikely(!v))
                         {
                             ret.set_error();
                             break;
@@ -881,12 +881,12 @@ namespace flask
 
                         v.key_ = std::move(key);
                         ret.emplace_back(std::move(v));
-                        if (flask_json_unlikely(*data == '}'))
+                        if (crow_json_unlikely(*data == '}'))
                         {
                             data++;
                             break;
                         }
-                        if (flask_json_unlikely(!consume(',')))
+                        if (crow_json_unlikely(!consume(',')))
                         {
                             ret.set_error();
                             break;
@@ -1225,5 +1225,5 @@ namespace flask
     }
 }
 
-#undef flask_json_likely
-#undef flask_json_unlikely
+#undef crow_json_likely
+#undef crow_json_unlikely
