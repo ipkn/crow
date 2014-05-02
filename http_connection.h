@@ -153,12 +153,12 @@ namespace crow
         static std::string get_cached_date_str()
         {
             using namespace std::chrono;
-            thread_local auto last = system_clock::now();
+            thread_local auto last = steady_clock::now();
             thread_local std::string date_str = DateTime().str();
 
-            if (system_clock::now() - last >= seconds(1))
+            if (steady_clock::now() - last >= seconds(1))
             {
-                last = system_clock::now();
+                last = steady_clock::now();
                 date_str = DateTime().str();
             }
             return date_str;
