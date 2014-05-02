@@ -69,8 +69,7 @@ namespace crow
         boost::asio::signal_set signals_;
 
         Handler* handler_;
-
-        uint16_t concurrency_ = {1};
+        uint16_t concurrency_{1};
         std::string server_name_ = "Crow/0.1";
         uint16_t port_;
     };

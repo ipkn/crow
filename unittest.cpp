@@ -280,7 +280,6 @@ TEST(multi_server)
         for(auto ch:sendmsg)
         {
             char buf[1] = {ch};
-            std::cerr << ch << '(' << (int)ch<<')'<<std::endl;
             c.send(asio::buffer(buf));
         }
 

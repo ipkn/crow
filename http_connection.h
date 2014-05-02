@@ -58,6 +58,8 @@ namespace crow
                 {503, "HTTP/1.1 503 Service Unavailable\r\n"},
             };
 
+            bool is_invalid_request = false;
+
             request req = parser_.to_request();
             if (parser_.http_major == 1 && parser_.http_minor == 0)
             {
@@ -65,14 +67,22 @@ namespace crow
                 if (!(req.headers.count("connection") && boost::iequals(req.headers["connection"],"Keep-Alive")))
                     close_connection_ = true;
             }
-            else
+            else if (parser_.http_major == 1 && parser_.http_minor == 1)
             {
                 // HTTP/1.1
                 if (req.headers.count("connection") && req.headers["connection"] == "close")
                     close_connection_ = true;
+                if (!req.headers.count("host"))
+                {
+                    is_invalid_request = true;
+                    res = response(400);
+                }
             }
 
-            res = handler_->handle(req);
+            if (!is_invalid_request)
+            {
+                res = handler_->handle(req);
+            }
 
             CROW_LOG_INFO << "HTTP/" << parser_.http_major << "." << parser_.http_minor << ' '
              << method_name(req.method) << " " << req.url
