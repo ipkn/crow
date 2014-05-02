@@ -34,6 +34,18 @@ namespace crow
             do_read();
         }
 
+        void handle_header()
+        {
+            // HTTP 1.1 Expect: 100-continue
+            if (parser_.check_version(1, 1) && parser_.headers.count("expect") && parser_.headers["expect"] == "100-continue")
+            {
+                buffers_.clear();
+                static std::string expect_100_continue = "HTTP/1.1 100 Continue\r\n\r\n";
+                buffers_.emplace_back(expect_100_continue.data(), expect_100_continue.size());
+                do_write();
+            }
+        }
+
         void handle()
         {
             static std::unordered_map<int, std::string> statusCodes = {
@@ -61,13 +73,13 @@ namespace crow
             bool is_invalid_request = false;
 
             request req = parser_.to_request();
-            if (parser_.http_major == 1 && parser_.http_minor == 0)
+            if (parser_.check_version(1, 0))
             {
                 // HTTP/1.0
                 if (!(req.headers.count("connection") && boost::iequals(req.headers["connection"],"Keep-Alive")))
                     close_connection_ = true;
             }
-            else if (parser_.http_major == 1 && parser_.http_minor == 1)
+            else if (parser_.check_version(1, 1))
             {
                 // HTTP/1.1
                 if (req.headers.count("connection") && req.headers["connection"] == "close")

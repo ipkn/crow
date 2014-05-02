@@ -241,7 +241,7 @@ TEST(server_handling_error_request)
         }
         catch(std::exception& e)
         {
-            std::cerr << e.what() << std::endl;
+            //std::cerr << e.what() << std::endl;
         }
     }
     server.stop();

@@ -66,6 +66,7 @@ namespace crow
                 boost::algorithm::to_lower(self->header_field);
                 self->headers.emplace(std::move(self->header_field), std::move(self->header_value));
             }
+            self->process_header();
             return 0;
         }
         static int on_body(http_parser* self_, const char* at, size_t length)
@@ -118,14 +119,24 @@ namespace crow
             body.clear();
         }
 
+        void process_header()
+        {
+            handler_->handle_header();
+        }
+
         void process_message()
         {
             handler_->handle();
         }
 
-        request to_request()
+        request to_request() const
         {
             return request{(HTTPMethod)method, std::move(url), std::move(headers), std::move(body)};
+        }
+
+        bool check_version(int major, int minor) const
+        {
+            return http_major == major && http_minor == minor;
         }
 
         std::string url;
