@@ -27,7 +27,6 @@ namespace crow
 
     protected:
 
-        friend class Router;
     };
 
     template <typename ... Args>
@@ -219,6 +218,7 @@ namespace crow
             static const int pos = Pos;
         };
 
+        friend class Router;
     };
 
     class Trie
@@ -323,7 +323,7 @@ public:
                 if (ret.first && (!found || found > ret.first))
                 {
                     found = ret.first;
-                    match_params = ret.second;
+                    match_params = std::move(ret.second);
                 }
             };
 
@@ -585,7 +585,7 @@ public:
             if (rule_index >= rules_.size())
                 throw std::runtime_error("Trie internal structure corrupted!");
 #ifdef CROW_ENABLE_LOGGING
-            std::cerr << req.url << ' ' << rules_[rule_index]->rule_ << std::endl;
+            std::cerr << req.url << ' ' << ((TaggedRule<>*)rules_[rule_index].get())->rule_ << std::endl;
 #endif
             return rules_[rule_index]->handle(req, found.second);
         }

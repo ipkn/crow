@@ -23,12 +23,12 @@ namespace crow
             // return datetime string
             std::string str()
             {
+                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
                 std::string result;
-                boost::local_time::local_time_facet* lf(new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT"));
                 try
                 {
                     std::stringstream ss;
-                    ss.imbue(std::locale(ss.getloc(), lf));
+                    ss.imbue(locale_);
                     ss << m_dt;
                     result = ss.str();
                 }
@@ -59,9 +59,9 @@ namespace crow
             // parse datetime string
             void parse(const std::string& dt)
             {
-                boost::local_time::local_time_input_facet* lif(new boost::local_time::local_time_input_facet("%a, %d %b %Y %H:%M:%S GMT"));
+                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
                 std::stringstream ss(dt);
-                ss.imbue(std::locale(std::locale::classic(), lif));
+                ss.imbue(locale_);
                 ss >> m_dt;
             }
 

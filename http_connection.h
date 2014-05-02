@@ -1,15 +1,16 @@
 #pragma once
 #include <boost/asio.hpp>
 #include <http_parser.h>
-#include <atomic>
 #include <boost/asio.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/array.hpp>
 #include <boost/lexical_cast.hpp>
+#include <atomic>
+#include <chrono>
 
+#include "datetime.h"
 #include "parser.h"
 #include "http_response.h"
-#include "datetime.h"
 
 namespace crow
 {
@@ -19,7 +20,11 @@ namespace crow
     class Connection
     {
     public:
-        Connection(tcp::socket&& socket, Handler* handler, const std::string& server_name) : socket_(std::move(socket)), handler_(handler), parser_(this), server_name_(server_name)
+        Connection(tcp::socket&& socket, Handler* handler, const std::string& server_name) 
+            : socket_(std::move(socket)), 
+            handler_(handler), 
+            parser_(this), 
+            server_name_(server_name) 
         {
         }
 
@@ -71,7 +76,7 @@ namespace crow
 #ifdef CROW_ENABLE_LOGGING
             std::cerr << "HTTP/" << parser_.http_major << "." << parser_.http_minor << ' ';
             std::cerr << method_name(req.method);
-            std::cerr << " " << res.code << std::endl;
+            std::cerr << " " << res.code << ' ' <<close_connection_<<std::endl;
 #endif
 
             static std::string seperator = ": ";
@@ -116,27 +121,25 @@ namespace crow
 
             if (!has_content_length)
             {
-                auto ret = res.headers.emplace("Content-Length", boost::lexical_cast<std::string>(res.body.size()));
-                buffers_.emplace_back(ret.first->first.data(), ret.first->first.size());
-                buffers_.emplace_back(seperator.data(), seperator.size());
-                buffers_.emplace_back(ret.first->second.data(), ret.first->second.size());
+                content_length_ = boost::lexical_cast<std::string>(res.body.size());
+                static std::string content_length_tag = "Content-Length: ";
+                buffers_.emplace_back(content_length_tag.data(), content_length_tag.size());
+                buffers_.emplace_back(content_length_.data(), content_length_.size());
                 buffers_.emplace_back(crlf.data(), crlf.size());
             }
             if (!has_server)
             {
-                auto ret = res.headers.emplace("Server", server_name_);
-                buffers_.emplace_back(ret.first->first.data(), ret.first->first.size());
-                buffers_.emplace_back(seperator.data(), seperator.size());
-                buffers_.emplace_back(ret.first->second.data(), ret.first->second.size());
+                static std::string server_tag = "Server: ";
+                buffers_.emplace_back(server_tag.data(), server_tag.size());
+                buffers_.emplace_back(server_name_.data(), server_name_.size());
                 buffers_.emplace_back(crlf.data(), crlf.size());
             }
             if (!has_date)
             {
-                std::string date_str = DateTime().str();
-                auto ret = res.headers.emplace("Date", date_str);
-                buffers_.emplace_back(ret.first->first.data(), ret.first->first.size());
-                buffers_.emplace_back(seperator.data(), seperator.size());
-                buffers_.emplace_back(ret.first->second.data(), ret.first->second.size());
+                static std::string date_tag = "Date: ";
+                date_str_ = get_cached_date_str();
+                buffers_.emplace_back(date_tag.data(), date_tag.size());
+                buffers_.emplace_back(date_str_.data(), date_str_.size());
                 buffers_.emplace_back(crlf.data(), crlf.size());
             }
 
@@ -147,28 +150,38 @@ namespace crow
         }
 
     private:
+        static std::string get_cached_date_str()
+        {
+            using namespace std::chrono;
+            thread_local auto last = system_clock::now();
+            thread_local std::string date_str = DateTime().str();
+
+            if (system_clock::now() - last >= seconds(1))
+            {
+                last = system_clock::now();
+                date_str = DateTime().str();
+            }
+            return date_str;
+        }
+
         void do_read()
         {
             life_++;
             socket_.async_read_some(boost::asio::buffer(buffer_), 
                 [this](boost::system::error_code ec, std::size_t bytes_transferred)
                 {
+                    bool do_complete_task = false;
                     if (!ec)
                     {
                         bool ret = parser_.feed(buffer_.data(), bytes_transferred);
                         if (ret)
                             do_read();
                         else
-                        {
-                            socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-                            socket_.close();
-
-                            life_--;
-                            if ((int)life_ == 0)
-                                delete this;
-                        }
+                            do_complete_task = true;
                     }
                     else
+                        do_complete_task = true;
+                    if (do_complete_task)
                     {
                         parser_.done();
                         socket_.close();
@@ -217,10 +230,13 @@ namespace crow
         HTTPParser<Connection> parser_;
         response res;
 
-        std::atomic<int> life_;
+        int life_;
         bool close_connection_ = false;
 
         const std::string& server_name_;
         std::vector<boost::asio::const_buffer> buffers_;
+
+        std::string content_length_;
+        std::string date_str_;
     };
 }
