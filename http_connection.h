@@ -75,7 +75,7 @@ namespace crow
             res = handler_->handle(req);
 
             CROW_LOG_INFO << "HTTP/" << parser_.http_major << "." << parser_.http_minor << ' '
-             << method_name(req.method)
+             << method_name(req.method) << " " << req.url
              << " " << res.code << ' ' << close_connection_;
 
             static std::string seperator = ": ";

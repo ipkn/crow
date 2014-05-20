@@ -31,12 +31,16 @@ class logger {
 		};
 
 		//
+		static Level currentLevel;
+
 		logger(string prefix, logger::Level level) : m_prefix(prefix), m_level(level) {
 
 		}
 		~logger() {
 #ifdef CROW_ENABLE_LOGGING
-			cerr << "(" << timeStamp() << ") [" << m_prefix << "] " << m_stringStream.str() << endl;
+			if(m_level <= currentLevel) {
+				cerr << "(" << timeStamp() << ") [" << m_prefix << "] " << m_stringStream.str() << endl;
+			}
 #endif
 		}
 
@@ -45,18 +49,28 @@ class logger {
 		logger& operator<<(T const &value) {
 
 #ifdef CROW_ENABLE_LOGGING
-    		m_stringStream << value;
+			if(m_level <= currentLevel) {
+    			m_stringStream << value;
+    		}
 #endif
     		return *this;
 		}
 
-		private:
+		//
+		static void setLogLevel(logger::Level level) {
+			currentLevel = level;
+		}
+
+	private:
 
 		//
 		ostringstream m_stringStream;
 		string m_prefix;
 		Level m_level;
 };
+
+//
+logger::Level logger::currentLevel = (Level)CROW_LOG_LEVEL;
 
 #define CROW_LOG_CRITICAL	logger("CRITICAL", logger::Level::CRITICAL)
 #define CROW_LOG_ERROR		logger("ERROR   ", logger::Level::ERROR)

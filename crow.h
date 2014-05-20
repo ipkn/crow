@@ -69,9 +69,10 @@ namespace crow
             Server<self_t> server(this, port_, concurrency_);
             server.run();
         }
+
         void debug_print()
         {
-            std::cerr << "Routing:" << std::endl;
+            CROW_LOG_DEBUG << "Routing:";
             router_.debug_print();
         }
 

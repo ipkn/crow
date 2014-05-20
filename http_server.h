@@ -35,7 +35,7 @@ namespace crow
                         std::async(std::launch::async, [this]{io_service_.run();})
                         );
 
-            CROW_LOG_INFO << "Server is running, local port " << port_;
+            CROW_LOG_INFO << server_name_ << " server is running, local port " << port_;
 
             signals_.async_wait(
                 [&](const boost::system::error_code& error, int signal_number){
