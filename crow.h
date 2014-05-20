@@ -7,8 +7,7 @@
 #include <type_traits>
 #include <thread>
 
-//#define CROW_ENABLE_LOGGING
-
+#include "settings.h"
 #include "http_server.h"
 #include "utility.h"
 #include "routing.h"

@@ -584,9 +584,9 @@ public:
 
             if (rule_index >= rules_.size())
                 throw std::runtime_error("Trie internal structure corrupted!");
-#ifdef CROW_ENABLE_LOGGING
-            std::cerr << req.url << ' ' << ((TaggedRule<>*)rules_[rule_index].get())->rule_ << std::endl;
-#endif
+
+            CROW_LOG_INFO << req.url << ' ' << ((TaggedRule<>*)rules_[rule_index].get())->rule_;
+
             return rules_[rule_index]->handle(req, found.second);
         }
 

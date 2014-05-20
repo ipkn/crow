@@ -11,6 +11,7 @@
 #include "datetime.h"
 #include "parser.h"
 #include "http_response.h"
+#include "logging.h"
 
 namespace crow
 {
@@ -73,11 +74,9 @@ namespace crow
 
             res = handler_->handle(req);
 
-#ifdef CROW_ENABLE_LOGGING
-            std::cerr << "HTTP/" << parser_.http_major << "." << parser_.http_minor << ' ';
-            std::cerr << method_name(req.method);
-            std::cerr << " " << res.code << ' ' <<close_connection_<<std::endl;
-#endif
+            CROW_LOG_INFO << "HTTP/" << parser_.http_major << "." << parser_.http_minor << ' '
+             << method_name(req.method)
+             << " " << res.code << ' ' << close_connection_;
 
             static std::string seperator = ": ";
             static std::string crlf = "\r\n";
