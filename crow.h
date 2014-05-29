@@ -12,6 +12,7 @@
 #include "http_server.h"
 #include "utility.h"
 #include "routing.h"
+#include "middleware.h"
 
 // TEST
 #include <iostream>
@@ -30,7 +31,15 @@ namespace crow
 
         response handle(const request& req)
         {
-            return router_.handle(req);
+            if(middleware::count() != 0) {
+
+                Router* router = &router_;
+                return middleware::processHandlers(req, [router](const request& req){
+                    return router->handle(req);                    
+                });
+            } else {
+                return router_.handle(req);
+            }
         }
 
         template <uint64_t Tag>

@@ -10,6 +10,20 @@ class ExampleLogHandler : public crow::ILogHandler {
         }
 };
 
+class ExampleMiddlewareHandler : public crow::IMiddlewareHandler {
+    public:
+        crow::response handle(const crow::request& req, crow::middleware::context *c) override {
+            CROW_LOG_DEBUG << "MIDDLEWARE PRE";
+            auto result = c->next();
+            CROW_LOG_DEBUG << "MIDDLEWARE POST";
+
+            crow::json::wvalue x;
+            x["message"] = result.body;
+
+            return x;
+        }
+};
+
 int main()
 {
     crow::Crow app;
@@ -59,6 +73,8 @@ int main()
         os << sum;
         return crow::response{os.str()};
     });
+
+    crow::middleware::use(std::make_shared<ExampleMiddlewareHandler>());
 
     //crow::logger::setLogLevel(LogLevel::INFO);
     //crow::logger::setHandler(std::make_shared<ExampleLogHandler>());
