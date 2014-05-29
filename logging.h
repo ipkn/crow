@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <iostream>
+#include <sstream>
 
 using namespace std;
 
@@ -97,11 +99,11 @@ namespace crow
 
 }
 
-#define CROW_LOG_CRITICAL	logger("CRITICAL", crow::LogLevel::CRITICAL)
-#define CROW_LOG_ERROR		logger("ERROR   ", crow::LogLevel::ERROR)
-#define CROW_LOG_WARNING	logger("WARNING ", crow::LogLevel::WARNING)
-#define CROW_LOG_INFO		logger("INFO    ", crow::LogLevel::INFO)
-#define CROW_LOG_DEBUG		logger("DEBUG   ", crow::LogLevel::DEBUG)
+#define CROW_LOG_CRITICAL	crow::logger("CRITICAL", crow::LogLevel::CRITICAL)
+#define CROW_LOG_ERROR		crow::logger("ERROR   ", crow::LogLevel::ERROR)
+#define CROW_LOG_WARNING	crow::logger("WARNING ", crow::LogLevel::WARNING)
+#define CROW_LOG_INFO		crow::logger("INFO    ", crow::LogLevel::INFO)
+#define CROW_LOG_DEBUG		crow::logger("DEBUG   ", crow::LogLevel::DEBUG)
 
 
 

@@ -8,6 +8,7 @@
 #include <thread>
 
 #include "settings.h"
+#include "logging.h" 
 #include "http_server.h"
 #include "utility.h"
 #include "routing.h"
