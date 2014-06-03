@@ -6,24 +6,24 @@ namespace crow
 
 class IMiddlewareHandler;
 
-class middleware {
+class Middleware {
 
 public:
 	//
 	typedef std::function<response(const request&)> RoutedResponseCallback;
 
 	//
-	class context {
-		friend class middleware;
+	class Context {
+		friend class Middleware;
 	public:
-		typedef std::function<response(const request&, context&)>  NextCallback;
+		typedef std::function<response(const request&, Context&)>  NextCallback;
 	private:
 		//
 		RoutedResponseCallback m_routedResponse;
 		NextCallback m_next;
 		const request& m_req;
 		//
-		context(RoutedResponseCallback fetchRoutedResponse, NextCallback nextCallback, const request& req);
+		Context(RoutedResponseCallback fetchRoutedResponse, NextCallback nextCallback, const request& req);
 		response callRoutedResponse();
 
 	public:
@@ -35,31 +35,28 @@ public:
 private:
 	//
 	typedef std::vector<std::shared_ptr<IMiddlewareHandler>> HandlersList;
-	static HandlersList handlers;
-	static HandlersList::iterator handlersIter;
+	HandlersList handlers;
+	HandlersList::iterator handlersIter;
 
 	//
-	static response goToNextHandler(const request& req, context& c);
+	response goToNextHandler(const request& req, Context& c);
 
 public:
 	//
-	static void use(std::shared_ptr<IMiddlewareHandler> middlewareObj);
-	static int count();
-	static response processHandlers(const request& req, RoutedResponseCallback fetchRoutedResponse);
+	void use(std::shared_ptr<IMiddlewareHandler> middlewareObj);
+	int count();
+	response processHandlers(const request& req, RoutedResponseCallback fetchRoutedResponse);
 
 };
 
 class IMiddlewareHandler {
 	public:
-		virtual response handle(const request& req, middleware::context* c) = 0;
+		virtual response handle(const request& req, Middleware::Context* c) = 0;
 };
-
-middleware::HandlersList middleware::handlers;
-middleware::HandlersList::iterator middleware::handlersIter;
 
 /////////////
 
-middleware::context::context(middleware::RoutedResponseCallback fetchRoutedResponse, NextCallback nextCallback, const request& req)
+Middleware::Context::Context(Middleware::RoutedResponseCallback fetchRoutedResponse, NextCallback nextCallback, const request& req)
 : m_routedResponse(fetchRoutedResponse)
 , m_next(nextCallback)
 , m_req(req)
@@ -67,27 +64,27 @@ middleware::context::context(middleware::RoutedResponseCallback fetchRoutedRespo
 	
 }
 
-response middleware::context::next()
+response Middleware::Context::next()
 {
 	return m_next(m_req, *this);
 }
 
-response middleware::context::callRoutedResponse()
+response Middleware::Context::callRoutedResponse()
 {
 	return m_routedResponse(m_req);
 }
 
 ////////
 
-void middleware::use(std::shared_ptr<IMiddlewareHandler> middlewareObj){
+void Middleware::use(std::shared_ptr<IMiddlewareHandler> middlewareObj){
 	handlers.push_back(middlewareObj);
 }
 
-int middleware::count() {
+int Middleware::count() {
 	return (int)handlers.size(); 
 }
 
-response middleware::goToNextHandler(const request& req, middleware::context& c) {
+response Middleware::goToNextHandler(const request& req, Middleware::Context& c) {
 	if(handlersIter != handlers.end()){
 		auto iter = handlersIter;
 		handlersIter++;
@@ -97,10 +94,23 @@ response middleware::goToNextHandler(const request& req, middleware::context& c)
 	return c.callRoutedResponse();
 }
 
-response middleware::processHandlers(const request& req, middleware::RoutedResponseCallback fetchRoutedResponse) {
+response Middleware::processHandlers(const request& req, Middleware::RoutedResponseCallback fetchRoutedResponse) {
 	handlersIter = handlers.begin();
-	context c(fetchRoutedResponse, goToNextHandler, req);
+	Context c(fetchRoutedResponse, std::bind(std::mem_fn(&Middleware::goToNextHandler), this,  placeholders::_1,  placeholders::_2), req);
 	return goToNextHandler(req, c);
 }
+
+class LambdaMiddlewareHandler : public IMiddlewareHandler {
+	public:
+		typedef std::function<response(const request&, Middleware::Context*)> LambbdaMiddlewareFunc;
+	private:
+		LambbdaMiddlewareFunc m_func;
+	public:
+		LambdaMiddlewareHandler(LambbdaMiddlewareFunc func) : m_func(func) {}
+		response handle(const request& req, Middleware::Context* c) {
+			return m_func(req, c);
+		}
+};
+
 
 }
