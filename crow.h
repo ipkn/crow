@@ -19,6 +19,7 @@
 
 #define CROW_ROUTE(app, url) app.route<crow::black_magic::get_parameter_tag(url)>(url)
 #define CROW_MIDDLEWARE(app, lambda) app.useMiddleware(std::make_shared<crow::LambdaMiddlewareHandler>(lambda))
+#define CROW_MIDDLEWARE_USE(app, ptr) app.useMiddleware(ptr)
 
 namespace crow
 {
