@@ -6,9 +6,7 @@
 
 #include "http_connection.h"
 #include "datetime.h"
-
-// TEST
-#include <iostream>
+#include "logging.h"
 
 namespace crow
 {
@@ -23,7 +21,8 @@ namespace crow
             socket_(io_service_), 
             signals_(io_service_, SIGINT, SIGTERM),
             handler_(handler), 
-            concurrency_(concurrency)
+            concurrency_(concurrency),
+            port_(port)
         {
             do_accept();
         }
@@ -35,6 +34,8 @@ namespace crow
                 v.push_back(
                         std::async(std::launch::async, [this]{io_service_.run();})
                         );
+
+            CROW_LOG_INFO << server_name_ << " server is running, local port " << port_;
 
             signals_.async_wait(
                 [&](const boost::system::error_code& error, int signal_number){
@@ -70,5 +71,6 @@ namespace crow
 
         uint16_t concurrency_ = {1};
         std::string server_name_ = "Crow/0.1";
+        uint16_t port_;
     };
 }

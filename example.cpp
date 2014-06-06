@@ -3,6 +3,13 @@
 
 #include <sstream>
 
+class ExampleLogHandler : public crow::ILogHandler {
+    public:
+        void log(string message, crow::LogLevel level) override {
+            cerr << "ExampleLogHandler -> " << message;
+        }
+};
+
 int main()
 {
     crow::Crow app;
@@ -52,6 +59,9 @@ int main()
         os << sum;
         return crow::response{os.str()};
     });
+
+    //crow::logger::setLogLevel(LogLevel::INFO);
+    //crow::logger::setHandler(std::make_shared<ExampleLogHandler>());
 
     app.port(18080)
         .multithreaded()

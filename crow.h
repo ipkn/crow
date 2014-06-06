@@ -7,8 +7,8 @@
 #include <type_traits>
 #include <thread>
 
-//#define CROW_ENABLE_LOGGING
-
+#include "settings.h"
+#include "logging.h" 
 #include "http_server.h"
 #include "utility.h"
 #include "routing.h"
@@ -70,9 +70,10 @@ namespace crow
             Server<self_t> server(this, port_, concurrency_);
             server.run();
         }
+
         void debug_print()
         {
-            std::cerr << "Routing:" << std::endl;
+            CROW_LOG_DEBUG << "Routing:";
             router_.debug_print();
         }
 

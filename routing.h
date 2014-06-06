@@ -490,35 +490,35 @@ public:
             {
                 if (n->param_childrens[i])
                 {
-                    std::cerr << std::string(2*level, ' ') /*<< "("<<n->param_childrens[i]<<") "*/;
+                    CROW_LOG_DEBUG << std::string(2*level, ' ') /*<< "("<<n->param_childrens[i]<<") "*/;
                     switch((ParamType)i)
                     {
                         case ParamType::INT:
-                            std::cerr << "<int>";
+                            CROW_LOG_DEBUG << "<int>";
                             break;
                         case ParamType::UINT:
-                            std::cerr << "<uint>";
+                            CROW_LOG_DEBUG << "<uint>";
                             break;
                         case ParamType::DOUBLE:
-                            std::cerr << "<float>";
+                            CROW_LOG_DEBUG << "<float>";
                             break;
                         case ParamType::STRING:
-                            std::cerr << "<str>";
+                            CROW_LOG_DEBUG << "<str>";
                             break;
                         case ParamType::PATH:
-                            std::cerr << "<path>";
+                            CROW_LOG_DEBUG << "<path>";
                             break;
                         default:
-                            std::cerr << "<ERROR>";
+                            CROW_LOG_DEBUG << "<ERROR>";
                             break;
                     }
-                    std::cerr << std::endl;
+
                     debug_node_print(&nodes_[n->param_childrens[i]], level+1);
                 }
             }
             for(auto& kv : n->children)
             {
-                std::cerr << std::string(2*level, ' ') /*<< "(" << kv.second << ") "*/ << kv.first << std::endl;
+                CROW_LOG_DEBUG << std::string(2*level, ' ') /*<< "(" << kv.second << ") "*/ << kv.first;
                 debug_node_print(&nodes_[kv.second], level+1);
             }
         }
@@ -584,9 +584,9 @@ public:
 
             if (rule_index >= rules_.size())
                 throw std::runtime_error("Trie internal structure corrupted!");
-#ifdef CROW_ENABLE_LOGGING
-            std::cerr << req.url << ' ' << ((TaggedRule<>*)rules_[rule_index].get())->rule_ << std::endl;
-#endif
+
+            CROW_LOG_DEBUG << "Matched rule '" << ((TaggedRule<>*)rules_[rule_index].get())->rule_ << "'";
+
             return rules_[rule_index]->handle(req, found.second);
         }
 
