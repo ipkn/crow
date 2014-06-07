@@ -8,6 +8,11 @@ class IMiddlewareHandler;
 
 class Middleware {
 
+private:
+	//
+	typedef std::vector<std::shared_ptr<IMiddlewareHandler>> HandlersList;
+	HandlersList handlers;
+
 public:
 	//
 	typedef std::function<response(const request&)> RoutedResponseCallback;
@@ -22,8 +27,9 @@ public:
 		RoutedResponseCallback m_routedResponse;
 		NextCallback m_next;
 		const request& m_req;
+		HandlersList::iterator m_handlersIter;
 		//
-		Context(RoutedResponseCallback fetchRoutedResponse, NextCallback nextCallback, const request& req);
+		Context(RoutedResponseCallback fetchRoutedResponse, NextCallback nextCallback, const request& req, HandlersList::iterator iter);
 		response callRoutedResponse();
 
 	public:
@@ -33,11 +39,6 @@ public:
 
 
 private:
-	//
-	typedef std::vector<std::shared_ptr<IMiddlewareHandler>> HandlersList;
-	HandlersList handlers;
-	HandlersList::iterator handlersIter;
-
 	//
 	response goToNextHandler(const request& req, Context& c);
 
@@ -56,10 +57,11 @@ class IMiddlewareHandler {
 
 /////////////
 
-Middleware::Context::Context(Middleware::RoutedResponseCallback fetchRoutedResponse, NextCallback nextCallback, const request& req)
+Middleware::Context::Context(Middleware::RoutedResponseCallback fetchRoutedResponse, NextCallback nextCallback, const request& req, HandlersList::iterator iter)
 : m_routedResponse(fetchRoutedResponse)
 , m_next(nextCallback)
 , m_req(req)
+, m_handlersIter(iter)
 {
 	
 }
@@ -85,9 +87,9 @@ int Middleware::count() {
 }
 
 response Middleware::goToNextHandler(const request& req, Middleware::Context& c) {
-	if(handlersIter != handlers.end()){
-		auto iter = handlersIter;
-		handlersIter++;
+	if(c.m_handlersIter != handlers.end()){
+		auto iter = c.m_handlersIter;
+		c.m_handlersIter++;
 		return (*iter)->handle(req, &c);
 	}
 
@@ -95,8 +97,7 @@ response Middleware::goToNextHandler(const request& req, Middleware::Context& c)
 }
 
 response Middleware::processHandlers(const request& req, Middleware::RoutedResponseCallback fetchRoutedResponse) {
-	handlersIter = handlers.begin();
-	Context c(fetchRoutedResponse, std::bind(std::mem_fn(&Middleware::goToNextHandler), this,  placeholders::_1,  placeholders::_2), req);
+	Context c(fetchRoutedResponse, std::bind(std::mem_fn(&Middleware::goToNextHandler), this,  placeholders::_1,  placeholders::_2), req, handlers.begin());
 	return goToNextHandler(req, c);
 }
 
