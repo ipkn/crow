@@ -72,5 +72,5 @@ int main()
 ## How to Build
 
 ### Ubuntu
-    sudo apt-get install libtcmalloc-minimal4 && sudo ln -s /usr/lib/libtcmalloc_minimal.so.4 /usr/lib/libtcmalloc_minimal.so
+    sudo apt-get install build-essential libtcmalloc-minimal4 && sudo ln -s /usr/lib/libtcmalloc_minimal.so.4 /usr/lib/libtcmalloc_minimal.so
     make -j$(($(grep -c '^processor' /proc/cpuinfo)+1))
