@@ -11,6 +11,7 @@
 #include "http_response.h"
 #include "http_request.h"
 #include "utility.h"
+#include "logging.h"
 
 namespace crow
 {
