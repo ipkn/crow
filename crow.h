@@ -1,9 +1,10 @@
 #pragma once
+
 #include <string>
 #include <functional>
 #include <memory>
 #include <future>
-#include <stdint.h>
+#include <cstdint>
 #include <type_traits>
 #include <thread>
 
