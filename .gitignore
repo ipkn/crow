@@ -29,3 +29,5 @@ unittest
 covtest
 *.gcda
 *.gcno
+
+.directory
