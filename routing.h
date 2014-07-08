@@ -183,7 +183,7 @@ namespace crow
         void operator()(std::string name, Func&& f)
         {
             name_ = std::move(name);
-            (*this).operator()<Func>(std::forward(f));
+            (*this).template operator()<Func>(std::forward(f));
         }
 
         response handle(const request& req, const routing_params& params)
