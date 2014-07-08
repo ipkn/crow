@@ -939,7 +939,7 @@ namespace crow
             type t() { return t_; }
         private:
             type t_{type::Null};
-            double d;
+            double d {};
             std::string s;
             std::unique_ptr<std::vector<wvalue>> l;
             std::unique_ptr<std::unordered_map<std::string, wvalue>> o;
