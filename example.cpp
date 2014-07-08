@@ -10,6 +10,21 @@ class ExampleLogHandler : public crow::ILogHandler {
         }
 };
 
+class ExampleMiddlewareHandler : public crow::IMiddlewareHandler {
+    public:
+        crow::response handle(const crow::request& req, crow::Middleware::Context *c) override {
+            CROW_LOG_DEBUG << "MIDDLEWARE PRE";
+            auto result = c->next();
+            CROW_LOG_DEBUG << "MIDDLEWARE POST";
+
+            crow::json::wvalue x;
+            x["message"] = result.body;
+            x["statusCode"] = result.code;
+
+            return x;
+        }
+};
+
 int main()
 {
     crow::Crow app;
@@ -58,6 +73,29 @@ int main()
         std::ostringstream os;
         os << sum;
         return crow::response{os.str()};
+    });
+
+    //crow::middleware::use(std::make_shared<ExampleMiddlewareHandler>());
+    CROW_MIDDLEWARE(app,
+    [](const crow::request& req, crow::Middleware::Context *c){
+        CROW_LOG_DEBUG << "MIDDLEWARE PRE 1";
+        auto result = c->next();
+        CROW_LOG_DEBUG << "MIDDLEWARE POST 1";
+
+        crow::json::wvalue x;
+        x["message"] = result.body;
+        x["statusCode"] = result.code;
+
+        return x;
+    });
+
+    CROW_MIDDLEWARE(app,
+    [](const crow::request& req, crow::Middleware::Context *c){
+        CROW_LOG_DEBUG << "MIDDLEWARE PRE 2";
+        auto result = c->next();
+        CROW_LOG_DEBUG << "MIDDLEWARE POST 2";
+
+        return result;
     });
 
     //crow::logger::setLogLevel(LogLevel::INFO);

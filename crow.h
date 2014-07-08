@@ -12,11 +12,14 @@
 #include "http_server.h"
 #include "utility.h"
 #include "routing.h"
+#include "middleware.h"
 
 // TEST
 #include <iostream>
 
 #define CROW_ROUTE(app, url) app.route<crow::black_magic::get_parameter_tag(url)>(url)
+#define CROW_MIDDLEWARE(app, lambda) app.useMiddleware(std::make_shared<crow::LambdaMiddlewareHandler>(lambda))
+#define CROW_MIDDLEWARE_USE(app, ptr) app.useMiddleware(ptr)
 
 namespace crow
 {
@@ -30,7 +33,15 @@ namespace crow
 
         response handle(const request& req)
         {
-            return router_.handle(req);
+            if(middleware_.count() != 0) {
+
+                Router* router = &router_;
+                return middleware_.processHandlers(req, [router](const request& req){
+                    return router->handle(req);                    
+                });
+            } else {
+                return router_.handle(req);
+            }
         }
 
         template <uint64_t Tag>
@@ -38,6 +49,11 @@ namespace crow
             -> typename std::result_of<decltype(&Router::new_rule_tagged<Tag>)(Router, std::string&&)>::type
         {
             return router_.new_rule_tagged<Tag>(std::move(rule));
+        }
+
+        void useMiddleware(std::shared_ptr<crow::IMiddlewareHandler> mw)
+        {
+            middleware_.use(mw);
         }
 
         self_t& port(std::uint16_t port)
@@ -82,6 +98,7 @@ namespace crow
         uint16_t concurrency_ = 1;
 
         Router router_;
+        Middleware middleware_;
     };
 };
 

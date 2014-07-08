@@ -21,6 +21,7 @@ namespace crow
         {
             *this = std::move(r);
         }
+
         response& operator = (response&& r)
         {
             body = std::move(r.body);
