@@ -8,6 +8,8 @@
 #include <iostream>
 #include <sstream>
 
+#include "settings.h"
+
 using namespace std;
 
 namespace crow
