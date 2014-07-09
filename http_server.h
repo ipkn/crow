@@ -1,7 +1,7 @@
 #pragma once
 
 #include <boost/asio.hpp>
-#include <stdint.h>
+#include <cstdint>
 #include <atomic>
 
 #include "http_connection.h"
@@ -12,6 +12,7 @@ namespace crow
 {
     using namespace boost;
     using tcp = asio::ip::tcp;
+    
     template <typename Handler>
     class Server
     {

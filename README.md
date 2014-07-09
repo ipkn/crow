@@ -1,12 +1,10 @@
-Crow
-====
+# Crow
 
 Crow is C++ microframework for web. (inspired by Python Flask)
 
 (still in development, not completed yet)
 
-Example
-=======
+## Example
 
 ```c++
 
@@ -69,5 +67,10 @@ int main()
         .multithreaded()
         .run();
 }
-
 ```
+
+## How to Build
+
+### Ubuntu
+    sudo apt-get install build-essential libtcmalloc-minimal4 && sudo ln -s /usr/lib/libtcmalloc_minimal.so.4 /usr/lib/libtcmalloc_minimal.so
+    make -j$(($(grep -c '^processor' /proc/cpuinfo)+1))

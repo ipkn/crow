@@ -2,11 +2,13 @@
 
 #include <string>
 #include <chrono>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
 #include <iostream>
 #include <sstream>
+
+#include "settings.h"
 
 using namespace std;
 

@@ -229,7 +229,7 @@ namespace crow
         HTTPParser<Connection> parser_;
         response res;
 
-        int life_;
+        int life_ {};
         bool close_connection_ = false;
 
         const std::string& server_name_;
