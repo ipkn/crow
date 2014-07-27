@@ -71,11 +71,18 @@ int main()
 
 ## How to Build
 
-### Installing missing dependencies
-
-#### Ubuntu
+### Ubuntu
+#### Installing missing dependencies
     sudo apt-get install build-essential libtcmalloc-minimal4 && sudo ln -s /usr/lib/libtcmalloc_minimal.so.4 /usr/lib/libtcmalloc_minimal.so
 
-### Building
+#### Building
     git submodule init && git submodule update
     make -j$(($(grep -c '^processor' /proc/cpuinfo)+1))
+
+### OSX
+#### Installing missing dependencies
+    brew install boost google-perftools
+
+#### Building
+    git submodule init && git submodule update
+    make -j$(($(sysctl -a | grep machdep.cpu.thread_count | awk -F " " '{print $2}')+1))
