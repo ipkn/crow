@@ -1,4 +1,5 @@
 //#define CROW_ENABLE_LOGGING
+#define CROW_ENABLE_DEBUG
 #include <iostream>
 #include <vector>
 #include "routing.h"
@@ -397,6 +398,7 @@ int testmain()
         if (failed__)
         {
             cerr << "F";
+            cerr << '\t' << typeid(*t).name() << endl;
             failed = true;
         }
         else

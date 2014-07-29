@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <atomic>
 
+#include <memory>
+
 #include "http_connection.h"
 #include "datetime.h"
 #include "logging.h"
@@ -57,7 +59,10 @@ namespace crow
                 [this](boost::system::error_code ec)
                 {
                     if (!ec)
-                        (new Connection<Handler>(std::move(socket_), handler_, server_name_))->start();
+                    {
+                        auto p = std::make_shared<Connection<Handler>>(std::move(socket_), handler_, server_name_);
+                        p->start();
+                    }
                     do_accept();
                 });
         }

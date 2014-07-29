@@ -97,6 +97,7 @@ namespace crow
             http_parser_init(this, HTTP_REQUEST);
         }
 
+        // return false on error
         bool feed(const char* buffer, int length)
         {
             int nparsed = http_parser_execute(this, &settings_, buffer, length);

@@ -1,36 +1,56 @@
 #pragma once
 #include <boost/asio.hpp>
-#include <http_parser.h>
 #include <boost/asio.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/array.hpp>
 #include <boost/lexical_cast.hpp>
 #include <atomic>
 #include <chrono>
+#include <array>
+
+#include <http_parser.h>
 
 #include "datetime.h"
 #include "parser.h"
 #include "http_response.h"
 #include "logging.h"
+#include "settings.h"
 
 namespace crow
 {
     using namespace boost;
     using tcp = asio::ip::tcp;
+#ifdef CROW_ENABLE_DEBUG
+    static int connectionCount;
+#endif
     template <typename Handler>
-    class Connection
+    class Connection : public std::enable_shared_from_this<Connection<Handler>>
     {
     public:
         Connection(tcp::socket&& socket, Handler* handler, const std::string& server_name) 
             : socket_(std::move(socket)), 
             handler_(handler), 
             parser_(this), 
-            server_name_(server_name) 
+            server_name_(server_name),
+            deadline_(socket_.get_io_service())
         {
+#ifdef CROW_ENABLE_DEBUG
+            connectionCount ++;
+            CROW_LOG_DEBUG << "Connection open, total " << connectionCount << ", " << this;
+#endif
         }
+#ifdef CROW_ENABLE_DEBUG
+        ~Connection()
+        {
+            connectionCount --;
+            CROW_LOG_DEBUG << "Connection closed, total " << connectionCount << ", " << this;
+        }
+#endif
 
         void start()
         {
+            auto self = this->shared_from_this();
+            start_deadline();
+
             do_read();
         }
 
@@ -187,71 +207,78 @@ namespace crow
 
         void do_read()
         {
-            life_++;
+            auto self = this->shared_from_this();
             socket_.async_read_some(boost::asio::buffer(buffer_), 
-                [this](boost::system::error_code ec, std::size_t bytes_transferred)
+                [self, this](const boost::system::error_code& ec, std::size_t bytes_transferred)
                 {
-                    bool do_complete_task = false;
+                    bool error_while_reading = true;
                     if (!ec)
                     {
                         bool ret = parser_.feed(buffer_.data(), bytes_transferred);
                         if (ret)
+                        {
                             do_read();
-                        else
-                            do_complete_task = true;
+                            error_while_reading = false;
+                        }
                     }
-                    else
-                        do_complete_task = true;
-                    if (do_complete_task)
+
+                    if (error_while_reading)
                     {
+                        deadline_.cancel();
                         parser_.done();
                         socket_.close();
-
-                        life_--;
-                        if ((int)life_ == 0)
-                            delete this;
+                    }
+                    else
+                    {
+                        start_deadline();
                     }
                 });
         }
 
         void do_write()
         {
-            life_++;
+            auto self = this->shared_from_this();
             boost::asio::async_write(socket_, buffers_, 
-                [this](const boost::system::error_code& ec, std::size_t bytes_transferred)
+                [&, self](const boost::system::error_code& ec, std::size_t bytes_transferred)
                 {
-                    bool should_close = false;
                     if (!ec)
                     {
+                        start_deadline();
                         if (close_connection_)
                         {
-                            should_close = true;
+                            socket_.close();
                         }
                     }
-                    else
-                    {
-                        should_close = true;
-                    }
-                    if (should_close)
-                    {
-                        socket_.close();
-                        life_--;
-                        if ((int)life_ == 0)
-                            delete this;
-                    }
                 });
+        }
+
+        void start_deadline(int timeout = 5)
+        {
+            deadline_.expires_from_now(boost::posix_time::seconds(timeout));
+            auto self = this->shared_from_this();
+            deadline_.async_wait([self, this](const boost::system::error_code& ec) 
+            {
+                if (ec || !socket_.is_open())
+                {
+                    return;
+                }
+                bool is_deadline_passed = deadline_.expires_at() <= boost::asio::deadline_timer::traits_type::now();
+                if (is_deadline_passed)
+                {
+                    socket_.close();
+                }
+            });
         }
 
     private:
         tcp::socket socket_;
         Handler* handler_;
 
-        boost::array<char, 8192> buffer_;
+        std::array<char, 8192> buffer_;
 
         HTTPParser<Connection> parser_;
         response res;
 
-        int life_ {};
         bool close_connection_ = false;
 
         const std::string& server_name_;
@@ -259,5 +286,8 @@ namespace crow
 
         std::string content_length_;
         std::string date_str_;
+
+        boost::asio::deadline_timer deadline_;
     };
+
 }
