@@ -5,6 +5,7 @@ FLAGS_BOOST_THREAD = -lboost_thread-mt
 else
 FLAGS_BOOST_THREAD = -lboost_thread
 FLAGS_DEBUG = -g
+FLAGS_GCOV = -r
 endif
 
 binaries=covtest example
@@ -29,7 +30,7 @@ unittest: unittest.cpp routing.h utility.h crow.h http_server.h http_connection.
 covtest: unittest.cpp routing.h utility.h crow.h http_server.h http_connection.h parser.h http_response.h common.h json.h datetime.h logging.h
 	${CXX} -Wall $(FLAGS_DEBUG) -std=c++1y -o covtest --coverage unittest.cpp http-parser/http_parser.c -pthread -lboost_system $(FLAGS_BOOST_THREAD) -I http-parser/
 	./covtest
-	gcov -r unittest.cpp
+	gcov $(FLAGS_GCOV) unittest.cpp
 
 .PHONY: clean
 
