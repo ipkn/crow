@@ -12,7 +12,7 @@ binaries=covtest example
 
 all: covtest example
 
-example: example.cpp settings.h crow.h http_server.h http_connection.h parser.h http_response.h routing.h common.h utility.h json.h datetime.h logging.h
+example: example.cpp settings.h crow.h http_server.h http_connection.h parser.h http_response.h routing.h common.h utility.h json.h datetime.h logging.h mustache.h
 	${CXX} -Wall $(FLAGS_DEBUG) -O3 -std=c++1y -o example example.cpp http-parser/http_parser.c -pthread -lboost_system $(FLAGS_BOOST_THREAD) -ltcmalloc_minimal -I http-parser/
 
 test: covtest
@@ -27,7 +27,7 @@ unittest: unittest.cpp routing.h utility.h crow.h http_server.h http_connection.
 	${CXX} -Wall $(FLAGS_DEBUG) -std=c++1y -o unittest unittest.cpp http-parser/http_parser.c -pthread -lboost_system $(FLAGS_BOOST_THREAD) -I http-parser/
 	./unittest
 
-covtest: unittest.cpp routing.h utility.h crow.h http_server.h http_connection.h parser.h http_response.h common.h json.h datetime.h logging.h
+covtest: unittest.cpp routing.h utility.h crow.h http_server.h http_connection.h parser.h http_response.h common.h json.h datetime.h logging.h mustache.h
 	${CXX} -Wall $(FLAGS_DEBUG) -std=c++1y -o covtest --coverage unittest.cpp http-parser/http_parser.c -pthread -lboost_system $(FLAGS_BOOST_THREAD) -I http-parser/
 	./covtest
 	gcov $(FLAGS_GCOV) unittest.cpp

@@ -6,6 +6,7 @@
 #include "utility.h"
 #include "crow.h"
 #include "json.h"
+#include "mustache.h"
 using namespace std;
 using namespace crow;
 
@@ -378,6 +379,16 @@ TEST(json_write)
 
     y["scores"]["a"]["b"]["c"] = nullptr;
     ASSERT_EQUAL(R"({"scores":{"a":{"b":{"c":null}}}})", json::dump(y));
+}
+
+TEST(template_basic)
+{
+    auto t = crow::mustache::compile(R"---(attack of {{name}})---");
+    crow::mustache::context ctx;
+    ctx["name"] = "killer tomatoes";
+    auto result = t.render(ctx);
+    ASSERT_EQUAL("attack of killer tomatoes", result);
+    //crow::mustache::load("basic.mustache");
 }
 
 int testmain()

@@ -27,6 +27,11 @@
 
 namespace crow
 {
+	namespace mustache
+	{
+		class template_t;
+	}
+
     namespace json
     {
         std::string escape(const std::string& str)
@@ -306,6 +311,11 @@ namespace crow
                 auto it = lower_bound(begin(), end(), str, Pred());
                 return it != end() && it->key_ == str;
             }
+
+			int count(const std::string& str)
+			{
+				return has(str) ? 1 : 0;
+			}
 
             rvalue* begin() const 
 			{ 
@@ -935,8 +945,9 @@ namespace crow
 
         class wvalue
         {
+			friend class crow::mustache::template_t;
         public:
-            type t() { return t_; }
+            type t() const { return t_; }
         private:
             type t_{type::Null};
             double d {};
@@ -946,6 +957,39 @@ namespace crow
         public:
 
             wvalue() {}
+
+            wvalue(const rvalue& r)
+            {
+                t_ = r.t();
+                switch(r.t())
+                {
+                    case type::Null:
+                    case type::False:
+                    case type::True:
+                        return;
+                    case type::Number:
+                        d = r.d();
+                        return;
+                    case type::String:
+                        s = r.s();
+                        return;
+                    case type::List:
+                        l = std::move(std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{}));
+                        l->reserve(r.size());
+                        for(auto it = r.begin(); it != r.end(); ++it)
+                            l->emplace_back(*it);
+                        return;
+                    case type::Object:
+                        o = std::move(
+                            std::unique_ptr<
+                                    std::unordered_map<std::string, wvalue>
+                                >(
+                                new std::unordered_map<std::string, wvalue>{}));
+                        for(auto it = r.begin(); it != r.end(); ++it)
+                            o->emplace(it->key(), *it);
+                        return;
+                }
+            }
 
             wvalue(wvalue&& r)
             {
@@ -1092,6 +1136,20 @@ namespace crow
                     l->resize(index+1);
                 return (*l)[index];
             }
+
+			int count(const std::string& str)
+			{
+                if (t_ != type::Object)
+                    reset();
+                t_ = type::Object;
+                if (!o)
+                    o = std::move(
+                        std::unique_ptr<
+                                std::unordered_map<std::string, wvalue>
+                            >(
+                            new std::unordered_map<std::string, wvalue>{}));
+                return o->count(str);
+			}
 
             wvalue& operator[](const std::string& str)
             {
