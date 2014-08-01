@@ -54,84 +54,210 @@ namespace crow
                 parse();
             }
 
+        private:
+            std::string tag_name(const Action& action)
+            {
+                return body_.substr(action.start, action.end - action.start);
+            }
+            auto find_context(const std::string& name, const std::vector<context*>& stack)->std::pair<bool, context&>
+            {
+                if (name == ".")
+                {
+                    return {true, *stack.back()};
+                }
+                int dotPosition = name.find(".");
+                if (dotPosition == (int)name.npos)
+                {
+                    for(auto it = stack.rbegin(); it != stack.rend(); ++it)
+                    {
+                        if ((*it)->t() == json::type::Object)
+                        {
+                            if ((*it)->count(name))
+                                return {true, (**it)[name]};
+                        }
+                    }
+                }
+                else
+                {
+                    std::vector<int> dotPositions;
+                    dotPositions.push_back(-1);
+                    while(dotPosition != (int)name.npos)
+                    {
+                        dotPositions.push_back(dotPosition);
+                        dotPosition = name.find(".", dotPosition+1);
+                    }
+                    dotPositions.push_back(name.size());
+                    std::vector<std::string> names;
+                    names.reserve(dotPositions.size()-1);
+                    for(int i = 1; i < (int)dotPositions.size(); i ++)
+                        names.emplace_back(name.substr(dotPositions[i-1]+1, dotPositions[i]-dotPositions[i-1]-1));
+
+                    for(auto it = stack.rbegin(); it != stack.rend(); ++it)
+                    {
+                        context* view = *it;
+                        bool found = true;
+                        for(auto jt = names.begin(); jt != names.end(); ++jt)
+                        {
+                            if (view->t() == json::type::Object &&
+                                view->count(*jt))
+                            {
+                                view = &(*view)[*jt];
+                            }
+                            else
+                            {
+                                found = false;
+                                break;
+                            }
+                        }
+                        if (found)
+                            return {true, *view};
+                    }
+
+                }
+
+                static json::wvalue empty_str;
+                empty_str = "";
+                return {false, empty_str};
+            }
+
+            void escape(const std::string& in, std::string& out)
+            {
+                out.reserve(out.size() + in.size());
+                for(auto it = in.begin(); it != in.end(); ++it)
+                {
+                    switch(*it)
+                    {
+                        case '&': out += "&amp;"; break;
+                        case '<': out += "&lt;"; break;
+                        case '>': out += "&gt;"; break;
+                        case '"': out += "&quot;"; break;
+                        case '\'': out += "&#39;"; break;
+                        case '/': out += "&#x2F;"; break;
+                        default: out += *it; break;
+                    }
+                }
+            }
+
+            void render_internal(int actionBegin, int actionEnd, std::vector<context*>& stack, std::string& out)
+            {
+                int current = actionBegin;
+                while(current < actionEnd)
+                {
+                    auto& fragment = fragments_[current];
+                    auto& action = actions_[current];
+                    out.insert(out.size(), body_, fragment.first, fragment.second-fragment.first);
+                    switch(action.t)
+                    {
+                        case ActionType::Ignore:
+                            // do nothing
+                            break;
+                        case ActionType::UnescapeTag:
+                        case ActionType::Tag:
+                            {
+                                auto optional_ctx = find_context(tag_name(action), stack);
+                                auto& ctx = optional_ctx.second;
+                                switch(ctx.t())
+                                {
+                                    case json::type::Number:
+                                        out += json::dump(ctx);
+                                        break;
+                                    case json::type::String:
+                                        if (action.t == ActionType::Tag)
+                                            escape(ctx.s, out);
+                                        else
+                                            out += ctx.s;
+                                        break;
+                                    default:
+                                        throw std::runtime_error("not implemented tag type" + boost::lexical_cast<std::string>((int)ctx.t()));
+                                }
+                            }
+                            break;
+                        case ActionType::ElseBlock:
+                            {
+                                static context nullContext;
+                                auto optional_ctx = find_context(tag_name(action), stack);
+                                if (!optional_ctx.first)
+                                {
+                                    stack.emplace_back(&nullContext);
+                                    break;
+                                }
+
+                                auto& ctx = optional_ctx.second;
+                                switch(ctx.t())
+                                {
+                                    case json::type::List:
+                                        if (ctx.l && !ctx.l->empty())
+                                            current = action.pos;
+                                        else
+                                            stack.emplace_back(&nullContext);
+                                        break;
+                                    case json::type::False:
+                                    case json::type::Null:
+                                        stack.emplace_back(&nullContext);
+                                        break;
+                                    default:
+                                        current = action.pos;
+                                        break;
+                                }
+                                break;
+                            }
+                        case ActionType::OpenBlock:
+                            {
+                                auto optional_ctx = find_context(tag_name(action), stack);
+                                if (!optional_ctx.first)
+                                {
+                                    current = action.pos;
+                                    break;
+                                }
+
+                                auto& ctx = optional_ctx.second;
+                                switch(ctx.t())
+                                {
+                                    case json::type::List:
+                                        if (ctx.l)
+                                            for(auto it = ctx.l->begin(); it != ctx.l->end(); ++it)
+                                            {
+                                                stack.push_back(&*it);
+                                                render_internal(current+1, action.pos, stack, out);
+                                                stack.pop_back();
+                                            }
+                                        current = action.pos;
+                                        break;
+                                    case json::type::Number:
+                                    case json::type::String:
+                                    case json::type::Object:
+                                    case json::type::True:
+                                        stack.push_back(&ctx);
+                                        break;
+                                    case json::type::False:
+                                    case json::type::Null:
+                                        current = action.pos;
+                                        break;
+                                    default:
+                                        throw std::runtime_error("{{#: not implemented context type: " + boost::lexical_cast<std::string>((int)ctx.t()));
+                                        break;
+                                }
+                                break;
+                            }
+                        case ActionType::CloseBlock:
+                            stack.pop_back();
+                            break;
+                        default:
+                            throw std::runtime_error("not implemented " + boost::lexical_cast<std::string>((int)action.t));
+                    }
+                    current++;
+                }
+                auto& fragment = fragments_[actionEnd];
+                out.insert(out.size(), body_, fragment.first, fragment.second - fragment.first);
+            }
+        public:
             std::string render(context& ctx)
             {
 				std::vector<context*> stack;
 				stack.emplace_back(&ctx);
-				auto tag_name = [&](const Action& action)
-				{
-					return body_.substr(action.start, action.end - action.start);
-				};
-				auto find_context = [&](const std::string& name)->std::pair<bool, context&>
-				{
-					for(auto it = stack.rbegin(); it != stack.rend(); ++it)
-					{
-						std::cerr << "finding " << name << " on " << (int)(*it)->t() << std::endl;
-						if ((*it)->t() == json::type::Object)
-						{
-							for(auto jt = (*it)->o->begin(); jt != (*it)->o->end(); ++jt)
-							{
-								std::cerr << '\t' << jt->first << ' ' << json::dump(jt->second) << std::endl;
-							}
-							if ((*it)->count(name))
-								return {true, (**it)[name]};
-						}
-					}
-					
-					static json::wvalue empty_str;
-					empty_str = "";
-					return {false, empty_str};
-				};
-                int current = 0;
+
                 std::string ret;
-                while(current < fragments_.size())
-                {
-					auto& fragment = fragments_[current];
-					auto& action = actions_[current];
-                    ret += body_.substr(fragment.first, fragment.second-fragment.first);
-                    switch(action.t)
-                    {
-					case ActionType::Ignore:
-						// do nothing
-						break;
-					case ActionType::Tag:
-						{
-							auto optional_ctx = find_context(tag_name(action));
-							auto& ctx = optional_ctx.second;
-							switch(ctx.t())
-							{
-								case json::type::Number:
-									ret += json::dump(ctx);
-									break;
-								case json::type::String:
-									ret += ctx.s;
-									break;
-								default:
-									throw std::runtime_error("not implemented tag type" + boost::lexical_cast<std::string>((int)ctx.t()));
-							}
-						}
-						break;
-					case ActionType::OpenBlock:
-						{
-							std::cerr << tag_name(action) << std::endl;
-							auto optional_ctx = find_context(tag_name(action));
-							std::cerr << optional_ctx.first << std::endl;
-							if (!optional_ctx.first)
-								current = action.pos;
-							auto& ctx = optional_ctx.second;
-							if (ctx.t() == json::type::Null || ctx.t() == json::type::False)
-								current = action.pos;
-							stack.push_back(&ctx);
-							break;
-						}
-					case ActionType::CloseBlock:
-						stack.pop_back();
-						break;
-					default:
-						throw std::runtime_error("not implemented " + boost::lexical_cast<std::string>((int)action.t));
-                    }
-					current++;
-                }
+                render_internal(0, fragments_.size()-1, stack, ret);
                 return ret;
             }
 
@@ -172,11 +298,15 @@ namespace crow
                     {
                         case '#':
                             idx++;
+                            while(body_[idx] == ' ') idx++;
+                            while(body_[endIdx-1] == ' ') endIdx--;
                             blockPositions.emplace_back(actions_.size());
                             actions_.emplace_back(ActionType::OpenBlock, idx, endIdx);
                             break;
                         case '/':
                             idx++;
+                            while(body_[idx] == ' ') idx++;
+                            while(body_[endIdx-1] == ' ') endIdx--;
                             {
                                 auto& matched = actions_[blockPositions.back()];
                                 if (body_.compare(idx, endIdx-idx, 
@@ -192,15 +322,21 @@ namespace crow
                             blockPositions.pop_back();
                             break;
                         case '^':
+                            idx++;
+                            while(body_[idx] == ' ') idx++;
+                            while(body_[endIdx-1] == ' ') endIdx--;
                             blockPositions.emplace_back(actions_.size());
-                            actions_.emplace_back(ActionType::ElseBlock, idx+1, endIdx);
+                            actions_.emplace_back(ActionType::ElseBlock, idx, endIdx);
                             break;
                         case '!':
                             // do nothing action
                             actions_.emplace_back(ActionType::Ignore, idx+1, endIdx);
                             break;
                         case '>': // partial
-                            actions_.emplace_back(ActionType::Partial, idx+1, endIdx);
+                            idx++;
+                            while(body_[idx] == ' ') idx++;
+                            while(body_[endIdx-1] == ' ') endIdx--;
+                            actions_.emplace_back(ActionType::Partial, idx, endIdx);
                             throw invalid_template_exception("{{>: partial not implemented: " + body_.substr(idx+1, endIdx-idx-1));
                             break;
                         case '{':
@@ -212,11 +348,15 @@ namespace crow
                             {
                                 throw invalid_template_exception("{{{: }}} not matched");
                             }
+                            while(body_[idx] == ' ') idx++;
+                            while(body_[endIdx-1] == ' ') endIdx--;
                             actions_.emplace_back(ActionType::UnescapeTag, idx, endIdx);
                             current++;
                             break;
                         case '&':
                             idx ++;
+                            while(body_[idx] == ' ') idx++;
+                            while(body_[endIdx-1] == ' ') endIdx--;
                             actions_.emplace_back(ActionType::UnescapeTag, idx, endIdx);
                             break;
                         case '=':
@@ -256,8 +396,62 @@ namespace crow
                             break;
                         default:
                             // normal tag case;
+                            while(body_[idx] == ' ') idx++;
+                            while(body_[endIdx-1] == ' ') endIdx--;
                             actions_.emplace_back(ActionType::Tag, idx, endIdx);
                             break;
+                    }
+                }
+
+                // removing standalones
+                for(int i = actions_.size()-2; i >= 0; i --)
+                {
+                    if (actions_[i].t == ActionType::Tag || actions_[i].t == ActionType::UnescapeTag)
+                        continue;
+                    auto& fragment_before = fragments_[i];
+                    auto& fragment_after = fragments_[i+1];
+                    bool is_last_action = i == (int)actions_.size()-2;
+                    bool all_space_before = true;
+                    int j, k;
+                    for(j = fragment_before.second-1;j >= fragment_before.first;j--)
+                    {
+                        if (body_[j] != ' ')
+                        {
+                            all_space_before = false;
+                            break;
+                        }
+                    }
+                    if (all_space_before && i > 0)
+                        continue;
+                    if (!all_space_before && body_[j] != '\n')
+                        continue;
+                    bool all_space_after = true;
+                    for(k = fragment_after.first; k < (int)body_.size() && k < fragment_after.second; k ++)
+                    {
+                        if (body_[k] != ' ')
+                        {
+                            all_space_after = false;
+                            break;
+                        }
+                    }
+                    if (all_space_after && !is_last_action)
+                        continue;
+                    if (!all_space_after && 
+                            !(
+                                body_[k] == '\n' 
+                            || 
+                                (body_[k] == '\r' && 
+                                k + 1 < (int)body_.size() && 
+                                body_[k+1] == '\n')))
+                        continue;
+                    fragment_before.second = j+1;
+                    if (!all_space_after)
+                    {
+                        if (body_[k] == '\n')
+                            k++;
+                        else 
+                            k += 2;
+                        fragment_after.first = k;
                     }
                 }
             }

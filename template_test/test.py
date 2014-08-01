@@ -6,21 +6,20 @@ import subprocess
 for testfile in glob.glob("*.json"):
     testdoc = json.load(open(testfile))
     for test in testdoc["tests"]:
-        if "partials" in test:
-            continue
-        if "partial" in test:
-            continue
         if "lambda" in test["data"]:
             continue
-        print testfile, test["name"]
-        print json.dumps(test["data"])
-        print test["template"]
+        if "partials" in test:
+            #print testfile, test["name"]
+            continue
         open('data', 'w').write(json.dumps(test["data"]))
         open('template', 'w').write(test["template"])
         ret = subprocess.check_output("./mustachetest")
+        print testfile, test["name"]
         if ret != test["expected"]:
-            print 'Expected:',(test["expected"])
-            print 'Actual:',(ret)
+            print json.dumps(test["data"])
+            print test["template"]
+            print 'Expected:',repr(test["expected"])
+            print 'Actual:',repr(ret)
+        assert ret == test["expected"]
         os.unlink('data')
         os.unlink('template')
-        assert ret == test["expected"]

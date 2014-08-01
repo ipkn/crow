@@ -30,14 +30,14 @@ void error_print(const A& a, Args...args)
 template <typename ...Args>
 void fail(Args...args) { error_print(args...);failed__ = true; }
 
-#define ASSERT_TRUE(x) if (!(x)) fail("Assert fail: expected ", #x, " is true, at " __FILE__ ":",__LINE__)
-#define ASSERT_EQUAL(a, b) if ((a) != (b)) fail("Assert fail: expected ", (a), " actual " , (b),  ", " #a " == " #b ", at " __FILE__ ":",__LINE__)
-#define ASSERT_NOTEQUAL(a, b) if ((a) == (b)) fail("Assert fail: not expected ", (a), ", " #a " != " #b ", at " __FILE__ ":",__LINE__)
+#define ASSERT_TRUE(x) if (!(x)) fail(__FILE__ ":", __LINE__, ": Assert fail: expected ", #x, " is true, at " __FILE__ ":",__LINE__)
+#define ASSERT_EQUAL(a, b) if ((a) != (b)) fail(__FILE__ ":", __LINE__, ": Assert fail: expected ", (a), " actual " , (b),  ", " #a " == " #b ", at " __FILE__ ":",__LINE__)
+#define ASSERT_NOTEQUAL(a, b) if ((a) == (b)) fail(__FILE__ ":", __LINE__, ": Assert fail: not expected ", (a), ", " #a " != " #b ", at " __FILE__ ":",__LINE__)
 #define ASSERT_THROW(x) \
     try \
     { \
         x; \
-        fail("Assert fail: exception should be thrown"); \
+        fail(__FILE__ ":", __LINE__, ": Assert fail: exception should be thrown"); \
     } \
     catch(std::exception&) \
     { \
@@ -329,7 +329,7 @@ TEST(json_read)
     ASSERT_EQUAL(false, x.has("mess"));
     ASSERT_THROW(x["mess"]);
     ASSERT_THROW(3 == x["message"]);
-    ASSERT_THROW(x["message"].size());
+    ASSERT_EQUAL(12, x["message"].size());
 
     std::string s = R"({"int":3,     "ints"  :[1,2,3,4,5]		})";
     auto y = json::load(s);
@@ -350,6 +350,29 @@ TEST(json_read)
 	q = y["ints"][2].i();
 	ASSERT_EQUAL(3, q);
 
+}
+
+TEST(json_read_unescaping)
+{
+    {
+        auto x = json::load(R"({"data":"\ud55c\n\t\r"})");
+        if (!x)
+        {
+            fail("fail to parse");
+            return;
+        }
+        ASSERT_EQUAL(6, x["data"].size());
+        ASSERT_EQUAL("한\n\t\r", x["data"]);
+    }
+    {
+        // multiple r_string instance
+        auto x = json::load(R"({"data":"\ud55c\n\t\r"})");
+        auto a = x["data"].s();
+        auto b = x["data"].s();
+        ASSERT_EQUAL(6, a.size());
+        ASSERT_EQUAL(6, b.size());
+        ASSERT_EQUAL(6, x["data"].size());
+    }
 }
 
 TEST(json_write)
