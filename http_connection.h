@@ -1,8 +1,6 @@
 #pragma once
 #include <boost/asio.hpp>
-#include <boost/asio.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/lexical_cast.hpp>
 #include <atomic>
 #include <chrono>
 #include <array>
@@ -162,7 +160,7 @@ namespace crow
 
             if (!has_content_length)
             {
-                content_length_ = boost::lexical_cast<std::string>(res.body.size());
+                content_length_ = std::to_string(res.body.size());
                 static std::string content_length_tag = "Content-Length: ";
                 buffers_.emplace_back(content_length_tag.data(), content_length_tag.size());
                 buffers_.emplace_back(content_length_.data(), content_length_.size());
