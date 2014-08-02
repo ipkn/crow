@@ -414,6 +414,18 @@ TEST(template_basic)
     //crow::mustache::load("basic.mustache");
 }
 
+TEST(template_load)
+{
+    crow::mustache::set_base(".");
+    ofstream("test.mustache") << R"---(attack of {{name}})---";
+    auto t = crow::mustache::load("test.mustache");
+    crow::mustache::context ctx;
+    ctx["name"] = "killer tomatoes";
+    auto result = t.render(ctx);
+    ASSERT_EQUAL("attack of killer tomatoes", result);
+    unlink("test.mustache");
+}
+
 int testmain()
 {
     bool failed = false;

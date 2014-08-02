@@ -1,12 +1,17 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <fstream>
+#include <iterator>
+#include <functional>
 #include "json.h"
 namespace crow
 {
     namespace mustache
     {
         using context = json::wvalue;
+
+        template_t load(const std::string& filename);
 
         class invalid_template_exception : public std::exception
         {
@@ -138,18 +143,30 @@ namespace crow
                 }
             }
 
-            void render_internal(int actionBegin, int actionEnd, std::vector<context*>& stack, std::string& out)
+            void render_internal(int actionBegin, int actionEnd, std::vector<context*>& stack, std::string& out, int indent)
             {
                 int current = actionBegin;
+
+                if (indent)
+                    out.insert(out.size(), indent, ' ');
+
                 while(current < actionEnd)
                 {
                     auto& fragment = fragments_[current];
                     auto& action = actions_[current];
-                    out.insert(out.size(), body_, fragment.first, fragment.second-fragment.first);
+                    render_fragment(fragment, indent, out);
                     switch(action.t)
                     {
                         case ActionType::Ignore:
                             // do nothing
+                            break;
+                        case ActionType::Partial:
+                            {
+                                std::string partial_name = tag_name(action);
+                                auto partial_templ = load(partial_name);
+                                int partial_indent = action.pos;
+                                partial_templ.render_internal(0, partial_templ.fragments_.size()-1, stack, out, partial_indent?indent+partial_indent:0);
+                            }
                             break;
                         case ActionType::UnescapeTag:
                         case ActionType::Tag:
@@ -218,7 +235,7 @@ namespace crow
                                             for(auto it = ctx.l->begin(); it != ctx.l->end(); ++it)
                                             {
                                                 stack.push_back(&*it);
-                                                render_internal(current+1, action.pos, stack, out);
+                                                render_internal(current+1, action.pos, stack, out, indent);
                                                 stack.pop_back();
                                             }
                                         current = action.pos;
@@ -248,7 +265,21 @@ namespace crow
                     current++;
                 }
                 auto& fragment = fragments_[actionEnd];
-                out.insert(out.size(), body_, fragment.first, fragment.second - fragment.first);
+                render_fragment(fragment, indent, out);
+            }
+            void render_fragment(const std::pair<int, int> fragment, int indent, std::string& out)
+            {
+                if (indent)
+                {
+                    for(int i = fragment.first; i < fragment.second; i ++)
+                    {
+                        out += body_[i];
+                        if (body_[i] == '\n' && i+1 != (int)body_.size())
+                            out.insert(out.size(), indent, ' ');
+                    }
+                }
+                else
+                    out.insert(out.size(), body_, fragment.first, fragment.second-fragment.first);
             }
         public:
             std::string render(context& ctx)
@@ -257,7 +288,7 @@ namespace crow
 				stack.emplace_back(&ctx);
 
                 std::string ret;
-                render_internal(0, fragments_.size()-1, stack, ret);
+                render_internal(0, fragments_.size()-1, stack, ret, 0);
                 return ret;
             }
 
@@ -337,7 +368,6 @@ namespace crow
                             while(body_[idx] == ' ') idx++;
                             while(body_[endIdx-1] == ' ') endIdx--;
                             actions_.emplace_back(ActionType::Partial, idx, endIdx);
-                            throw invalid_template_exception("{{>: partial not implemented: " + body_.substr(idx+1, endIdx-idx-1));
                             break;
                         case '{':
                             if (tag_open != "{{" || tag_close != "}}")
@@ -444,6 +474,10 @@ namespace crow
                                 k + 1 < (int)body_.size() && 
                                 body_[k+1] == '\n')))
                         continue;
+                    if (actions_[i].t == ActionType::Partial)
+                    {
+                        actions_[i].pos = fragment_before.second - j - 1;
+                    }
                     fragment_before.second = j+1;
                     if (!all_space_after)
                     {
@@ -464,6 +498,43 @@ namespace crow
         template_t compile(const std::string& body)
         {
             return template_t(body);
+        }
+        namespace detail
+        {
+            std::string template_base_directory = "templates";
+        }
+
+        std::string default_loader(const std::string& filename)
+        {
+            std::ifstream inf(detail::template_base_directory + filename);
+            if (!inf)
+                return {};
+            return {std::istreambuf_iterator<char>(inf), std::istreambuf_iterator<char>()};
+        }
+
+        namespace detail
+        {
+            std::function<std::string (std::string)> loader = default_loader;
+        }
+
+        void set_base(const std::string& path)
+        {
+            detail::template_base_directory = path;
+            if (detail::template_base_directory.back() != '\\' && 
+                detail::template_base_directory.back() != '/')
+            {
+                detail::template_base_directory += '/';
+            }
+        }
+
+        void set_loader(std::function<std::string(std::string)> loader)
+        {
+            detail::loader = std::move(loader);
+        }
+
+        template_t load(const std::string& filename)
+        {
+            return compile(detail::loader(filename));
         }
     }
 }

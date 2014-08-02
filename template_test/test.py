@@ -8,14 +8,17 @@ for testfile in glob.glob("*.json"):
     for test in testdoc["tests"]:
         if "lambda" in test["data"]:
             continue
-        if "partials" in test:
-            #print testfile, test["name"]
-            continue
         open('data', 'w').write(json.dumps(test["data"]))
         open('template', 'w').write(test["template"])
+        if "partials" in test:
+            open('partials', 'w').write(json.dumps(test["partials"]))
+        else:
+            open('partials', 'w').write("{}")
         ret = subprocess.check_output("./mustachetest")
         print testfile, test["name"]
         if ret != test["expected"]:
+            if 'partials' in test:
+                print 'partials:', json.dumps(test["partials"])
             print json.dumps(test["data"])
             print test["template"]
             print 'Expected:',repr(test["expected"])
@@ -23,3 +26,4 @@ for testfile in glob.glob("*.json"):
         assert ret == test["expected"]
         os.unlink('data')
         os.unlink('template')
+        os.unlink('partials')
