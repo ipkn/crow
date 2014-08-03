@@ -2,7 +2,17 @@
 
 Crow is C++ microframework for web. (inspired by Python Flask)
 
-(still in development, not completed yet)
+## Features
+
+ - Easy routing
+   - Similiar to Flask
+   - Type-safe Handlers (see Example)
+ - Fast built-in JSON parser (crow::json)
+ - [Mustache](http://mustache.github.io/) based templating library (crow::mustache)
+
+## Still in development   
+ - Built-in ORM
+ - Middleware support
 
 ## Example
 
@@ -17,12 +27,6 @@ int main()
 {
     crow::Crow app;
 
-    CROW_ROUTE(app, "/")
-        .name("hello")
-    ([]{
-        return "Hello World!";
-    });
-
     CROW_ROUTE(app, "/about")
     ([](){
         return "About Crow example.";
@@ -36,6 +40,7 @@ int main()
         return x;
     });
 
+    // argument
     CROW_ROUTE(app,"/hello/<int>")
     ([](int count){
         if (count > 100)
@@ -71,6 +76,12 @@ int main()
 
 ## How to Build
 
+### Requirements
+
+ - C++ compiler with good C++11 support (tested with g++>=4.8)
+ - boost library
+ - tcmalloc (optional)
+
 ### Ubuntu
 #### Installing missing dependencies
     sudo apt-get install build-essential libtcmalloc-minimal4 && sudo ln -s /usr/lib/libtcmalloc_minimal.so.4 /usr/lib/libtcmalloc_minimal.so
@@ -86,3 +97,4 @@ int main()
 #### Building
     git submodule init && git submodule update
     make -j$(($(sysctl -a | grep machdep.cpu.thread_count | awk -F " " '{print $2}')+1))
+
