@@ -24,7 +24,7 @@ namespace crow
         
         virtual void validate() = 0;
 
-        virtual response handle(const request&, const routing_params&) = 0;
+        virtual void handle(const request&, response&, const routing_params&) = 0;
 
     protected:
 
@@ -42,6 +42,7 @@ namespace crow
             H3& handler_with_req_res;
             const routing_params& params;
             const request& req;
+            response& res;
         };
 
         template <typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2> 
@@ -52,75 +53,83 @@ namespace crow
         template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<int64_t, Args1...>, black_magic::S<Args2...>>
         {
-            response operator()(F cparams)
+            void operator()(F cparams)
             {
                 using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<int64_t, NInt>>;
-                return call<F, NInt+1, NUint, NDouble, NString,
-                       black_magic::S<Args1...>, pushed>()(cparams);
+                call<F, NInt+1, NUint, NDouble, NString,
+                    black_magic::S<Args1...>, pushed>()(cparams);
             }
         };
 
         template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<uint64_t, Args1...>, black_magic::S<Args2...>>
         {
-            response operator()(F cparams)
+            void operator()(F cparams)
             {
                 using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<uint64_t, NUint>>;
-                return call<F, NInt, NUint+1, NDouble, NString,
-                       black_magic::S<Args1...>, pushed>()(cparams);
+                call<F, NInt, NUint+1, NDouble, NString,
+                    black_magic::S<Args1...>, pushed>()(cparams);
             }
         };
 
         template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<double, Args1...>, black_magic::S<Args2...>>
         {
-            response operator()(F cparams)
+            void operator()(F cparams)
             {
                 using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<double, NDouble>>;
-                return call<F, NInt, NUint, NDouble+1, NString,
-                       black_magic::S<Args1...>, pushed>()(cparams);
+                call<F, NInt, NUint, NDouble+1, NString,
+                    black_magic::S<Args1...>, pushed>()(cparams);
             }
         };
 
         template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<std::string, Args1...>, black_magic::S<Args2...>>
         {
-            response operator()(F cparams)
+            void operator()(F cparams)
             {
                 using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<std::string, NString>>;
-                return call<F, NInt, NUint, NDouble, NString+1,
-                       black_magic::S<Args1...>, pushed>()(cparams);
+                call<F, NInt, NUint, NDouble, NString+1,
+                    black_magic::S<Args1...>, pushed>()(cparams);
             }
         };
 
         template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1> 
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<>, black_magic::S<Args1...>>
         {
-            response operator()(F cparams)
+            void operator()(F cparams)
             {
                 if (cparams.handler) 
-                    return cparams.handler(
+                {
+                    cparams.res = cparams.handler(
                         cparams.params.template get<typename Args1::type>(Args1::pos)... 
                     );
+                    cparams.res.end();
+                    return;
+                }
                 if (cparams.handler_with_req)
-                    return cparams.handler_with_req(
+                {
+                    cparams.res = cparams.handler_with_req(
                         cparams.req,
                         cparams.params.template get<typename Args1::type>(Args1::pos)... 
                     );
+                    cparams.res.end();
+                    return;
+                }
                 if (cparams.handler_with_req_res)
                 {
-                    crow::response res;
                     cparams.handler_with_req_res(
                         cparams.req,
-                        res,
+                        cparams.res,
                         cparams.params.template get<typename Args1::type>(Args1::pos)... 
                     );
-                    return res;
+                    return;
                 }
 #ifdef CROW_ENABLE_LOGGING
                 std::cerr << "ERROR cannot find handler" << std::endl;
 #endif
-                return response(500);
+                // we already found matched url; this is server error
+                cparams.res = response(500);
             }
         };
     public:
@@ -223,24 +232,23 @@ namespace crow
             (*this).template operator()<Func>(std::forward(f));
         }
 
-        response handle(const request& req, const routing_params& params)
+        void handle(const request& req, response& res, const routing_params& params) override
         {
-            return 
-                call<
-                    call_params<
-                        decltype(handler_), 
-                        decltype(handler_with_req_),
-                        decltype(handler_with_req_res_)>, 
-                    0, 0, 0, 0, 
-                    black_magic::S<Args...>, 
-                    black_magic::S<>
-                >()(
-                    call_params<
-                        decltype(handler_), 
-                        decltype(handler_with_req_),
-                        decltype(handler_with_req_res_)>
-                    {handler_, handler_with_req_, handler_with_req_res_, params, req}
-                );
+            call<
+                call_params<
+                    decltype(handler_), 
+                    decltype(handler_with_req_),
+                    decltype(handler_with_req_res_)>, 
+                0, 0, 0, 0, 
+                black_magic::S<Args...>, 
+                black_magic::S<>
+            >()(
+                call_params<
+                    decltype(handler_), 
+                    decltype(handler_with_req_),
+                    decltype(handler_with_req_res_)>
+                {handler_, handler_with_req_, handler_with_req_res_, params, req, res}
+            );
         }
 
     private:
@@ -614,21 +622,26 @@ public:
             }
         }
 
-        response handle(const request& req)
+        void handle(const request& req, response& res)
         {
             auto found = trie_.find(req);
 
             unsigned rule_index = found.first;
 
             if (!rule_index)
-                return response(404);
+            {
+				CROW_LOG_DEBUG << "Cannot match rules " << req.url;
+                res = response(404);
+				res.end();
+                return;
+            }
 
             if (rule_index >= rules_.size())
                 throw std::runtime_error("Trie internal structure corrupted!");
 
             CROW_LOG_DEBUG << "Matched rule '" << ((TaggedRule<>*)rules_[rule_index].get())->rule_ << "'";
 
-            return rules_[rule_index]->handle(req, found.second);
+            rules_[rule_index]->handle(req, res, found.second);
         }
 
         void debug_print()

@@ -46,7 +46,7 @@ int main()
     ([](const crow::request& req, crow::response& res, int a, int b){
         std::ostringstream os;
         os << a+b;
-        res.send(os.str());
+        res.write(os.str());
         res.end();
     });
 

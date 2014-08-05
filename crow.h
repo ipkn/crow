@@ -29,9 +29,9 @@ namespace crow
         {
         }
 
-        response handle(const request& req)
+        void handle(const request& req, response& res)
         {
-            return router_.handle(req);
+            return router_.handle(req, res);
         }
 
         template <uint64_t Tag>
@@ -84,5 +84,6 @@ namespace crow
 
         Router router_;
     };
+    using App = Crow;
 };
 

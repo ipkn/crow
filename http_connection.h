@@ -36,13 +36,15 @@ namespace crow
             CROW_LOG_DEBUG << "Connection open, total " << connectionCount << ", " << this;
 #endif
         }
-#ifdef CROW_ENABLE_DEBUG
+        
         ~Connection()
         {
+            res.complete_request_handler_ = nullptr;
+#ifdef CROW_ENABLE_DEBUG
             connectionCount --;
             CROW_LOG_DEBUG << "Connection closed, total " << connectionCount << ", " << this;
-        }
 #endif
+        }
 
         void start()
         {
@@ -66,28 +68,6 @@ namespace crow
 
         void handle()
         {
-            static std::unordered_map<int, std::string> statusCodes = {
-                {200, "HTTP/1.1 200 OK\r\n"},
-                {201, "HTTP/1.1 201 Created\r\n"},
-                {202, "HTTP/1.1 202 Accepted\r\n"},
-                {204, "HTTP/1.1 204 No Content\r\n"},
-
-                {300, "HTTP/1.1 300 Multiple Choices\r\n"},
-                {301, "HTTP/1.1 301 Moved Permanently\r\n"},
-                {302, "HTTP/1.1 302 Moved Temporarily\r\n"},
-                {304, "HTTP/1.1 304 Not Modified\r\n"},
-
-                {400, "HTTP/1.1 400 Bad Request\r\n"},
-                {401, "HTTP/1.1 401 Unauthorized\r\n"},
-                {403, "HTTP/1.1 403 Forbidden\r\n"},
-                {404, "HTTP/1.1 404 Not Found\r\n"},
-
-                {500, "HTTP/1.1 500 Internal Server Error\r\n"},
-                {501, "HTTP/1.1 501 Not Implemented\r\n"},
-                {502, "HTTP/1.1 502 Bad Gateway\r\n"},
-                {503, "HTTP/1.1 503 Service Unavailable\r\n"},
-            };
-
             bool is_invalid_request = false;
 
             request req = parser_.to_request();
@@ -109,14 +89,54 @@ namespace crow
                 }
             }
 
+            CROW_LOG_INFO << "Request: "<< this << " HTTP/" << parser_.http_major << "." << parser_.http_minor << ' '
+             << method_name(req.method) << " " << req.url;
+
+
             if (!is_invalid_request)
             {
-                res = handler_->handle(req);
+                deadline_.cancel();
+                auto self = this->shared_from_this();
+                res.complete_request_handler_ = [self]{ self->complete_request(); };
+                handler_->handle(req, res);
             }
+			else
+			{
+				complete_request();
+			}
+        }
 
-            CROW_LOG_INFO << "HTTP/" << parser_.http_major << "." << parser_.http_minor << ' '
-             << method_name(req.method) << " " << req.url
-             << " " << res.code << ' ' << close_connection_;
+        void complete_request()
+        {
+            CROW_LOG_INFO << "Response: " << this << ' ' << res.code << ' ' << close_connection_;
+
+			if (!socket_.is_open())
+				return;
+
+            auto self = this->shared_from_this();
+            res.complete_request_handler_ = nullptr;
+
+            static std::unordered_map<int, std::string> statusCodes = {
+                {200, "HTTP/1.1 200 OK\r\n"},
+                {201, "HTTP/1.1 201 Created\r\n"},
+                {202, "HTTP/1.1 202 Accepted\r\n"},
+                {204, "HTTP/1.1 204 No Content\r\n"},
+
+                {300, "HTTP/1.1 300 Multiple Choices\r\n"},
+                {301, "HTTP/1.1 301 Moved Permanently\r\n"},
+                {302, "HTTP/1.1 302 Moved Temporarily\r\n"},
+                {304, "HTTP/1.1 304 Not Modified\r\n"},
+
+                {400, "HTTP/1.1 400 Bad Request\r\n"},
+                {401, "HTTP/1.1 401 Unauthorized\r\n"},
+                {403, "HTTP/1.1 403 Forbidden\r\n"},
+                {404, "HTTP/1.1 404 Not Found\r\n"},
+
+                {500, "HTTP/1.1 500 Internal Server Error\r\n"},
+                {501, "HTTP/1.1 501 Not Implemented\r\n"},
+                {502, "HTTP/1.1 502 Bad Gateway\r\n"},
+                {503, "HTTP/1.1 503 Service Unavailable\r\n"},
+            };
 
             static std::string seperator = ": ";
             static std::string crlf = "\r\n";
@@ -186,6 +206,7 @@ namespace crow
             buffers_.emplace_back(res.body.data(), res.body.size());
 
             do_write();
+            res.clear();
         }
 
     private:

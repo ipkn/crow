@@ -1,0 +1,48 @@
+<html>
+<head>
+<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+</head>
+<body>
+<input id="msg" type="text">
+<button id="send">Send</button>
+<div id="logs">
+</div>
+<script>
+$(document).ready(function(){
+	$("#send").click(function(){
+		var msg = $("#msg").val();
+		console.log(msg);
+		if (msg.length > 0)
+			$.post("/send", msg);
+		$("#msg").val("");
+	});
+	$("#msg").keyup(function(event){
+		if(event.keyCode == 13){
+			$("#send").click();
+		}
+	});
+	var lastLog = 0;
+	var updateLog;
+	updateLog = function(data)
+	{
+		console.log("recv ");
+		console.log(data);
+		var lastLog = data.last*1;
+		console.log("lastLog: " + lastLog);
+		var s = "";
+		for(var x in data.msgs)
+		{
+			s += data.msgs[x] + "<BR>";
+		}
+		$("#logs").html(s+$("#logs").html());
+		var failFunction;
+		failFunction = function(){
+			$.getJSON("/logs/"+lastLog, updateLog).fail(failFunction);
+		};
+		$.getJSON("/logs/"+lastLog, updateLog).fail(failFunction);
+	}
+	$.getJSON("/logs", updateLog);
+});
+</script>
+</body>
+</html>

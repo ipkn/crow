@@ -72,9 +72,11 @@ TEST(Rule)
 
     r.validate();
 
+    response res;
+
     // executing handler
     ASSERT_EQUAL(0, x);
-    r.handle(request(), routing_params());
+    r.handle(request(), res, routing_params());
     ASSERT_EQUAL(1, x);
 
     // registering handler with request argument
@@ -84,7 +86,7 @@ TEST(Rule)
 
     // executing handler
     ASSERT_EQUAL(1, x);
-    r.handle(request(), routing_params());
+    r.handle(request(), res, routing_params());
     ASSERT_EQUAL(2, x);
 }
 
@@ -143,13 +145,24 @@ TEST(RoutingTest)
 
     app.validate();
     //app.debug_print();
+	{
+        request req;
+        response res;
+
+        req.url = "/-1";
+
+        app.handle(req, res);
+
+        ASSERT_EQUAL(404, res.code);
+	}
 
     {
         request req;
+        response res;
 
         req.url = "/0/1001999";
 
-        auto res = app.handle(req);
+        app.handle(req, res);
 
         ASSERT_EQUAL(200, res.code);
 
@@ -158,10 +171,11 @@ TEST(RoutingTest)
 
     {
         request req;
+        response res;
 
         req.url = "/1/-100/1999";
 
-        auto res = app.handle(req);
+        app.handle(req, res);
 
         ASSERT_EQUAL(200, res.code);
 
@@ -170,11 +184,12 @@ TEST(RoutingTest)
     }
     {
         request req;
+        response res;
 
         req.url = "/4/5000/3/-2.71828/hellhere";
         req.headers["TestHeader"] = "Value";
 
-        auto res = app.handle(req);
+        app.handle(req, res);
 
         ASSERT_EQUAL(200, res.code);
 
@@ -185,11 +200,12 @@ TEST(RoutingTest)
     }
     {
         request req;
+        response res;
 
         req.url = "/5/-5/999/3.141592/hello_there/a/b/c/d";
         req.headers["TestHeader"] = "Value";
 
-        auto res = app.handle(req);
+        app.handle(req, res);
 
         ASSERT_EQUAL(200, res.code);
 

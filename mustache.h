@@ -282,6 +282,16 @@ namespace crow
                     out.insert(out.size(), body_, fragment.first, fragment.second-fragment.first);
             }
         public:
+            std::string render()
+            {
+				context empty_ctx;
+				std::vector<context*> stack;
+				stack.emplace_back(&empty_ctx);
+
+                std::string ret;
+                render_internal(0, fragments_.size()-1, stack, ret, 0);
+                return ret;
+            }
             std::string render(context& ctx)
             {
 				std::vector<context*> stack;
