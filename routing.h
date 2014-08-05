@@ -34,11 +34,12 @@ namespace crow
     class TaggedRule : public BaseRule
     {
     private:
-        template <typename H1, typename H2>
+        template <typename H1, typename H2, typename H3>
         struct call_params
         {
             H1& handler;
             H2& handler_with_req;
+            H3& handler_with_req_res;
             const routing_params& params;
             const request& req;
         };
@@ -106,6 +107,16 @@ namespace crow
                         cparams.req,
                         cparams.params.template get<typename Args1::type>(Args1::pos)... 
                     );
+                if (cparams.handler_with_req_res)
+                {
+                    crow::response res;
+                    cparams.handler_with_req_res(
+                        cparams.req,
+                        res,
+                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
+                    );
+                    return res;
+                }
 #ifdef CROW_ENABLE_LOGGING
                 std::cerr << "ERROR cannot find handler" << std::endl;
 #endif
@@ -139,7 +150,7 @@ namespace crow
 
         void validate()
         {
-            if (!handler_ && !handler_with_req_)
+            if (!handler_ && !handler_with_req_ && !handler_with_req_res_)
             {
                 throw std::runtime_error(name_ + (!name_.empty() ? ": " : "") + "no handler for url " + rule_);
             }
@@ -150,8 +161,7 @@ namespace crow
         operator()(Func&& f)
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
-            black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value
-            , 
+                black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value , 
                 "Handler type is mismatched with URL paramters");
             static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value, 
                 "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
@@ -160,23 +170,50 @@ namespace crow
                     return response(f(args...));
                 };
                 handler_with_req_ = nullptr;
+                handler_with_req_res_ = nullptr;
         }
 
         template <typename Func>
-        typename std::enable_if<!black_magic::CallHelper<Func, black_magic::S<Args...>>::value, void>::type
+        typename std::enable_if<
+            !black_magic::CallHelper<Func, black_magic::S<Args...>>::value &&
+            black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value, 
+            void>::type
         operator()(Func&& f)
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
-            black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value
-            , 
+                black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value, 
                 "Handler type is mismatched with URL paramters");
             static_assert(!std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<Args>()...))>::value, 
                 "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
 
-                handler_with_req_ = [f = std::move(f)](const crow::request& request, Args ... args){
-                    return response(f(request, args...));
+                handler_with_req_ = [f = std::move(f)](const crow::request& req, Args ... args){
+                    return response(f(req, args...));
                 };
                 handler_ = nullptr;
+                handler_with_req_res_ = nullptr;
+        }
+
+        template <typename Func>
+        typename std::enable_if<
+            !black_magic::CallHelper<Func, black_magic::S<Args...>>::value &&
+            !black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value, 
+            void>::type
+        operator()(Func&& f)
+        {
+            static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
+                black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value ||
+                black_magic::CallHelper<Func, black_magic::S<crow::request, crow::response&, Args...>>::value
+                , 
+                "Handler type is mismatched with URL paramters");
+            static_assert(std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<crow::response&>(), std::declval<Args>()...))>::value, 
+                "Handler function with response argument should have void return type");
+
+                handler_with_req_res_ = std::move(f);
+                //[f = std::move(f)](const crow::request& req, crow::response& res, Args ... args){
+                //    f(req, response, args...);
+                //};
+                handler_ = nullptr;
+                handler_with_req_ = nullptr;
         }
 
         template <typename Func>
@@ -192,21 +229,24 @@ namespace crow
                 call<
                     call_params<
                         decltype(handler_), 
-                        decltype(handler_with_req_)>, 
+                        decltype(handler_with_req_),
+                        decltype(handler_with_req_res_)>, 
                     0, 0, 0, 0, 
                     black_magic::S<Args...>, 
                     black_magic::S<>
                 >()(
                     call_params<
                         decltype(handler_), 
-                        decltype(handler_with_req_)>
-                    {handler_, handler_with_req_, params, req}
+                        decltype(handler_with_req_),
+                        decltype(handler_with_req_res_)>
+                    {handler_, handler_with_req_, handler_with_req_res_, params, req}
                 );
         }
 
     private:
         std::function<response(Args...)> handler_;
-        std::function<response(crow::request, Args...)> handler_with_req_;
+        std::function<response(const crow::request&, Args...)> handler_with_req_;
+        std::function<void(const crow::request&, crow::response&, Args...)> handler_with_req_res_;
 
         std::string rule_;
         std::string name_;

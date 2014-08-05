@@ -42,6 +42,14 @@ int main()
         return crow::response(os.str());
     });
 
+    CROW_ROUTE(app,"/add/<int>/<int>")
+    ([](const crow::request& req, crow::response& res, int a, int b){
+        std::ostringstream os;
+        os << a+b;
+        res.send(os.str());
+        res.end();
+    });
+
     // Compile error with message "Handler type is mismatched with URL paramters"
     //CROW_ROUTE(app,"/another/<int>")
     //([](int a, int b){

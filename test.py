@@ -6,6 +6,7 @@ assert "3 bottles of beer!" == urllib.urlopen('http://localhost:18080/hello/3').
 assert "100 bottles of beer!" == urllib.urlopen('http://localhost:18080/hello/100').read()
 assert 400 == urllib.urlopen('http://localhost:18080/hello/500').getcode()
 assert "3" == urllib.urlopen('http://localhost:18080/add_json', data='{"a":1,"b":2}').read()
+assert "3" == urllib.urlopen('http://localhost:18080/add/1/2').read()
 
 # test persistent connection
 import socket

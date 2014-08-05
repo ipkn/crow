@@ -220,6 +220,14 @@ TEST(simple_response_routing_params)
     ASSERT_EQUAL("hello", rp.get<string>(0));
 }
 
+TEST(handler_with_response)
+{
+    Crow app;
+    CROW_ROUTE(app, "/")([](const crow::request&, crow::response&)
+    {
+    });
+}
+
 TEST(server_handling_error_request)
 {
     static char buf[2048];
