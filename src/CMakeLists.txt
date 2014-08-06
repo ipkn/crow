@@ -5,6 +5,7 @@ set(CROW_SRCS
 #${PROJECT_SOURCE_DIR}/some.cpp
 #${PROJECT_SOURCE_DIR}/someother.cpp
 ${PROJECT_SOURCE_DIR}/../http-parser/http_parser.c
+routing.cpp
 )
 
 set_source_files_properties(${PROJECT_SOURCE_DIR}/../http-parser/http_parser.c PROPERTIES LANGUAGE C )

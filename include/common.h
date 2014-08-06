@@ -18,7 +18,7 @@ namespace crow
         TRACE,
     };
 
-    std::string method_name(HTTPMethod method)
+    inline std::string method_name(HTTPMethod method)
     {
         switch(method)
         {

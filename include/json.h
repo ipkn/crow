@@ -29,7 +29,7 @@ namespace crow
 
     namespace json
     {
-        void escape(const std::string& str, std::string& ret)
+        inline void escape(const std::string& str, std::string& ret)
         {
             ret.reserve(ret.size() + str.size()+str.size()/4);
             for(char c:str)
@@ -63,7 +63,7 @@ namespace crow
                 }
             }
         }
-        std::string escape(const std::string& str)
+        inline std::string escape(const std::string& str)
         {
             std::string ret;
             escape(str, ret);
@@ -596,50 +596,47 @@ namespace crow
         namespace detail {
         }
 
-        bool operator == (const rvalue& l, const std::string& r)
+        inline bool operator == (const rvalue& l, const std::string& r)
         {
             return l.s() == r;
         }
 
-        bool operator == (const std::string& l, const rvalue& r)
+        inline bool operator == (const std::string& l, const rvalue& r)
         {
             return l == r.s();
         }
 
-        bool operator != (const rvalue& l, const std::string& r)
+        inline bool operator != (const rvalue& l, const std::string& r)
         {
             return l.s() != r;
         }
 
-        bool operator != (const std::string& l, const rvalue& r)
+        inline bool operator != (const std::string& l, const rvalue& r)
         {
             return l != r.s();
         }
 
-        bool operator == (const rvalue& l, double r)
+        inline bool operator == (const rvalue& l, double r)
         {
             return l.d() == r;
         }
 
-        bool operator == (double l, const rvalue& r)
+        inline bool operator == (double l, const rvalue& r)
         {
             return l == r.d();
         }
 
-        bool operator != (const rvalue& l, double r)
+        inline bool operator != (const rvalue& l, double r)
         {
             return l.d() != r;
         }
 
-        bool operator != (double l, const rvalue& r)
+        inline bool operator != (double l, const rvalue& r)
         {
             return l != r.d();
         }
 
 
-        //inline rvalue decode(const std::string& s)
-        //{
-        //}
         inline rvalue load_nocopy_internal(char* data, size_t size)
         {
             //static const char* escaped = "\"\\/\b\f\n\r\t";
@@ -1298,13 +1295,13 @@ namespace crow
             friend std::string dump(const wvalue& v);
         };
 
-        void dump_string(const std::string& str, std::string& out)
+        inline void dump_string(const std::string& str, std::string& out)
         {
             out.push_back('"');
             escape(str, out);
             out.push_back('"');
         }
-        void dump_internal(const wvalue& v, std::string& out)
+        inline void dump_internal(const wvalue& v, std::string& out)
         {
             switch(v.t_)
             {
@@ -1362,7 +1359,7 @@ namespace crow
             }
         }
 
-        std::string dump(const wvalue& v)
+        inline std::string dump(const wvalue& v)
         {
             std::string ret;
             ret.reserve(v.estimate_length());
