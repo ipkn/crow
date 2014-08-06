@@ -505,18 +505,22 @@ namespace crow
             std::string body_;
         };
 
-        template_t compile(const std::string& body)
+        inline template_t compile(const std::string& body)
         {
             return template_t(body);
         }
         namespace detail
         {
-            std::string template_base_directory = "templates";
+            inline std::string& get_template_base_directory_ref()
+            {
+                static std::string template_base_directory = "templates";
+                return template_base_directory;
+            }
         }
 
-        std::string default_loader(const std::string& filename)
+        inline std::string default_loader(const std::string& filename)
         {
-            std::ifstream inf(detail::template_base_directory + filename);
+            std::ifstream inf(detail::get_template_base_directory_ref() + filename);
             if (!inf)
                 return {};
             return {std::istreambuf_iterator<char>(inf), std::istreambuf_iterator<char>()};
@@ -524,27 +528,32 @@ namespace crow
 
         namespace detail
         {
-            std::function<std::string (std::string)> loader = default_loader;
-        }
-
-        void set_base(const std::string& path)
-        {
-            detail::template_base_directory = path;
-            if (detail::template_base_directory.back() != '\\' && 
-                detail::template_base_directory.back() != '/')
+            inline std::function<std::string (std::string)> get_loader_ref()
             {
-                detail::template_base_directory += '/';
+                static std::function<std::string (std::string)> loader = default_loader;
+                return loader;
             }
         }
 
-        void set_loader(std::function<std::string(std::string)> loader)
+        inline void set_base(const std::string& path)
         {
-            detail::loader = std::move(loader);
+            auto& base = detail::get_template_base_directory_ref();
+            base = path;
+            if (base.back() != '\\' && 
+                base.back() != '/')
+            {
+                base += '/';
+            }
         }
 
-        template_t load(const std::string& filename)
+        inline void set_loader(std::function<std::string(std::string)> loader)
         {
-            return compile(detail::loader(filename));
+            detail::get_loader_ref() = std::move(loader);
+        }
+
+        inline template_t load(const std::string& filename)
+        {
+            return compile(detail::get_loader_ref()(filename));
         }
     }
 }
