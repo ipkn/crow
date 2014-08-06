@@ -29,10 +29,45 @@ namespace crow
 
     namespace json
     {
+        void escape(const std::string& str, std::string& ret)
+        {
+            ret.reserve(ret.size() + str.size()+str.size()/4);
+            for(char c:str)
+            {
+                switch(c)
+                {
+                    case '"': ret += "\\\""; break;
+                    case '\\': ret += "\\\\"; break;
+                    case '\n': ret += "\\n"; break;
+                    case '\b': ret += "\\b"; break;
+                    case '\f': ret += "\\f"; break;
+                    case '\r': ret += "\\r"; break;
+                    case '\t': ret += "\\t"; break;
+                    default:
+                        if (0 <= c && c < 0x20)
+                        {
+                            ret += "\\u00";
+                            auto to_hex = [](char c)
+                            {
+                                c = c&0xf;
+                                if (c < 10)
+                                    return '0' + c;
+                                return 'a'+c-10;
+                            };
+                            ret += to_hex(c/16);
+                            ret += to_hex(c%16);
+                        }
+                        else
+                            ret += c;
+                        break;
+                }
+            }
+        }
         std::string escape(const std::string& str)
         {
-            // TODO
-            return str;
+            std::string ret;
+            escape(str, ret);
+            return ret;
         }
 
         enum class type : char
@@ -1265,9 +1300,8 @@ namespace crow
 
         void dump_string(const std::string& str, std::string& out)
         {
-            // TODO escaping
             out.push_back('"');
-            out += str;
+            escape(str, out);
             out.push_back('"');
         }
         void dump_internal(const wvalue& v, std::string& out)

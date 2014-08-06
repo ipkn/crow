@@ -30,9 +30,15 @@ $(document).ready(function(){
 		var lastLog = data.last*1;
 		console.log("lastLog: " + lastLog);
 		var s = "";
+        function htmlEncode(s)
+        {
+            return s.replace(/&(?!\w+([;\s]|$))/g, "&amp;")
+            .replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
 		for(var x in data.msgs)
 		{
-			s += data.msgs[x] + "<BR>";
+
+			s = htmlEncode(data.msgs[x]) + "<BR>" + s;
 		}
 		$("#logs").html(s+$("#logs").html());
 		var failFunction;

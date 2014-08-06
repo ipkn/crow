@@ -98,6 +98,7 @@ namespace crow
                 deadline_.cancel();
                 auto self = this->shared_from_this();
                 res.complete_request_handler_ = [self]{ self->complete_request(); };
+                res.is_alive_helper_ = [this]()->bool{ return socket_.is_open(); };
                 handler_->handle(req, res);
             }
 			else
