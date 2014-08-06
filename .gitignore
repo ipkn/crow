@@ -26,8 +26,9 @@ unittest
 *.swp
 *.gcov
 
-covtest
 *.gcda
 *.gcno
+
+build
 
 .directory

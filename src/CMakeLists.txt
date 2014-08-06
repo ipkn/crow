@@ -15,4 +15,3 @@ include_directories("${PROJECT_INCLUDE_DIR}")
 
 add_library(${PROJECT_NAME} SHARED ${CROW_SRCS})
 #target_link_libraries(${PROJECT_NAME} tcmalloc)
-set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-Wall -std=c++1y")
