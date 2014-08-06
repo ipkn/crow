@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 2.8)
 project (crow_all)
 
+if (NOT CMAKE_BUILD_TYPE)
+    message(STATUS "No build type selected, default to Release")
+    set(CMAKE_BUILD_TYPE "Release")
+endif()
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++1y")
 
 find_package( Boost 1.40 COMPONENTS date_time filesystem system thread REQUIRED )
@@ -14,7 +19,7 @@ ${PROJECT_SOURCE_DIR}/http-parser
 include_directories("${PROJECT_INCLUDE_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}")
  
-add_subdirectory(src)
+#add_subdirectory(src)
 add_subdirectory(tests)
 add_subdirectory(examples)
 

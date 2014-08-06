@@ -1,11 +1,12 @@
 #pragma once
 #include <boost/asio.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/lexical_cast.hpp>
 #include <atomic>
 #include <chrono>
 #include <array>
 
-#include <http_parser.h>
+#include "http_parser_merged.h"
 
 #include "datetime.h"
 #include "parser.h"
@@ -29,7 +30,8 @@ namespace crow
             handler_(handler), 
             parser_(this), 
             server_name_(server_name),
-            deadline_(socket_.get_io_service())
+            deadline_(socket_.get_io_service()),
+            address_str_(boost::lexical_cast<std::string>(socket_.remote_endpoint()))
         {
 #ifdef CROW_ENABLE_DEBUG
             connectionCount ++;
@@ -89,7 +91,7 @@ namespace crow
                 }
             }
 
-            CROW_LOG_INFO << "Request: "<< this << " HTTP/" << parser_.http_major << "." << parser_.http_minor << ' '
+            CROW_LOG_INFO << "Request: " << address_str_ << " " << this << " HTTP/" << parser_.http_major << "." << parser_.http_minor << ' '
              << method_name(req.method) << " " << req.url;
 
 
@@ -308,6 +310,7 @@ namespace crow
         std::string date_str_;
 
         boost::asio::deadline_timer deadline_;
+        std::string address_str_;
     };
 
 }

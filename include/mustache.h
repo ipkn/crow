@@ -528,7 +528,7 @@ namespace crow
 
         namespace detail
         {
-            inline std::function<std::string (std::string)> get_loader_ref()
+            inline std::function<std::string (std::string)>& get_loader_ref()
             {
                 static std::function<std::string (std::string)> loader = default_loader;
                 return loader;

@@ -15,8 +15,8 @@ add_executable(mustachetest ${TEST_SRCS})
 #target_link_libraries(unittest ${Boost_LIBRARIES} )
 set_target_properties(mustachetest PROPERTIES COMPILE_FLAGS "-Wall -std=c++1y")
 
-message(${PROJECT_SOURCE_DIR})
-message(${CMAKE_CURRENT_BINARY_DIR})
+#message(${PROJECT_SOURCE_DIR})
+#message(${CMAKE_CURRENT_BINARY_DIR})
 file(COPY DIRECTORY . DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
     FILES_MATCHING 
     PATTERN "*.json")
