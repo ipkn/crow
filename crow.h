@@ -91,6 +91,10 @@ namespace crow
         {
             middleware_.use(middlewareObj);
         }
+        void use(crow::MiddlewareHandlerFunc before, crow::MiddlewareHandlerFunc after = nullptr)
+        {
+            middleware_.use(std::make_shared<crow::LambdaMiddlewareHandler>(before, after));
+        }
 
     private:
         uint16_t port_ = 80;

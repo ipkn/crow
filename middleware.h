@@ -56,17 +56,24 @@ void Middleware::processAfterHandlers(const request& req, response& res) {
 	}
 }
 
-/*class LambdaMiddlewareHandler : public IMiddleware {
-	public:
-		typedef std::function<response(const request&, Middleware::Context*)> LambbdaMiddlewareFunc;
+typedef std::function<void(const request& req, response& res)> MiddlewareHandlerFunc;
+
+class LambdaMiddlewareHandler : public IMiddleware {
+		
 	private:
-		LambbdaMiddlewareFunc m_func;
+		MiddlewareHandlerFunc m_before;
+		MiddlewareHandlerFunc m_after;
 	public:
-		LambdaMiddlewareHandler(LambbdaMiddlewareFunc func) : m_func(func) {}
-		response handle(const request& req, Middleware::Context* c) {
-			return m_func(req, c);
+		LambdaMiddlewareHandler(MiddlewareHandlerFunc before, MiddlewareHandlerFunc after) : m_before(before), m_after(after) {}
+		void before_handle(const request& req, response& res) {
+			if(m_before != nullptr)
+				m_before(req, res);
 		}
-};*/
+		void after_handle(const request& req, response& res) {
+			if(m_after != nullptr)
+				m_after(req, res);
+		}
+};
 
 
 }
