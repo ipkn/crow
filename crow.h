@@ -38,8 +38,8 @@ namespace crow
                 middleware_.processBeforeHandlers(req, res);
                 if(!res.isCompleted()) {
                     router_.handle(req, res);
-                    middleware_.processAfterHandlers(req, res);
                 }
+                middleware_.processAfterHandlers(req, res);
             }
         }
 
