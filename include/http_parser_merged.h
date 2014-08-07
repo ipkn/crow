@@ -637,7 +637,7 @@ int http_message_needs_eof(const http_parser *parser);
  * assumed that the caller cares about (and can detect) the transition between
  * URL and non-URL states by looking for these.
  */
-enum state
+inline enum state
 parse_url_char(enum state s, const char ch)
 {
 #if HTTP_PARSER_STRICT
@@ -828,7 +828,7 @@ static const uint8_t normal_url_char[32] = {
   return s_dead;
 }
 
-size_t http_parser_execute (http_parser *parser,
+inline size_t http_parser_execute (http_parser *parser,
                             const http_parser_settings *settings,
                             const char *data,
                             size_t len)
@@ -2240,7 +2240,7 @@ error:
 
 
 /* Does the parser need to see an EOF to find the end of the message? */
-int
+inline int
 http_message_needs_eof (const http_parser *parser)
 {
   if (parser->type == HTTP_REQUEST) {
@@ -2263,7 +2263,7 @@ http_message_needs_eof (const http_parser *parser)
 }
 
 
-int
+inline int
 http_should_keep_alive (const http_parser *parser)
 {
   if (parser->http_major > 0 && parser->http_minor > 0) {
@@ -2282,7 +2282,7 @@ http_should_keep_alive (const http_parser *parser)
 }
 
 
-const char *
+inline const char *
 http_method_str (enum http_method m)
 {
 static const char *method_strings[] =
@@ -2295,7 +2295,7 @@ static const char *method_strings[] =
 }
 
 
-void
+inline void
 http_parser_init (http_parser *parser, enum http_parser_type t)
 {
   void *data = parser->data; /* preserve application data */
@@ -2306,7 +2306,7 @@ http_parser_init (http_parser *parser, enum http_parser_type t)
   parser->http_errno = HPE_OK;
 }
 
-const char *
+inline const char *
 http_errno_name(enum http_errno err) {
 /* Map errno values to strings for human-readable output */
 #define HTTP_STRERROR_GEN(n, s) { "HPE_" #n, s },
@@ -2321,7 +2321,7 @@ static struct {
   return http_strerror_tab[err].name;
 }
 
-const char *
+inline const char *
 http_errno_description(enum http_errno err) {
 /* Map errno values to strings for human-readable output */
 #define HTTP_STRERROR_GEN(n, s) { "HPE_" #n, s },
@@ -2336,7 +2336,7 @@ static struct {
   return http_strerror_tab[err].description;
 }
 
-static enum http_host_state
+inline static enum http_host_state
 http_parse_host_char(enum http_host_state s, const char ch) {
   switch(s) {
     case s_http_userinfo:
@@ -2401,7 +2401,7 @@ http_parse_host_char(enum http_host_state s, const char ch) {
   return s_http_host_dead;
 }
 
-static int
+inline int
 http_parse_host(const char * buf, struct http_parser_url *u, int found_at) {
   enum http_host_state s;
 
@@ -2474,7 +2474,7 @@ http_parse_host(const char * buf, struct http_parser_url *u, int found_at) {
   return 0;
 }
 
-int
+inline int
 http_parser_parse_url(const char *buf, size_t buflen, int is_connect,
                       struct http_parser_url *u)
 {
@@ -2573,7 +2573,7 @@ http_parser_parse_url(const char *buf, size_t buflen, int is_connect,
   return 0;
 }
 
-void
+inline void
 http_parser_pause(http_parser *parser, int paused) {
   /* Users should only be pausing/unpausing a parser that is not in an error
    * state. In non-debug builds, there's not much that we can do about this
@@ -2587,12 +2587,12 @@ http_parser_pause(http_parser *parser, int paused) {
   }
 }
 
-int
+inline int
 http_body_is_final(const struct http_parser *parser) {
     return parser->state == s_message_done;
 }
 
-unsigned long
+inline unsigned long
 http_parser_version(void) {
   return HTTP_PARSER_VERSION_MAJOR * 0x10000 |
          HTTP_PARSER_VERSION_MINOR * 0x00100 |

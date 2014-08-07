@@ -159,27 +159,27 @@ namespace crow
                 friend rvalue crow::json::load(const char* data, size_t size);
             };
 
-            bool operator < (const r_string& l, const r_string& r)
+            inline bool operator < (const r_string& l, const r_string& r)
             {
                 return boost::lexicographical_compare(l,r);
             }
 
-            bool operator < (const r_string& l, const std::string& r)
+            inline bool operator < (const r_string& l, const std::string& r)
             {
                 return boost::lexicographical_compare(l,r);
             }
 
-            bool operator > (const r_string& l, const std::string& r)
+            inline bool operator > (const r_string& l, const std::string& r)
             {
                 return boost::lexicographical_compare(r,l);
             }
 
-            bool operator == (const r_string& l, const r_string& r)
+            inline bool operator == (const r_string& l, const r_string& r)
             {
                 return boost::equals(l,r);
             }
 
-            bool operator == (const r_string& l, const std::string& r)
+            inline bool operator == (const r_string& l, const std::string& r)
             {
                 return boost::equals(l,r);
             }

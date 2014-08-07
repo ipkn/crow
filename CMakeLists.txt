@@ -26,3 +26,15 @@ add_subdirectory(examples)
 enable_testing()
 add_test(NAME crow_test COMMAND ${CMAKE_CURRENT_BINARY_DIR}/tests/unittest)
 add_test(NAME template_test COMMAND ${CMAKE_CURRENT_BINARY_DIR}/tests/template/test.py WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/tests/template)
+
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/amalgamate)
+add_custom_target(amalgamation ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/amalgamate/crow_all.h)
+file(COPY DIRECTORY ${PROJECT_SOURCE_DIR}/include DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
+    FILES_MATCHING 
+    PATTERN "*.h")
+
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/amalgamate/crow_all.h 
+    COMMAND python ${PROJECT_SOURCE_DIR}/amalgamate/merge_all.py
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/amalgamate
+    )
+
