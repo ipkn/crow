@@ -3,6 +3,7 @@
 #include <boost/asio.hpp>
 #include <cstdint>
 #include <atomic>
+#include <future>
 
 #include <memory>
 

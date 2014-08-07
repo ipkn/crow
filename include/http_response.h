@@ -73,9 +73,14 @@ namespace crow
             end();
         }
 
-        void* p;
+        bool is_alive()
+        {
+            return is_alive_helper_ && is_alive_helper_();
+        }
+
         private:
             bool completed_{};
             std::function<void()> complete_request_handler_;
+            std::function<bool()> is_alive_helper_;
     };
 }

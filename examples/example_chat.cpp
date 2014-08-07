@@ -3,11 +3,12 @@
 #include "mustache.h"
 #include <string>
 #include <vector>
+#include <chrono>
 
 using namespace std;
 
 vector<string> msgs;
-vector<crow::response*> ress;
+vector<pair<crow::response*, decltype(chrono::steady_clock::now())>> ress;
 
 void broadcast(const string& msg)
 {
@@ -16,9 +17,10 @@ void broadcast(const string& msg)
     x["msgs"][0] = msgs.back();
     x["last"] = msgs.size();
     string body = crow::json::dump(x);
-    for(auto* res:ress)
+    for(auto p:ress)
     {
-        CROW_LOG_DEBUG << res->p << " replied: " << body;
+        auto* res = p.first;
+        CROW_LOG_DEBUG << res << " replied: " << body;
         res->end(body);
     }
     ress.clear();
@@ -39,8 +41,9 @@ int main()
     ([]{
         CROW_LOG_INFO << "logs requested";
         crow::json::wvalue x;
-        for(int i = max(0, (int)msgs.size()-100); i < (int)msgs.size(); i++)
-            x["msgs"][i] = msgs[i];
+        int start = max(0, (int)msgs.size()-100);
+        for(int i = start; i < (int)msgs.size(); i++)
+            x["msgs"][i-start] = msgs[i];
         x["last"] = msgs.size();
         CROW_LOG_INFO << "logs completed";
         return x;
@@ -61,8 +64,17 @@ int main()
         }
         else
         {
-            ress.push_back(&res);
-            CROW_LOG_DEBUG << res.p << " stored";
+            vector<pair<crow::response*, decltype(chrono::steady_clock::now())>> filtered;
+            for(auto p : ress)
+            {
+                if (p.first->is_alive() && chrono::steady_clock::now() - p.second < chrono::seconds(30))
+                    filtered.push_back(p);
+                else
+                    p.first->end();
+            }
+            ress.swap(filtered);
+            ress.push_back({&res, chrono::steady_clock::now()});
+            CROW_LOG_DEBUG << &res << " stored " << ress.size();
         }
     });
 
@@ -74,7 +86,7 @@ int main()
         return "";
     });
 
-    app.port(18080)
+    app.port(40080)
         //.multithreaded()
         .run();
 }
