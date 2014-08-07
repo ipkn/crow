@@ -10,9 +10,26 @@ class ExampleLogHandler : public crow::ILogHandler {
         }
 };
 
+class ExampleMiddleware : public crow::IMiddleware {
+    public:
+        const char* tag_;
+        ExampleMiddleware(const char* tag) : tag_(tag) {}
+        void before_handle(const crow::request& req, crow::response& res)
+        {
+            CROW_LOG_INFO << "ExampleMiddleware " << tag_ << " : before handle";
+        }
+        void after_handle(const crow::request& req, crow::response& res)
+        {
+         CROW_LOG_INFO << "ExampleMiddleware " << tag_ << " : after handle";
+        }
+};
+
 int main()
 {
     crow::Crow app;
+
+    app.use(std::make_shared<ExampleMiddleware>("A"));
+    app.use(std::make_shared<ExampleMiddleware>("B"));
 
     CROW_ROUTE(app, "/")
         .name("hello")

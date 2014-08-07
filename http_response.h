@@ -73,6 +73,11 @@ namespace crow
             end();
         }
 
+        bool isCompleted() 
+        {
+            return completed_;
+        }
+
         void* p;
         private:
             bool completed_{};
