@@ -16,11 +16,11 @@ class ExampleMiddleware : public crow::IMiddleware {
         ExampleMiddleware(const char* tag) : tag_(tag) {}
         void before_handle(const crow::request& req, crow::response& res)
         {
-            CROW_LOG_INFO << "ExampleMiddleware " << tag_ << " : before handle";
+            CROW_LOG_INFO << "Middleware " << tag_ << " : before handle";
         }
         void after_handle(const crow::request& req, crow::response& res)
         {
-            CROW_LOG_INFO << "ExampleMiddleware " << tag_ << " : after handle";
+            CROW_LOG_INFO << "Middleware " << tag_ << " : after handle";
         }
 };
 
@@ -29,17 +29,12 @@ int main()
     crow::Crow app;
 
     app.use(std::make_shared<ExampleMiddleware>("A"));
-    app.use(std::make_shared<ExampleMiddleware>("B"));
 
     app.use([](const crow::request& req, crow::response& res){
-        CROW_LOG_INFO << "LambdaMiddleware 1 : before handle";
-    });
-
-    app.use([](const crow::request& req, crow::response& res){
-        CROW_LOG_INFO << "LambdaMiddleware 2 : before handle";
+        CROW_LOG_INFO << "Middleware B : before handle";
     },
     [](const crow::request& req, crow::response& res){
-        CROW_LOG_INFO << "LambdaMiddleware 2 : after handle";
+        CROW_LOG_INFO << "Middleware B : after handle";
     });
 
     CROW_ROUTE(app, "/")
