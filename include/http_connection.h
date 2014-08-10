@@ -113,11 +113,11 @@ namespace crow
         {
             CROW_LOG_INFO << "Response: " << this << ' ' << res.code << ' ' << close_connection_;
 
-			if (!socket_.is_open())
-				return;
-
             auto self = this->shared_from_this();
             res.complete_request_handler_ = nullptr;
+            
+			if (!socket_.is_open())
+				return;
 
             static std::unordered_map<int, std::string> statusCodes = {
                 {200, "HTTP/1.1 200 OK\r\n"},
