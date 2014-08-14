@@ -4,6 +4,11 @@ project (crow_examples)
 add_executable(example example.cpp)
 #target_link_libraries(example crow)
 target_link_libraries(example ${Boost_LIBRARIES} )
+
+if (Tcmalloc_FOUND)
+target_link_libraries(example ${Tcmalloc_LIBRARIES})
+endif(Tcmalloc_FOUND)
+
 add_custom_command(OUTPUT example_test.py
         COMMAND ${CMAKE_COMMAND} -E
         copy ${PROJECT_SOURCE_DIR}/example_test.py ${CMAKE_CURRENT_BINARY_DIR}/example_test.py
@@ -20,3 +25,6 @@ add_custom_command(OUTPUT example_chat.html
         DEPENDS ${PROJECT_SOURCE_DIR}/example_chat.html 
         )
 add_custom_target(example_chat_copy ALL DEPENDS example_chat.html)
+
+SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -g -pg" )
+SET( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -g -pg" )

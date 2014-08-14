@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 project (crow_all)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
+find_package(Tcmalloc)
 
 if (NOT CMAKE_BUILD_TYPE)
     message(STATUS "No build type selected, default to Release")
