@@ -109,11 +109,19 @@ namespace crow
     };
 }
 
-#define CROW_LOG_CRITICAL    crow::logger("CRITICAL", crow::LogLevel::CRITICAL)
-#define CROW_LOG_ERROR        crow::logger("ERROR   ", crow::LogLevel::ERROR)
-#define CROW_LOG_WARNING    crow::logger("WARNING ", crow::LogLevel::WARNING)
-#define CROW_LOG_INFO        crow::logger("INFO    ", crow::LogLevel::INFO)
-#define CROW_LOG_DEBUG        crow::logger("DEBUG   ", crow::LogLevel::DEBUG)
-
-
+#define CROW_LOG_CRITICAL   \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::CRITICAL) \
+            crow::logger("CRITICAL", crow::LogLevel::CRITICAL)
+#define CROW_LOG_ERROR      \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::ERROR) \
+            crow::logger("ERROR   ", crow::LogLevel::ERROR)
+#define CROW_LOG_WARNING    \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::WARNING) \
+            crow::logger("WARNING ", crow::LogLevel::WARNING)
+#define CROW_LOG_INFO       \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::INFO) \
+            crow::logger("INFO    ", crow::LogLevel::INFO)
+#define CROW_LOG_DEBUG      \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::DEBUG) \
+            crow::logger("DEBUG   ", crow::LogLevel::DEBUG)
 
