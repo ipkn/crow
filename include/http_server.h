@@ -61,7 +61,7 @@ namespace crow
                 {
                     if (!ec)
                     {
-                        auto p = std::make_shared<Connection<Handler>>(std::move(socket_), handler_, server_name_);
+                        auto p = new Connection<Handler>(std::move(socket_), handler_, server_name_);
                         p->start();
                     }
                     do_accept();

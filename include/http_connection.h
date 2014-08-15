@@ -22,7 +22,7 @@ namespace crow
     static int connectionCount;
 #endif
     template <typename Handler>
-    class Connection : public std::enable_shared_from_this<Connection<Handler>>
+    class Connection
     {
     public:
         Connection(tcp::socket&& socket, Handler* handler, const std::string& server_name) 
@@ -30,8 +30,7 @@ namespace crow
             handler_(handler), 
             parser_(this), 
             server_name_(server_name),
-            deadline_(socket_.get_io_service()),
-            address_str_(boost::lexical_cast<std::string>(socket_.remote_endpoint()))
+            deadline_(socket_.get_io_service())
         {
 #ifdef CROW_ENABLE_DEBUG
             connectionCount ++;
@@ -50,7 +49,7 @@ namespace crow
 
         void start()
         {
-            auto self = this->shared_from_this();
+            //auto self = this->shared_from_this();
             start_deadline();
 
             do_read();
@@ -91,15 +90,15 @@ namespace crow
                 }
             }
 
-            CROW_LOG_INFO << "Request: " << address_str_ << " " << this << " HTTP/" << parser_.http_major << "." << parser_.http_minor << ' '
+            CROW_LOG_INFO << "Request: " << boost::lexical_cast<std::string>(socket_.remote_endpoint()) << " " << this << " HTTP/" << parser_.http_major << "." << parser_.http_minor << ' '
              << method_name(req.method) << " " << req.url;
 
 
             if (!is_invalid_request)
             {
                 deadline_.cancel();
-                auto self = this->shared_from_this();
-                res.complete_request_handler_ = [self]{ self->complete_request(); };
+                //auto self = this->shared_from_this();
+                res.complete_request_handler_ = [this]{ this->complete_request(); };
                 res.is_alive_helper_ = [this]()->bool{ return socket_.is_open(); };
                 handler_->handle(req, res);
             }
@@ -113,11 +112,15 @@ namespace crow
         {
             CROW_LOG_INFO << "Response: " << this << ' ' << res.code << ' ' << close_connection_;
 
-            auto self = this->shared_from_this();
+            //auto self = this->shared_from_this();
             res.complete_request_handler_ = nullptr;
             
 			if (!socket_.is_open())
+            {
+                CROW_LOG_DEBUG << this << " delete (socket is closed) " << is_reading << ' ' << is_writing;
+                delete this;
 				return;
+            }
 
             static std::unordered_map<int, std::string> statusCodes = {
                 {200, "HTTP/1.1 200 OK\r\n"},
@@ -229,9 +232,10 @@ namespace crow
 
         void do_read()
         {
-            auto self = this->shared_from_this();
+            //auto self = this->shared_from_this();
+            is_reading = true;
             socket_.async_read_some(boost::asio::buffer(buffer_), 
-                [self, this](const boost::system::error_code& ec, std::size_t bytes_transferred)
+                [this](const boost::system::error_code& ec, std::size_t bytes_transferred)
                 {
                     bool error_while_reading = true;
                     if (!ec)
@@ -249,6 +253,8 @@ namespace crow
                         deadline_.cancel();
                         parser_.done();
                         socket_.close();
+                        is_reading = false;
+                        check_destory();
                     }
                     else
                     {
@@ -259,10 +265,12 @@ namespace crow
 
         void do_write()
         {
-            auto self = this->shared_from_this();
+            //auto self = this->shared_from_this();
+            is_writing = true;
             boost::asio::async_write(socket_, buffers_, 
-                [&, self](const boost::system::error_code& ec, std::size_t bytes_transferred)
+                [&](const boost::system::error_code& ec, std::size_t bytes_transferred)
                 {
+                    is_writing = false;
                     if (!ec)
                     {
                         start_deadline();
@@ -271,14 +279,25 @@ namespace crow
                             socket_.close();
                         }
                     }
+                    else
+                        check_destory();
                 });
+        }
+
+        void check_destory()
+        {
+            if (!is_reading && !is_writing)
+            {
+                CROW_LOG_DEBUG << this << " delete (idle) ";
+                delete this;
+            }
         }
 
         void start_deadline(int timeout = 5)
         {
             deadline_.expires_from_now(boost::posix_time::seconds(timeout));
-            auto self = this->shared_from_this();
-            deadline_.async_wait([self, this](const boost::system::error_code& ec) 
+            //auto self = this->shared_from_this();
+            deadline_.async_wait([this](const boost::system::error_code& ec) 
             {
                 if (ec || !socket_.is_open())
                 {
@@ -310,7 +329,9 @@ namespace crow
         std::string date_str_;
 
         boost::asio::deadline_timer deadline_;
-        std::string address_str_;
+
+        bool is_reading{};
+        bool is_writing{};
     };
 
 }
