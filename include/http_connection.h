@@ -70,6 +70,7 @@ namespace crow
 
         void handle()
         {
+            cancel_deadline_timer();
             bool is_invalid_request = false;
 
             request req = parser_.to_request();
@@ -97,7 +98,6 @@ namespace crow
 
             if (!is_invalid_request)
             {
-                cancel_deadline_timer();
                 res.complete_request_handler_ = [this]{ this->complete_request(); };
                 res.is_alive_helper_ = [this]()->bool{ return socket_.is_open(); };
                 handler_->handle(req, res);
@@ -117,8 +117,8 @@ namespace crow
             
 			if (!socket_.is_open())
             {
-                CROW_LOG_DEBUG << this << " delete (socket is closed) " << is_reading << ' ' << is_writing;
-                delete this;
+                //CROW_LOG_DEBUG << this << " delete (socket is closed) " << is_reading << ' ' << is_writing;
+                //delete this;
 				return;
             }
 
@@ -243,7 +243,6 @@ namespace crow
                         bool ret = parser_.feed(buffer_.data(), bytes_transferred);
                         if (ret && socket_.is_open() && !close_connection_)
                         {
-                            do_read();
                             error_while_reading = false;
                         }
                     }
@@ -255,11 +254,12 @@ namespace crow
                         socket_.close();
                         is_reading = false;
                         CROW_LOG_DEBUG << this << " from read(1)";
-                        check_destory();
+                        check_destroy();
                     }
                     else
                     {
                         start_deadline();
+                        do_read();
                     }
                 });
         }
@@ -274,23 +274,22 @@ namespace crow
                     is_writing = false;
                     if (!ec)
                     {
-                        start_deadline();
                         if (close_connection_)
                         {
                             socket_.close();
                             CROW_LOG_DEBUG << this << " from write(1)";
-                            check_destory();
+                            check_destroy();
                         }
                     }
                     else
                     {
                         CROW_LOG_DEBUG << this << " from write(2)";
-                        check_destory();
+                        check_destroy();
                     }
                 });
         }
 
-        void check_destory()
+        void check_destroy()
         {
             CROW_LOG_DEBUG << this << " is_reading " << is_reading << " is_writing " << is_writing;
             if (!is_reading && !is_writing)
@@ -302,11 +301,8 @@ namespace crow
 
         void cancel_deadline_timer()
         {
-            if (timer_cancel_helper)
-            {
-                *timer_cancel_helper = true;
-                timer_cancel_helper.release();
-            }
+            CROW_LOG_DEBUG << this << " timer cancelled: " << timer_cancel_key_.first << ' ' << timer_cancel_key_.second;
+            detail::dumb_timer_queue::get_current_dumb_timer_queue().cancel(timer_cancel_key_);
         }
 
         void start_deadline(int timeout = 5)
@@ -314,21 +310,15 @@ namespace crow
             auto& timer_queue = detail::dumb_timer_queue::get_current_dumb_timer_queue();
             cancel_deadline_timer();
             
-            timer_cancel_helper.reset(new bool{false});
-            bool* p_is_cancelled = timer_cancel_helper.get();
-            timer_queue.add([p_is_cancelled, this]
+            timer_cancel_key_ = timer_queue.add([this]
             {
-                if (*p_is_cancelled)
-                {
-                    delete p_is_cancelled;
-                    return;
-                }
                 if (!socket_.is_open())
                 {
                     return;
                 }
                 socket_.close();
             });
+            CROW_LOG_DEBUG << this << " timer added: " << timer_cancel_key_.first << ' ' << timer_cancel_key_.second;
         }
 
     private:
@@ -349,7 +339,7 @@ namespace crow
         std::string date_str_;
 
         //boost::asio::deadline_timer deadline_;
-        std::unique_ptr<bool> timer_cancel_helper;
+        detail::dumb_timer_queue::key timer_cancel_key_;
 
         bool is_reading{};
         bool is_writing{};
