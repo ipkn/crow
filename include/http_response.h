@@ -59,11 +59,11 @@ namespace crow
         {
             if (!completed_)
             {
-                completed_ = true;
                 if (complete_request_handler_)
                 {
                     complete_request_handler_();
                 }
+                completed_ = true;
             }
         }
 
@@ -71,6 +71,11 @@ namespace crow
         {
             body += body_part;
             end();
+        }
+
+        bool is_completed() 
+        {
+            return completed_;
         }
 
         bool is_alive()
