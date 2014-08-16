@@ -125,9 +125,8 @@ namespace crow
                     );
                     return;
                 }
-#ifdef CROW_ENABLE_LOGGING
-                std::cerr << "ERROR cannot find handler" << std::endl;
-#endif
+                CROW_LOG_DEBUG << "ERROR cannot find handler" << std::endl;
+
                 // we already found matched url; this is server error
                 cparams.res = response(500);
             }

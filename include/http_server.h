@@ -10,6 +10,7 @@
 #include "http_connection.h"
 #include "datetime.h"
 #include "logging.h"
+#include "dumb_timer_queue.h"
 
 namespace crow
 {
@@ -36,8 +37,15 @@ namespace crow
             std::vector<std::future<void>> v;
             for(uint16_t i = 0; i < concurrency_; i ++)
                 v.push_back(
-                        std::async(std::launch::async, [this]{io_service_.run();})
-                        );
+                        std::async(std::launch::async, [this]{
+                            auto& timer_queue = detail::dumb_timer_queue::get_current_dumb_timer_queue();
+                            timer_queue.set_io_service(io_service_);
+                            while(!io_service_.stopped())
+                            {
+                                timer_queue.process();
+                                io_service_.poll_one();
+                            }
+                        }));
 
             CROW_LOG_INFO << server_name_ << " server is running, local port " << port_;
 

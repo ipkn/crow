@@ -13,6 +13,7 @@
 #include "http_response.h"
 #include "logging.h"
 #include "settings.h"
+#include "dumb_timer_queue.h"
 
 namespace crow
 {
@@ -29,8 +30,7 @@ namespace crow
             : socket_(std::move(socket)), 
             handler_(handler), 
             parser_(this), 
-            server_name_(server_name),
-            deadline_(socket_.get_io_service())
+            server_name_(server_name)
         {
 #ifdef CROW_ENABLE_DEBUG
             connectionCount ++;
@@ -41,6 +41,7 @@ namespace crow
         ~Connection()
         {
             res.complete_request_handler_ = nullptr;
+            cancel_deadline_timer();
 #ifdef CROW_ENABLE_DEBUG
             connectionCount --;
             CROW_LOG_DEBUG << "Connection closed, total " << connectionCount << ", " << this;
@@ -96,8 +97,7 @@ namespace crow
 
             if (!is_invalid_request)
             {
-                deadline_.cancel();
-                //auto self = this->shared_from_this();
+                cancel_deadline_timer();
                 res.complete_request_handler_ = [this]{ this->complete_request(); };
                 res.is_alive_helper_ = [this]()->bool{ return socket_.is_open(); };
                 handler_->handle(req, res);
@@ -241,7 +241,7 @@ namespace crow
                     if (!ec)
                     {
                         bool ret = parser_.feed(buffer_.data(), bytes_transferred);
-                        if (ret)
+                        if (ret && socket_.is_open() && !close_connection_)
                         {
                             do_read();
                             error_while_reading = false;
@@ -250,10 +250,11 @@ namespace crow
 
                     if (error_while_reading)
                     {
-                        deadline_.cancel();
+                        cancel_deadline_timer();
                         parser_.done();
                         socket_.close();
                         is_reading = false;
+                        CROW_LOG_DEBUG << this << " from read(1)";
                         check_destory();
                     }
                     else
@@ -277,15 +278,21 @@ namespace crow
                         if (close_connection_)
                         {
                             socket_.close();
+                            CROW_LOG_DEBUG << this << " from write(1)";
+                            check_destory();
                         }
                     }
                     else
+                    {
+                        CROW_LOG_DEBUG << this << " from write(2)";
                         check_destory();
+                    }
                 });
         }
 
         void check_destory()
         {
+            CROW_LOG_DEBUG << this << " is_reading " << is_reading << " is_writing " << is_writing;
             if (!is_reading && !is_writing)
             {
                 CROW_LOG_DEBUG << this << " delete (idle) ";
@@ -293,21 +300,34 @@ namespace crow
             }
         }
 
+        void cancel_deadline_timer()
+        {
+            if (timer_cancel_helper)
+            {
+                *timer_cancel_helper = true;
+                timer_cancel_helper.release();
+            }
+        }
+
         void start_deadline(int timeout = 5)
         {
-            deadline_.expires_from_now(boost::posix_time::seconds(timeout));
-            //auto self = this->shared_from_this();
-            deadline_.async_wait([this](const boost::system::error_code& ec) 
+            auto& timer_queue = detail::dumb_timer_queue::get_current_dumb_timer_queue();
+            cancel_deadline_timer();
+            
+            timer_cancel_helper.reset(new bool{false});
+            bool* p_is_cancelled = timer_cancel_helper.get();
+            timer_queue.add([p_is_cancelled, this]
             {
-                if (ec || !socket_.is_open())
+                if (*p_is_cancelled)
+                {
+                    delete p_is_cancelled;
+                    return;
+                }
+                if (!socket_.is_open())
                 {
                     return;
                 }
-                bool is_deadline_passed = deadline_.expires_at() <= boost::asio::deadline_timer::traits_type::now();
-                if (is_deadline_passed)
-                {
-                    socket_.close();
-                }
+                socket_.close();
             });
         }
 
@@ -315,7 +335,7 @@ namespace crow
         tcp::socket socket_;
         Handler* handler_;
 
-        std::array<char, 8192> buffer_;
+        std::array<char, 4096> buffer_;
 
         HTTPParser<Connection> parser_;
         response res;
@@ -328,7 +348,8 @@ namespace crow
         std::string content_length_;
         std::string date_str_;
 
-        boost::asio::deadline_timer deadline_;
+        //boost::asio::deadline_timer deadline_;
+        std::unique_ptr<bool> timer_cancel_helper;
 
         bool is_reading{};
         bool is_writing{};
