@@ -2,8 +2,8 @@
 #include <fstream>
 #include <string>
 #include <iterator>
-#include "../mustache.h"
-#include "../json.h"
+#include "mustache.h"
+#include "json.h"
 using namespace std;
 using namespace crow;
 using namespace crow::mustache;

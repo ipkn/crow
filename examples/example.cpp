@@ -16,11 +16,14 @@ class ExampleMiddleware : public crow::IMiddleware {
         ExampleMiddleware(const char* tag) : tag_(tag) {}
         void before_handle(const crow::request& req, crow::response& res)
         {
-            CROW_LOG_INFO << "Middleware " << tag_ << " : before handle";
+            CROW_LOG_DEBUG << "Middleware " << tag_ << " : before handle";
+
+            // Uncomment next line to observe the middleware stack change
+            //res.end("Middleware ended the response early.");
         }
         void after_handle(const crow::request& req, crow::response& res)
         {
-            CROW_LOG_INFO << "Middleware " << tag_ << " : after handle";
+            CROW_LOG_DEBUG << "Middleware " << tag_ << " : after handle";
         }
 };
 
@@ -28,13 +31,13 @@ int main()
 {
     crow::Crow app;
 
-    app.use(std::make_shared<ExampleMiddleware>("A"));
+    app.use(new ExampleMiddleware("A"));
 
     app.use([](const crow::request& req, crow::response& res){
-        CROW_LOG_INFO << "Middleware B : before handle";
+        CROW_LOG_DEBUG << "Middleware B : before handle";
     },
     [](const crow::request& req, crow::response& res){
-        CROW_LOG_INFO << "Middleware B : after handle";
+        CROW_LOG_DEBUG << "Middleware B : after handle";
     });
 
     CROW_ROUTE(app, "/")

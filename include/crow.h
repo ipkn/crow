@@ -35,11 +35,11 @@ namespace crow
             } 
             else 
             {
-                middleware_.processBeforeHandlers(req, res);
-                if(!res.isCompleted()) {
+                auto depth = middleware_.processBeforeHandlers(req, res);
+                if(!res.is_completed()) {
                     router_.handle(req, res);
                 }
-                middleware_.processAfterHandlers(req, res);
+                middleware_.processAfterHandlers(req, res, depth);
             }
         }
 
@@ -87,13 +87,14 @@ namespace crow
             router_.debug_print();
         }
 
-        void use(std::shared_ptr<IMiddleware> middlewareObj)
+        void use(IMiddleware* middlewareObj)
         {
             middleware_.use(middlewareObj);
         }
+
         void use(crow::MiddlewareHandlerFunc before, crow::MiddlewareHandlerFunc after = nullptr)
         {
-            middleware_.use(std::make_shared<crow::LambdaMiddlewareHandler>(before, after));
+            middleware_.use(new LambdaMiddlewareHandler(before, after));
         }
 
     private:

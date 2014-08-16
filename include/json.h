@@ -29,10 +29,45 @@ namespace crow
 
     namespace json
     {
-        std::string escape(const std::string& str)
+        inline void escape(const std::string& str, std::string& ret)
         {
-            // TODO
-            return str;
+            ret.reserve(ret.size() + str.size()+str.size()/4);
+            for(char c:str)
+            {
+                switch(c)
+                {
+                    case '"': ret += "\\\""; break;
+                    case '\\': ret += "\\\\"; break;
+                    case '\n': ret += "\\n"; break;
+                    case '\b': ret += "\\b"; break;
+                    case '\f': ret += "\\f"; break;
+                    case '\r': ret += "\\r"; break;
+                    case '\t': ret += "\\t"; break;
+                    default:
+                        if (0 <= c && c < 0x20)
+                        {
+                            ret += "\\u00";
+                            auto to_hex = [](char c)
+                            {
+                                c = c&0xf;
+                                if (c < 10)
+                                    return '0' + c;
+                                return 'a'+c-10;
+                            };
+                            ret += to_hex(c/16);
+                            ret += to_hex(c%16);
+                        }
+                        else
+                            ret += c;
+                        break;
+                }
+            }
+        }
+        inline std::string escape(const std::string& str)
+        {
+            std::string ret;
+            escape(str, ret);
+            return ret;
         }
 
         enum class type : char
@@ -124,27 +159,27 @@ namespace crow
                 friend rvalue crow::json::load(const char* data, size_t size);
             };
 
-            bool operator < (const r_string& l, const r_string& r)
+            inline bool operator < (const r_string& l, const r_string& r)
             {
                 return boost::lexicographical_compare(l,r);
             }
 
-            bool operator < (const r_string& l, const std::string& r)
+            inline bool operator < (const r_string& l, const std::string& r)
             {
                 return boost::lexicographical_compare(l,r);
             }
 
-            bool operator > (const r_string& l, const std::string& r)
+            inline bool operator > (const r_string& l, const std::string& r)
             {
                 return boost::lexicographical_compare(r,l);
             }
 
-            bool operator == (const r_string& l, const r_string& r)
+            inline bool operator == (const r_string& l, const r_string& r)
             {
                 return boost::equals(l,r);
             }
 
-            bool operator == (const r_string& l, const std::string& r)
+            inline bool operator == (const r_string& l, const std::string& r)
             {
                 return boost::equals(l,r);
             }
@@ -561,50 +596,47 @@ namespace crow
         namespace detail {
         }
 
-        bool operator == (const rvalue& l, const std::string& r)
+        inline bool operator == (const rvalue& l, const std::string& r)
         {
             return l.s() == r;
         }
 
-        bool operator == (const std::string& l, const rvalue& r)
+        inline bool operator == (const std::string& l, const rvalue& r)
         {
             return l == r.s();
         }
 
-        bool operator != (const rvalue& l, const std::string& r)
+        inline bool operator != (const rvalue& l, const std::string& r)
         {
             return l.s() != r;
         }
 
-        bool operator != (const std::string& l, const rvalue& r)
+        inline bool operator != (const std::string& l, const rvalue& r)
         {
             return l != r.s();
         }
 
-        bool operator == (const rvalue& l, double r)
+        inline bool operator == (const rvalue& l, double r)
         {
             return l.d() == r;
         }
 
-        bool operator == (double l, const rvalue& r)
+        inline bool operator == (double l, const rvalue& r)
         {
             return l == r.d();
         }
 
-        bool operator != (const rvalue& l, double r)
+        inline bool operator != (const rvalue& l, double r)
         {
             return l.d() != r;
         }
 
-        bool operator != (double l, const rvalue& r)
+        inline bool operator != (double l, const rvalue& r)
         {
             return l != r.d();
         }
 
 
-        //inline rvalue decode(const std::string& s)
-        //{
-        //}
         inline rvalue load_nocopy_internal(char* data, size_t size)
         {
             //static const char* escaped = "\"\\/\b\f\n\r\t";
@@ -1263,14 +1295,13 @@ namespace crow
             friend std::string dump(const wvalue& v);
         };
 
-        void dump_string(const std::string& str, std::string& out)
+        inline void dump_string(const std::string& str, std::string& out)
         {
-            // TODO escaping
             out.push_back('"');
-            out += str;
+            escape(str, out);
             out.push_back('"');
         }
-        void dump_internal(const wvalue& v, std::string& out)
+        inline void dump_internal(const wvalue& v, std::string& out)
         {
             switch(v.t_)
             {
@@ -1328,7 +1359,7 @@ namespace crow
             }
         }
 
-        std::string dump(const wvalue& v)
+        inline std::string dump(const wvalue& v)
         {
             std::string ret;
             ret.reserve(v.estimate_length());

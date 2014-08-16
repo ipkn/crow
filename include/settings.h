@@ -9,10 +9,10 @@
 
 /* #define - specifies log level */
 /*
-	CRITICAL 	= 0
-	ERROR		= 1
+	DEBUG 		= 0
+	INFO 		= 1
 	WARNING		= 2
-	INFO 		= 3
-	DEBUG 		= 4
+	ERROR		= 3
+	CRITICAL 	= 4
 */
-#define CROW_LOG_LEVEL 4
+#define CROW_LOG_LEVEL 0

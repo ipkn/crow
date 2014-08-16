@@ -9,6 +9,8 @@ Crow is C++ microframework for web. (inspired by Python Flask)
    - Type-safe Handlers (see Example)
  - Fast built-in JSON parser (crow::json)
  - [Mustache](http://mustache.github.io/) based templating library (crow::mustache)
+ - Header only
+ - Provide an amalgamated header file `crow_all.h' with every features
 
 ## Still in development   
  - Built-in ORM
@@ -76,25 +78,38 @@ int main()
 
 ## How to Build
 
+If you just want to use crow, copy amalgamate/crow_all.h and include it.
+
 ### Requirements
 
  - C++ compiler with good C++11 support (tested with g++>=4.8)
  - boost library
- - tcmalloc (optional)
+ - CMake
 
-### Ubuntu
-#### Installing missing dependencies
+ - Linking with tcmalloc/jemalloc is recommended for speed.
+
+### Building (Tests, Examples)
+
+Out-of-source build with CMake is recommended.
+
+```
+mkdir build
+cd build
+cmake ..
+make
+```
+
+You can run tests with following commands:
+```
+ctest
+```
+
+
+### Installing missing dependencies
+
+#### Ubuntu
     sudo apt-get install build-essential libtcmalloc-minimal4 && sudo ln -s /usr/lib/libtcmalloc_minimal.so.4 /usr/lib/libtcmalloc_minimal.so
 
-#### Building
-    git submodule init && git submodule update
-    make -j$(($(grep -c '^processor' /proc/cpuinfo)+1))
-
-### OSX
-#### Installing missing dependencies
+#### OSX
     brew install boost google-perftools
-
-#### Building
-    git submodule init && git submodule update
-    make -j$(($(sysctl -a | grep machdep.cpu.thread_count | awk -F " " '{print $2}')+1))
 

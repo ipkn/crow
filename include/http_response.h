@@ -59,11 +59,11 @@ namespace crow
         {
             if (!completed_)
             {
-                completed_ = true;
                 if (complete_request_handler_)
                 {
                     complete_request_handler_();
                 }
+                completed_ = true;
             }
         }
 
@@ -73,14 +73,19 @@ namespace crow
             end();
         }
 
-        bool isCompleted() 
+        bool is_completed() 
         {
             return completed_;
         }
 
-        void* p;
+        bool is_alive()
+        {
+            return is_alive_helper_ && is_alive_helper_();
+        }
+
         private:
             bool completed_{};
             std::function<void()> complete_request_handler_;
+            std::function<bool()> is_alive_helper_;
     };
 }
