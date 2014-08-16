@@ -21,6 +21,7 @@
 *.app
 
 example
+example_chat
 unittest
 
 *.swp
@@ -32,3 +33,4 @@ unittest
 build
 
 .directory
+*.sublime-*

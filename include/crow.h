@@ -13,9 +13,7 @@
 #include "http_server.h"
 #include "utility.h"
 #include "routing.h"
-
-// TEST
-#include <iostream>
+#include "middleware.h"
 
 #define CROW_ROUTE(app, url) app.route<crow::black_magic::get_parameter_tag(url)>(url)
 
@@ -31,7 +29,18 @@ namespace crow
 
         void handle(const request& req, response& res)
         {
-            return router_.handle(req, res);
+            if(middleware_.count() == 0)
+            {
+                router_.handle(req, res);
+            } 
+            else 
+            {
+                auto depth = middleware_.processBeforeHandlers(req, res);
+                if(!res.is_completed()) {
+                    router_.handle(req, res);
+                }
+                middleware_.processAfterHandlers(req, res, depth);
+            }
         }
 
         template <uint64_t Tag>
@@ -78,11 +87,22 @@ namespace crow
             router_.debug_print();
         }
 
+        void use(IMiddleware* middlewareObj)
+        {
+            middleware_.use(middlewareObj);
+        }
+
+        void use(crow::MiddlewareHandlerFunc before, crow::MiddlewareHandlerFunc after = nullptr)
+        {
+            middleware_.use(new LambdaMiddlewareHandler(before, after));
+        }
+
     private:
         uint16_t port_ = 80;
         uint16_t concurrency_ = 1;
 
         Router router_;
+        Middleware middleware_;
     };
     using App = Crow;
 };
