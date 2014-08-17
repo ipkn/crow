@@ -10,9 +10,35 @@ class ExampleLogHandler : public crow::ILogHandler {
         }
 };
 
+class ExampleMiddleware : public crow::IMiddleware {
+    public:
+        const char* tag_;
+        ExampleMiddleware(const char* tag) : tag_(tag) {}
+        void before_handle(const crow::request& req, crow::response& res)
+        {
+            CROW_LOG_DEBUG << "Middleware " << tag_ << " : before handle";
+
+            // Uncomment next line to observe the middleware stack change
+            //res.end("Middleware ended the response early.");
+        }
+        void after_handle(const crow::request& req, crow::response& res)
+        {
+            CROW_LOG_DEBUG << "Middleware " << tag_ << " : after handle";
+        }
+};
+
 int main()
 {
     crow::Crow app;
+
+    app.use(new ExampleMiddleware("A"));
+
+    app.use([](const crow::request& req, crow::response& res){
+        CROW_LOG_DEBUG << "Middleware B : before handle";
+    },
+    [](const crow::request& req, crow::response& res){
+        CROW_LOG_DEBUG << "Middleware B : after handle";
+    });
 
     CROW_ROUTE(app, "/")
         .name("hello")
