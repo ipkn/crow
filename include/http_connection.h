@@ -26,8 +26,8 @@ namespace crow
     class Connection
     {
     public:
-        Connection(tcp::socket&& socket, Handler* handler, const std::string& server_name) 
-            : socket_(std::move(socket)), 
+        Connection(boost::asio::io_service& io_service, Handler* handler, const std::string& server_name) 
+            : socket_(io_service), 
             handler_(handler), 
             parser_(this), 
             server_name_(server_name)
@@ -46,6 +46,11 @@ namespace crow
             connectionCount --;
             CROW_LOG_DEBUG << "Connection closed, total " << connectionCount << ", " << this;
 #endif
+        }
+
+        tcp::socket& socket()
+        {
+            return socket_;
         }
 
         void start()

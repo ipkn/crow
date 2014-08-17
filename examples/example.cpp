@@ -6,7 +6,7 @@
 class ExampleLogHandler : public crow::ILogHandler {
     public:
         void log(string message, crow::LogLevel level) override {
-            cerr << "ExampleLogHandler -> " << message;
+//            cerr << "ExampleLogHandler -> " << message;
         }
 };
 
@@ -68,7 +68,8 @@ int main()
         return crow::response{os.str()};
     });
 
-    //crow::logger::setLogLevel(LogLevel::INFO);
+    // ignore all log
+    crow::logger::setLogLevel(crow::LogLevel::CRITICAL);
     //crow::logger::setHandler(std::make_shared<ExampleLogHandler>());
 
     app.port(18080)
