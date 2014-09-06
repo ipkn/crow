@@ -112,7 +112,7 @@ TEST(ParameterTagging)
 
 TEST(RoutingTest)
 {
-    Crow app;
+    SimpleApp app;
     int A{};
     uint32_t B{};
     double C{};
@@ -238,7 +238,7 @@ TEST(simple_response_routing_params)
 
 TEST(handler_with_response)
 {
-    Crow app;
+    SimpleApp app;
     CROW_ROUTE(app, "/")([](const crow::request&, crow::response&)
     {
     });
@@ -247,9 +247,9 @@ TEST(handler_with_response)
 TEST(server_handling_error_request)
 {
     static char buf[2048];
-    Crow app;
+    SimpleApp app;
     CROW_ROUTE(app, "/")([]{return "A";});
-    Server<Crow> server(&app, 45451);
+    Server<SimpleApp> server(&app, 45451);
     auto _ = async(launch::async, [&]{server.run();});
     std::string sendmsg = "POX";
     asio::io_service is;
@@ -276,12 +276,12 @@ TEST(server_handling_error_request)
 TEST(multi_server)
 {
     static char buf[2048];
-    Crow app1, app2;
+    SimpleApp app1, app2;
     CROW_ROUTE(app1, "/")([]{return "A";});
     CROW_ROUTE(app2, "/")([]{return "B";});
 
-    Server<Crow> server1(&app1, 45451);
-    Server<Crow> server2(&app2, 45452);
+    Server<SimpleApp> server1(&app1, 45451);
+    Server<SimpleApp> server2(&app2, 45452);
 
     auto _ = async(launch::async, [&]{server1.run();});
     auto _2 = async(launch::async, [&]{server2.run();});

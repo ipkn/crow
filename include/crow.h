@@ -13,6 +13,8 @@
 #include "http_server.h"
 #include "utility.h"
 #include "routing.h"
+#include "middleware_impl.h"
+#include "http_request.h"
 
 // TEST
 #include <iostream>
@@ -21,6 +23,7 @@
 
 namespace crow
 {
+    template <typename ... Middlewares>
     class Crow
     {
     public:
@@ -78,12 +81,26 @@ namespace crow
             router_.debug_print();
         }
 
+        // middleware
+        using context_t = detail::context<Middlewares...>;
+        template <typename T>
+        T& get_middleware_context(request& req)
+        {
+            static_assert(black_magic::contains<T, Middlewares...>::value, "App doesn't have the specified middleware type.");
+            auto& ctx = *reinterpret_cast<context_t*>(req.middleware_context);
+            return ctx.get<T>();
+        }
+
     private:
         uint16_t port_ = 80;
         uint16_t concurrency_ = 1;
 
+        std::tuple<Middlewares...> middlewares_;
+
         Router router_;
     };
-    using App = Crow;
+    template <typename ... Middlewares>
+    using App = Crow<Middlewares...>;
+    using SimpleApp = Crow<>;
 };
 

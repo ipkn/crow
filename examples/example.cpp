@@ -12,7 +12,7 @@ class ExampleLogHandler : public crow::ILogHandler {
 
 int main()
 {
-    crow::Crow app;
+    crow::SimpleApp app;
 
     CROW_ROUTE(app, "/")
         .name("hello")

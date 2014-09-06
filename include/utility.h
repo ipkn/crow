@@ -2,6 +2,8 @@
 
 #include <cstdint>
 #include <stdexcept>
+#include <tuple>
+#include <type_traits>
 
 namespace crow
 {
@@ -211,5 +213,76 @@ template <typename F, typename Set>
             using type = S<>;
         };
 
+        template <typename ... T>
+        struct last_element_type
+        {
+            using type = typename std::tuple_element<sizeof...(T)-1, std::tuple<T...>>::type;
+        };
+
+
+        template <>
+        struct last_element_type<>
+        {
+        };
+
+
+        // from http://stackoverflow.com/questions/13072359/c11-compile-time-array-with-logarithmic-evaluation-depth
+        template<class T> using Invoke = typename T::type;
+
+        template<unsigned...> struct seq{ using type = seq; };
+
+        template<class S1, class S2> struct concat;
+
+        template<unsigned... I1, unsigned... I2>
+        struct concat<seq<I1...>, seq<I2...>>
+          : seq<I1..., (sizeof...(I1)+I2)...>{};
+
+        template<class S1, class S2>
+        using Concat = Invoke<concat<S1, S2>>;
+
+        template<unsigned N> struct gen_seq;
+        template<unsigned N> using GenSeq = Invoke<gen_seq<N>>;
+
+        template<unsigned N>
+        struct gen_seq : Concat<GenSeq<N/2>, GenSeq<N - N/2>>{};
+
+        template<> struct gen_seq<0> : seq<>{};
+        template<> struct gen_seq<1> : seq<0>{};
+
+        template <typename Seq, typename Tuple> 
+        struct pop_back_helper;
+
+        template <unsigned ... N, typename Tuple>
+        struct pop_back_helper<seq<N...>, Tuple>
+        {
+            template <template <typename ... Args> class U>
+            using rebind = U<std::tuple_element<N, Tuple>...>;
+        };
+
+        template <typename ... T>
+        struct pop_back : public pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>
+        {
+        };
+
+        template <>
+        struct pop_back<>
+        {
+            template <template <typename ... Args> class U>
+            using rebind = U<>;
+        };
+
+        // from http://stackoverflow.com/questions/2118541/check-if-c0x-parameter-pack-contains-a-type
+        template < typename Tp, typename... List >
+        struct contains : std::true_type {};
+
+        template < typename Tp, typename Head, typename... Rest >
+        struct contains<Tp, Head, Rest...>
+        : std::conditional< std::is_same<Tp, Head>::value,
+            std::true_type,
+            contains<Tp, Rest...>
+        >::type {};
+
+        template < typename Tp >
+        struct contains<Tp> : std::false_type {};
 	}
 }
