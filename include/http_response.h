@@ -5,11 +5,11 @@
 
 namespace crow
 {
-    template <typename T>
+    template <typename Handler, typename ... Middlewares>
     class Connection;
     struct response
     {
-        template <typename T> 
+        template <typename Handler, typename ... Middlewares>
         friend class crow::Connection;
 
         std::string body;
@@ -31,7 +31,7 @@ namespace crow
 
         response& operator = (const response& r) = delete;
 
-        response& operator = (response&& r)
+        response& operator = (response&& r) noexcept
         {
             body = std::move(r.body);
             json_value = std::move(r.json_value);
@@ -39,6 +39,11 @@ namespace crow
             headers = std::move(r.headers);
 			completed_ = r.completed_;
             return *this;
+        }
+
+        bool is_completed() const noexcept
+        {
+            return completed_;
         }
 
         void clear()
@@ -59,11 +64,11 @@ namespace crow
         {
             if (!completed_)
             {
-                completed_ = true;
                 if (complete_request_handler_)
                 {
                     complete_request_handler_();
                 }
+                completed_ = true;
             }
         }
 

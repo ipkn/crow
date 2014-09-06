@@ -10,9 +10,13 @@ add_executable(unittest ${TEST_SRCS})
 #target_link_libraries(unittest crow)
 target_link_libraries(unittest ${Boost_LIBRARIES} )
 
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+# using Clang
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+# using GCC
 set_target_properties(unittest PROPERTIES COMPILE_FLAGS "--coverage -fprofile-arcs -ftest-coverage")
-
 target_link_libraries(unittest gcov)
+endif()
 
 add_subdirectory(template)
 #CXXFLAGS="-g -O0 -Wall -W -Wshadow -Wunused-variable \

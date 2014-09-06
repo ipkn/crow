@@ -352,7 +352,8 @@ TEST(json_read)
     ASSERT_EQUAL(1, x.size());
     ASSERT_EQUAL(false, x.has("mess"));
     ASSERT_THROW(x["mess"]);
-    ASSERT_THROW(3 == x["message"]);
+    // TODO returning false is better than exception
+    //ASSERT_THROW(3 == x["message"]);
     ASSERT_EQUAL(12, x["message"].size());
 
     std::string s = R"({"int":3,     "ints"  :[1,2,3,4,5]		})";
@@ -476,6 +477,75 @@ int testmain()
     }
     cerr<<endl;
     return failed ? -1 : 0;
+}
+
+struct NullMiddleware
+{
+    struct context {};
+
+    template <typename AllContext>
+    void before_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    {}
+
+    template <typename AllContext>
+    void after_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    {}
+};
+
+TEST(middleware_simple)
+{
+    App<NullMiddleware> app;
+    CROW_ROUTE(app, "/")([&](const crow::request& req)
+    {
+        app.get_middleware_context<NullMiddleware>(req);
+        return "";
+    });
+}
+
+struct IntSettingMiddleware
+{
+    struct context { int val; };
+
+    template <typename AllContext>
+    void before_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    {
+        ctx.val = 1;
+    }
+
+    template <typename AllContext>
+    void after_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    {
+        ctx.val = 2;
+    }
+};
+
+TEST(middleware_context)
+{
+    static char buf[2048];
+    App<IntSettingMiddleware> app;
+    Server<decltype(app), IntSettingMiddleware> server(&app, 45451);
+    auto _ = async(launch::async, [&]{server.run();});
+    std::string sendmsg = "GET /\r\n\r\n";
+
+    int x{};
+    CROW_ROUTE(app, "/")([&](const request& req){
+        auto& ctx = app.get_middleware_context<IntSettingMiddleware>(req);
+        x = ctx.val;
+
+        return "";
+    });
+    asio::io_service is;
+    {
+        asio::ip::tcp::socket c(is);
+        c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
+
+
+        c.send(asio::buffer(sendmsg));
+
+        c.receive(asio::buffer(buf, 2048));
+    }
+    ASSERT_EQUAL(1, x);
+    server.stop();
 }
 
 int main()

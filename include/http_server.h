@@ -18,7 +18,7 @@ namespace crow
     using namespace boost;
     using tcp = asio::ip::tcp;
     
-    template <typename Handler>
+    template <typename Handler, typename ... Middlewares>
     class Server
     {
     public:
@@ -43,10 +43,13 @@ namespace crow
             for(uint16_t i = 0; i < concurrency_; i ++)
                 v.push_back(
                         std::async(std::launch::async, [this, i]{
+                            // initializing timer queue
                             auto& timer_queue = detail::dumb_timer_queue::get_current_dumb_timer_queue();
+
                             timer_queue.set_io_service(*io_service_pool_[i]);
                             boost::asio::deadline_timer timer(*io_service_pool_[i]);
                             timer.expires_from_now(boost::posix_time::seconds(1));
+
                             std::function<void(const boost::system::error_code& ec)> handler;
                             handler = [&](const boost::system::error_code& ec){
                                 if (ec)
@@ -56,6 +59,7 @@ namespace crow
                                 timer.async_wait(handler);
                             };
                             timer.async_wait(handler);
+
                             io_service_pool_[i]->run();
                         }));
             CROW_LOG_INFO << server_name_ << " server is running, local port " << port_;
@@ -92,7 +96,7 @@ namespace crow
 
         void do_accept()
         {
-            auto p = new Connection<Handler>(pick_io_service(), handler_, server_name_);
+            auto p = new Connection<Handler, Middlewares...>(pick_io_service(), handler_, server_name_, middlewares_);
             acceptor_.async_accept(p->socket(), 
                 [this, p](boost::system::error_code ec)
                 {
@@ -115,5 +119,8 @@ namespace crow
         std::string server_name_ = "Crow/0.1";
         uint16_t port_;
         unsigned int roundrobin_index_{};
+
+        std::tuple<Middlewares...> middlewares_;
+
     };
 }

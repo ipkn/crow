@@ -2,9 +2,9 @@
 #include <boost/asio.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/array.hpp>
 #include <atomic>
 #include <chrono>
-#include <array>
 
 #include "http_parser_merged.h"
 
@@ -14,23 +14,57 @@
 #include "logging.h"
 #include "settings.h"
 #include "dumb_timer_queue.h"
+#include "middleware_context.h"
 
 namespace crow
 {
+    namespace detail
+    {
+        template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares>
+        bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx)
+        {
+            // TODO cut ctx to partial_context<0..N-1>
+            std::get<N>(middlewares).before_handle(req, res, ctx.template get<CurrentMW>(), ctx);
+            if (res.is_completed())
+            {
+                std::get<N>(middlewares).after_handle(req, res, ctx.template get<CurrentMW>(), ctx);
+                return true;
+            }
+            if (middleware_call_helper<N+1, Context, Middlewares...>(middlewares, req, res, ctx))
+            {
+                std::get<N>(middlewares).after_handle(req, res, ctx.template get<CurrentMW>(), ctx);
+                return true;
+            }
+            return false;
+        }
+
+        template <int N, typename Context, typename Container>
+        bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx)
+        {
+            return false;
+        }
+    }
+
     using namespace boost;
     using tcp = asio::ip::tcp;
 #ifdef CROW_ENABLE_DEBUG
     static int connectionCount;
 #endif
-    template <typename Handler>
+    template <typename Handler, typename ... Middlewares>
     class Connection
     {
     public:
-        Connection(boost::asio::io_service& io_service, Handler* handler, const std::string& server_name) 
+        Connection(
+            boost::asio::io_service& io_service, 
+            Handler* handler, 
+            const std::string& server_name,
+            std::tuple<Middlewares...>& middlewares
+            ) 
             : socket_(io_service), 
             handler_(handler), 
             parser_(this), 
-            server_name_(server_name)
+            server_name_(server_name),
+            middlewares_(middlewares)
         {
 #ifdef CROW_ENABLE_DEBUG
             connectionCount ++;
@@ -101,11 +135,20 @@ namespace crow
              << method_name(req.method) << " " << req.url;
 
 
+            need_to_call_after_handlers_ = false;
             if (!is_invalid_request)
             {
                 res.complete_request_handler_ = [this]{ this->complete_request(); };
                 res.is_alive_helper_ = [this]()->bool{ return socket_.is_open(); };
-                handler_->handle(req, res);
+
+                req.middleware_context = (void*)&ctx_;
+                detail::middleware_call_helper<0, decltype(ctx_), decltype(middlewares_), Middlewares...>(middlewares_, req, res, ctx_);
+
+                if (!res.completed_)
+                {
+                    need_to_call_after_handlers_ = true;
+                    handler_->handle(req, res);
+                }
             }
 			else
 			{
@@ -116,6 +159,11 @@ namespace crow
         void complete_request()
         {
             CROW_LOG_INFO << "Response: " << this << ' ' << res.code << ' ' << close_connection_;
+
+            if (need_to_call_after_handlers_)
+            {
+                // TODO call all of after_handlers
+            }
 
             //auto self = this->shared_from_this();
             res.complete_request_handler_ = nullptr;
@@ -330,7 +378,7 @@ namespace crow
         tcp::socket socket_;
         Handler* handler_;
 
-        std::array<char, 4096> buffer_;
+        boost::array<char, 4096> buffer_;
 
         HTTPParser<Connection> parser_;
         response res;
@@ -348,6 +396,10 @@ namespace crow
 
         bool is_reading{};
         bool is_writing{};
+        bool need_to_call_after_handlers_;
+
+        std::tuple<Middlewares...>& middlewares_;
+        detail::context<Middlewares...> ctx_;
     };
 
 }
