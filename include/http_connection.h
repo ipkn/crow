@@ -20,21 +20,53 @@ namespace crow
 {
     namespace detail
     {
+        template <typename MW, typename Context, typename ParentContext>
+        void before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx, 
+            decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>()))* dummy = 0)
+        {
+            mw.before_handle(req, res, ctx.template get<MW>());
+        }
+
+        template <typename MW, typename Context, typename ParentContext>
+        void before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx,
+            decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>(), std::declval<Context&>))* dummy = 0)
+        {
+            mw.before_handle(req, res, ctx.template get<MW>(), parent_ctx);
+        }
+
+        template <typename MW, typename Context, typename ParentContext>
+        void after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx, 
+            decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>()))* dummy = 0)
+        {
+            mw.after_handle(req, res, ctx.template get<MW>());
+        }
+
+        template <typename MW, typename Context, typename ParentContext>
+        void after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx, 
+            decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>(), std::declval<Context&>))* dummy = 0)
+        {
+            mw.after_handle(req, res, ctx.template get<MW>(), parent_ctx);
+        }
+
         template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares>
         bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx)
         {
-            // TODO cut ctx to partial_context<0..N-1>
-            std::get<N>(middlewares).before_handle(req, res, ctx.template get<CurrentMW>(), ctx);
+            using parent_context_t = typename Context::template partial<N-1>;
+            using current_context_t = typename Context::template partial<N>;
+            before_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx, static_cast<parent_context_t&>(ctx));
+
             if (res.is_completed())
             {
-                std::get<N>(middlewares).after_handle(req, res, ctx.template get<CurrentMW>(), ctx);
+                after_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx, static_cast<parent_context_t&>(ctx));
                 return true;
             }
-            if (middleware_call_helper<N+1, Context, Middlewares...>(middlewares, req, res, ctx))
+
+            if (middleware_call_helper<N+1, Context, Container, Middlewares...>(middlewares, req, res, ctx))
             {
-                std::get<N>(middlewares).after_handle(req, res, ctx.template get<CurrentMW>(), ctx);
+                after_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx, static_cast<parent_context_t&>(ctx));
                 return true;
             }
+
             return false;
         }
 
@@ -42,6 +74,31 @@ namespace crow
         bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx)
         {
             return false;
+        }
+
+        template <int N, typename Context, typename Container>
+        typename std::enable_if<(N<0)>::type 
+        after_handlers_call_helper(Container& middlewares, Context& context, request& req, response& res)
+        {
+        }
+
+        template <int N, typename Context, typename Container>
+        typename std::enable_if<(N==0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, request& req, response& res)
+        {
+            using parent_context_t = typename Context::template partial<N-1>;
+            using current_context_t = typename Context::template partial<N>;
+            using CurrentMW = typename std::tuple_element<N, typename std::remove_reference<Container>::type>::type;
+            after_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx, static_cast<parent_context_t&>(ctx));
+        }
+
+        template <int N, typename Context, typename Container>
+        typename std::enable_if<(N>0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, request& req, response& res)
+        {
+            using parent_context_t = typename Context::template partial<N-1>;
+            using current_context_t = typename Context::template partial<N>;
+            using CurrentMW = typename std::tuple_element<N, typename std::remove_reference<Container>::type>::type;
+            after_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx, static_cast<parent_context_t&>(ctx));
+            after_handlers_call_helper<N-1, Context, Container>(middlewares, ctx, req, res);
         }
     }
 
@@ -112,7 +169,8 @@ namespace crow
             cancel_deadline_timer();
             bool is_invalid_request = false;
 
-            request req = parser_.to_request();
+            req_ = std::move(parser_.to_request());
+            request& req = req_;
             if (parser_.check_version(1, 0))
             {
                 // HTTP/1.0
@@ -138,16 +196,23 @@ namespace crow
             need_to_call_after_handlers_ = false;
             if (!is_invalid_request)
             {
-                res.complete_request_handler_ = [this]{ this->complete_request(); };
+                res.complete_request_handler_ = []{};
                 res.is_alive_helper_ = [this]()->bool{ return socket_.is_open(); };
 
+                ctx_ = detail::context<Middlewares...>();
                 req.middleware_context = (void*)&ctx_;
                 detail::middleware_call_helper<0, decltype(ctx_), decltype(middlewares_), Middlewares...>(middlewares_, req, res, ctx_);
+                CROW_LOG_DEBUG << "ALATDA " << req.url;
 
                 if (!res.completed_)
                 {
+                    res.complete_request_handler_ = [this]{ this->complete_request(); };
                     need_to_call_after_handlers_ = true;
                     handler_->handle(req, res);
+                }
+                else
+                {
+                    complete_request();
                 }
             }
 			else
@@ -158,11 +223,16 @@ namespace crow
 
         void complete_request()
         {
-            CROW_LOG_INFO << "Response: " << this << ' ' << res.code << ' ' << close_connection_;
+            CROW_LOG_INFO << "Response: " << this << ' ' << req_.url << ' ' << res.code << ' ' << close_connection_;
 
             if (need_to_call_after_handlers_)
             {
-                // TODO call all of after_handlers
+                // call all after_handler of middlewares
+                detail::after_handlers_call_helper<
+                    ((int)sizeof...(Middlewares)-1),
+                    decltype(ctx_),
+                    decltype(middlewares_)> 
+                (middlewares_, ctx_, req_, res);
             }
 
             //auto self = this->shared_from_this();
@@ -381,6 +451,7 @@ namespace crow
         boost::array<char, 4096> buffer_;
 
         HTTPParser<Connection> parser_;
+        request req_;
         response res;
 
         bool close_connection_ = false;

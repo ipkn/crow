@@ -256,12 +256,14 @@ template <typename F, typename Set>
         struct pop_back_helper<seq<N...>, Tuple>
         {
             template <template <typename ... Args> class U>
-            using rebind = U<std::tuple_element<N, Tuple>...>;
+            using rebind = U<typename std::tuple_element<N, Tuple>::type...>;
         };
 
         template <typename ... T>
-        struct pop_back : public pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>
+        struct pop_back //: public pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>
         {
+            template <template <typename ... Args> class U>
+            using rebind = typename pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>::template rebind<U>;
         };
 
         template <>
@@ -284,5 +286,10 @@ template <typename F, typename Set>
 
         template < typename Tp >
         struct contains<Tp> : std::false_type {};
+
+        template <typename T>
+        struct empty_context
+        {
+        };
 	}
 }

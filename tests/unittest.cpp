@@ -479,6 +479,14 @@ int testmain()
     return failed ? -1 : 0;
 }
 
+TEST(black_magic)
+{
+    using namespace black_magic;
+    static_assert(std::is_same<void, last_element_type<int, char, void>::type>::value, "last_element_type");
+    static_assert(std::is_same<char, pop_back<int, char, void>::rebind<last_element_type>::type>::value, "pop_back");
+    static_assert(std::is_same<int, pop_back<int, char, void>::rebind<pop_back>::rebind<last_element_type>::type>::value, "pop_back");
+}
+
 struct NullMiddleware
 {
     struct context {};
@@ -492,12 +500,25 @@ struct NullMiddleware
     {}
 };
 
+struct NullSimpleMiddleware
+{
+    struct context {};
+
+    void before_handle(request& req, response& res, context& ctx)
+    {}
+
+    void after_handle(request& req, response& res, context& ctx)
+    {}
+};
+
 TEST(middleware_simple)
 {
-    App<NullMiddleware> app;
+    App<NullMiddleware, NullSimpleMiddleware> app;
+    decltype(app)::server_t server(&app, 45451);
     CROW_ROUTE(app, "/")([&](const crow::request& req)
     {
-        app.get_middleware_context<NullMiddleware>(req);
+        app.get_context<NullMiddleware>(req);
+        app.get_context<NullSimpleMiddleware>(req);
         return "";
     });
 }
@@ -519,21 +540,98 @@ struct IntSettingMiddleware
     }
 };
 
+std::vector<std::string> test_middleware_context_vector;
+
+struct FirstMW
+{
+    struct context 
+    { 
+        std::vector<string> v; 
+    };
+
+    void before_handle(request& req, response& res, context& ctx)
+    {
+        ctx.v.push_back("1 before");
+    }
+
+    void after_handle(request& req, response& res, context& ctx)
+    {
+        ctx.v.push_back("1 after");
+        test_middleware_context_vector = ctx.v;
+    }
+};
+
+struct SecondMW
+{
+    struct context {};
+    template <typename AllContext>
+    void before_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    {
+        all_ctx.template get<FirstMW>().v.push_back("2 before");
+        if (req.url == "/break")
+            res.end();
+    }
+
+    template <typename AllContext>
+    void after_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    {
+        all_ctx.template get<FirstMW>().v.push_back("2 after");
+    }
+};
+
+struct ThirdMW
+{
+    struct context {};
+    template <typename AllContext>
+    void before_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    {
+        all_ctx.template get<FirstMW>().v.push_back("3 before");
+    }
+
+    template <typename AllContext>
+    void after_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    {
+        all_ctx.template get<FirstMW>().v.push_back("3 after");
+    }
+};
+
 TEST(middleware_context)
 {
+
     static char buf[2048];
-    App<IntSettingMiddleware> app;
-    Server<decltype(app), IntSettingMiddleware> server(&app, 45451);
-    auto _ = async(launch::async, [&]{server.run();});
-    std::string sendmsg = "GET /\r\n\r\n";
+    // SecondMW depends on FirstMW (it uses all_ctx.get<FirstMW>)
+    // so it leads to compile error if we remove FirstMW from definition
+    // App<IntSettingMiddleware, SecondMW> app;
+    // or change the order of FirstMW and SecondMW
+    // App<IntSettingMiddleware, SecondMW, FirstMW> app;
+
+    App<IntSettingMiddleware, FirstMW, SecondMW, ThirdMW> app;
 
     int x{};
     CROW_ROUTE(app, "/")([&](const request& req){
-        auto& ctx = app.get_middleware_context<IntSettingMiddleware>(req);
-        x = ctx.val;
+        {
+            auto& ctx = app.get_context<IntSettingMiddleware>(req);
+            x = ctx.val;
+        }
+        {
+            auto& ctx = app.get_context<FirstMW>(req);
+            ctx.v.push_back("handle");
+        }
 
         return "";
     });
+    CROW_ROUTE(app, "/break")([&](const request& req){
+        {
+            auto& ctx = app.get_context<FirstMW>(req);
+            ctx.v.push_back("handle");
+        }
+
+        return "";
+    });
+
+    decltype(app)::server_t server(&app, 45451);
+    auto _ = async(launch::async, [&]{server.run();});
+    std::string sendmsg = "GET /\r\n\r\n";
     asio::io_service is;
     {
         asio::ip::tcp::socket c(is);
@@ -543,8 +641,38 @@ TEST(middleware_context)
         c.send(asio::buffer(sendmsg));
 
         c.receive(asio::buffer(buf, 2048));
+        c.close();
     }
-    ASSERT_EQUAL(1, x);
+    {
+        auto& out = test_middleware_context_vector;
+        ASSERT_EQUAL(1, x);
+        ASSERT_EQUAL(7, out.size());
+        ASSERT_EQUAL("1 before", out[0]);
+        ASSERT_EQUAL("2 before", out[1]);
+        ASSERT_EQUAL("3 before", out[2]);
+        ASSERT_EQUAL("handle", out[3]);
+        ASSERT_EQUAL("3 after", out[4]);
+        ASSERT_EQUAL("2 after", out[5]);
+        ASSERT_EQUAL("1 after", out[6]);
+    }
+    std::string sendmsg2 = "GET /break\r\n\r\n";
+    {
+        asio::ip::tcp::socket c(is);
+        c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
+
+        c.send(asio::buffer(sendmsg2));
+
+        c.receive(asio::buffer(buf, 2048));
+        c.close();
+    }
+    {
+        auto& out = test_middleware_context_vector;
+        ASSERT_EQUAL(4, out.size());
+        ASSERT_EQUAL("1 before", out[0]);
+        ASSERT_EQUAL("2 before", out[1]);
+        ASSERT_EQUAL("2 after", out[2]);
+        ASSERT_EQUAL("1 after", out[3]);
+    }
     server.stop();
 }
 

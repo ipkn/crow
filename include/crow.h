@@ -82,7 +82,7 @@ namespace crow
         // middleware
         using context_t = detail::context<Middlewares...>;
         template <typename T>
-        typename T::context& get_middleware_context(const request& req)
+        typename T::context& get_context(const request& req)
         {
             static_assert(black_magic::contains<T, Middlewares...>::value, "App doesn't have the specified middleware type.");
             auto& ctx = *reinterpret_cast<context_t*>(req.middleware_context);
