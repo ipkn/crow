@@ -11,10 +11,10 @@ Crow is C++ microframework for web. (inspired by Python Flask)
  - [Mustache](http://mustache.github.io/) based templating library (crow::mustache)
  - Header only
  - Provide an amalgamated header file `crow_all.h' with every features
+ - Middleware support
 
 ## Still in development   
  - Built-in ORM
- - Middleware support
 
 ## Example
 
@@ -27,7 +27,7 @@ Crow is C++ microframework for web. (inspired by Python Flask)
 
 int main()
 {
-    crow::Crow app;
+    crow::SimpleApp app;
 
     CROW_ROUTE(app, "/about")
     ([](){
