@@ -7,6 +7,8 @@
 #include "crow.h"
 #include "json.h"
 #include "mustache.h"
+#include "middleware.h"
+
 using namespace std;
 using namespace crow;
 
@@ -187,7 +189,7 @@ TEST(RoutingTest)
         response res;
 
         req.url = "/4/5000/3/-2.71828/hellhere";
-        req.headers["TestHeader"] = "Value";
+        req.add_header("TestHeader", "Value");
 
         app.handle(req, res);
 
@@ -203,7 +205,7 @@ TEST(RoutingTest)
         response res;
 
         req.url = "/5/-5/999/3.141592/hello_there/a/b/c/d";
-        req.headers["TestHeader"] = "Value";
+        req.add_header("TestHeader", "Value");
 
         app.handle(req, res);
 
@@ -672,6 +674,45 @@ TEST(middleware_context)
         ASSERT_EQUAL("2 before", out[1]);
         ASSERT_EQUAL("2 after", out[2]);
         ASSERT_EQUAL("1 after", out[3]);
+    }
+    server.stop();
+}
+
+TEST(middleware_cookieparser)
+{
+    static char buf[2048];
+
+    App<CookieParser> app;
+
+    std::string value1;
+    std::string value2;
+
+    CROW_ROUTE(app, "/")([&](const request& req){
+        {
+            auto& ctx = app.get_context<CookieParser>(req);
+            value1 = ctx.get_cookie("key1");
+            value2 = ctx.get_cookie("key2");
+        }
+
+        return "";
+    });
+
+    decltype(app)::server_t server(&app, 45451);
+    auto _ = async(launch::async, [&]{server.run();});
+    std::string sendmsg = "GET /\r\nCookie: key1=value1; key2=\"val\\\"ue2\"\r\n\r\n";
+    asio::io_service is;
+    {
+        asio::ip::tcp::socket c(is);
+        c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
+
+        c.send(asio::buffer(sendmsg));
+
+        c.receive(asio::buffer(buf, 2048));
+        c.close();
+    }
+    {
+        ASSERT_EQUAL("value1", value1);
+        ASSERT_EQUAL("val\"ue2", value2);
     }
     server.stop();
 }

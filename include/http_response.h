@@ -2,6 +2,8 @@
 #include <string>
 #include <unordered_map>
 #include "json.h"
+#include "http_request.h"
+#include "ci_map.h"
 
 namespace crow
 {
@@ -15,7 +17,25 @@ namespace crow
         std::string body;
         json::wvalue json_value;
         int code{200};
-        std::unordered_map<std::string, std::string> headers;
+
+        // `headers' stores HTTP headers.
+        ci_map headers;
+
+        void set_header(std::string key, std::string value)
+        {
+            headers.erase(key);
+            headers.emplace(std::move(key), std::move(value));
+        }
+        void add_header(std::string key, std::string value)
+        {
+            headers.emplace(std::move(key), std::move(value));
+        }
+
+        const std::string& get_header_value(const std::string& key)
+        {
+            return crow::get_header_value(headers, key);
+        }
+
 
         response() {}
         explicit response(int code) : code(code) {}

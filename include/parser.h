@@ -31,7 +31,6 @@ namespace crow
                 case 0:
                     if (!self->header_value.empty())
                     {
-                        boost::algorithm::to_lower(self->header_field);
                         self->headers.emplace(std::move(self->header_field), std::move(self->header_value));
                     }
                     self->header_field.assign(at, at+length);
@@ -63,7 +62,6 @@ namespace crow
             HTTPParser* self = static_cast<HTTPParser*>(self_);
             if (!self->header_field.empty())
             {
-                boost::algorithm::to_lower(self->header_field);
                 self->headers.emplace(std::move(self->header_field), std::move(self->header_value));
             }
             self->process_header();
@@ -144,7 +142,7 @@ namespace crow
         int header_building_state = 0;
         std::string header_field;
         std::string header_value;
-        std::unordered_map<std::string, std::string> headers;
+        ci_map headers;
         std::string body;
 
         Handler* handler_;
