@@ -2,7 +2,7 @@ language: cpp
 
 compiler:
   - gcc
-  - clang
+  #- clang
 
 before_script:
   - sudo add-apt-repository -y ppa:kalakris/cmake
@@ -10,7 +10,7 @@ before_script:
   - sudo add-apt-repository -y ppa:boost-latest/ppa
   - sudo apt-get -qq update
   - sudo apt-get install -qq libboost1.55-all-dev
-  - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-4.8; fi
+  - sudo apt-get install -qq g++-4.8
   - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
   - mkdir build
   - cd build
