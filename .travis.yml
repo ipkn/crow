@@ -5,7 +5,7 @@ compiler:
   - clang
 
 before_script:
-  - sudo apt-get install -qq libboost-dev
+  - sudo apt-get install -qq libboost-all-dev
   - mkdir build
   - cd build
   - cmake ..
