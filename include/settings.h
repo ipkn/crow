@@ -14,5 +14,7 @@
 	WARNING		= 2
 	ERROR		= 3
 	CRITICAL 	= 4
+
+    default to INFO
 */
-#define CROW_LOG_LEVEL 0
+#define CROW_LOG_LEVEL 1
