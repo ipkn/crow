@@ -23,6 +23,18 @@ namespace crow
         ci_map headers;
         std::string body;
 
+        void* middleware_context{};
+
+        request()
+            : method(HTTPMethod::GET)
+        {
+        }
+
+        request(HTTPMethod method, std::string url, ci_map headers, std::string body)
+            : method(method), url(std::move(url)), headers(std::move(headers)), body(std::move(body))
+        {
+        }
+
         void add_header(std::string key, std::string value)
         {
             headers.emplace(std::move(key), std::move(value));
@@ -33,6 +45,5 @@ namespace crow
             return crow::get_header_value(headers, key);
         }
 
-        void* middleware_context{};
     };
 }
