@@ -10,7 +10,7 @@ endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++1y")
 
-find_package( Boost 1.40 COMPONENTS date_time filesystem system thread REQUIRED )
+find_package( Boost 1.52 COMPONENTS date_time filesystem system thread REQUIRED )
 include_directories( ${Boost_INCLUDE_DIR} )
 
 set(PROJECT_INCLUDE_DIR 
