@@ -2,6 +2,8 @@
 
 Crow is C++ microframework for web. (inspired by Python Flask)
 
+![Travis Build](https://travis-ci.org/ipkn/crow.svg?branch=master)
+
 ## Features
 
  - Easy routing
