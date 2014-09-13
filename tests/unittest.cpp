@@ -717,6 +717,44 @@ TEST(middleware_cookieparser)
     server.stop();
 }
 
+TEST(bug_quick_repeated_request)
+{
+    static char buf[2048];
+
+    SimpleApp app;
+
+    CROW_ROUTE(app, "/")([&]{
+        return "hello";
+    });
+
+    decltype(app)::server_t server(&app, 45451);
+    auto _ = async(launch::async, [&]{server.run();});
+    std::string sendmsg = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    asio::io_service is;
+    {
+        std::vector<std::future<void>> v;
+        for(int i = 0; i < 5; i++)
+        {
+            v.push_back(async(launch::async, 
+                [&]
+                {
+                    asio::ip::tcp::socket c(is);
+                    c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
+
+                    for(int j = 0; j < 5; j ++)
+                    {
+                        c.send(asio::buffer(sendmsg));
+
+                        size_t received = c.receive(asio::buffer(buf, 2048));
+                        ASSERT_EQUAL("hello", std::string(buf + received - 5, buf + received));
+                    }
+                    c.close();
+                }));
+        }
+    }
+    server.stop();
+}
+
 int main()
 {
     return testmain();
