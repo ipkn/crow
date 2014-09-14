@@ -1,3 +1,4 @@
+#pragma once
 // settings for crow
 // TODO - replace with runtime config. libucl?
 

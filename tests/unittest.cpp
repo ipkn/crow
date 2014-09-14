@@ -2,6 +2,9 @@
 #define CROW_ENABLE_DEBUG
 #include <iostream>
 #include <vector>
+#include "settings.h"
+#undef CROW_LOG_LEVEL
+#define CROW_LOG_LEVEL 0
 #include "routing.h"
 #include "utility.h"
 #include "crow.h"
