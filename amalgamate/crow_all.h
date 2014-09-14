@@ -4699,6 +4699,7 @@ namespace crow
 
 
 
+#pragma once
 // settings for crow
 // TODO - replace with runtime config. libucl?
 
@@ -6807,7 +6808,6 @@ namespace crow
                 ctx_ = detail::context<Middlewares...>();
                 req.middleware_context = (void*)&ctx_;
                 detail::middleware_call_helper<0, decltype(ctx_), decltype(middlewares_), Middlewares...>(middlewares_, req, res, ctx_);
-                CROW_LOG_DEBUG << "ALATDA " << req.url;
 
                 if (!res.completed_)
                 {
@@ -6832,6 +6832,8 @@ namespace crow
 
             if (need_to_call_after_handlers_)
             {
+                need_to_call_after_handlers_ = false;
+
                 // call all after_handler of middlewares
                 detail::after_handlers_call_helper<
                     ((int)sizeof...(Middlewares)-1),
@@ -6941,6 +6943,13 @@ namespace crow
 
             do_write();
             res.clear();
+
+            if (need_to_start_read_after_complete_)
+            {
+                need_to_start_read_after_complete_ = false;
+                start_deadline();
+                do_read();
+            }
         }
 
     private:
@@ -6984,10 +6993,15 @@ namespace crow
                         CROW_LOG_DEBUG << this << " from read(1)";
                         check_destroy();
                     }
-                    else
+                    else if (!need_to_call_after_handlers_)
                     {
                         start_deadline();
                         do_read();
+                    }
+                    else
+                    {
+                        // res will be completed later by user
+                        need_to_start_read_after_complete_ = true;
                     }
                 });
         }
@@ -7073,6 +7087,7 @@ namespace crow
         bool is_reading{};
         bool is_writing{};
         bool need_to_call_after_handlers_;
+        bool need_to_start_read_after_complete_{};
 
         std::tuple<Middlewares...>& middlewares_;
         detail::context<Middlewares...> ctx_;
