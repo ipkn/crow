@@ -352,7 +352,7 @@ public:
             optimize();
         }
 
-        std::pair<unsigned, routing_params> find(const request& req, const Node* node = nullptr, unsigned pos = 0, routing_params* params = nullptr) const
+        std::pair<unsigned, routing_params> find(const std::string& req_url, const Node* node = nullptr, unsigned pos = 0, routing_params* params = nullptr) const
         {
             routing_params empty;
             if (params == nullptr)
@@ -363,7 +363,7 @@ public:
 
             if (node == nullptr)
                 node = head();
-            if (pos == req.url.size())
+            if (pos == req_url.size())
                 return {node->rule_index, *params};
 
             auto update_found = [&found, &match_params](std::pair<unsigned, routing_params>& ret)
@@ -377,16 +377,16 @@ public:
 
             if (node->param_childrens[(int)ParamType::INT])
             {
-                char c = req.url[pos];
+                char c = req_url[pos];
                 if ((c >= '0' && c <= '9') || c == '+' || c == '-')
                 {
                     char* eptr;
                     errno = 0;
-                    long long int value = strtoll(req.url.data()+pos, &eptr, 10);
-                    if (errno != ERANGE && eptr != req.url.data()+pos)
+                    long long int value = strtoll(req_url.data()+pos, &eptr, 10);
+                    if (errno != ERANGE && eptr != req_url.data()+pos)
                     {
                         params->int_params.push_back(value);
-                        auto ret = find(req, &nodes_[node->param_childrens[(int)ParamType::INT]], eptr - req.url.data(), params);
+                        auto ret = find(req_url, &nodes_[node->param_childrens[(int)ParamType::INT]], eptr - req_url.data(), params);
                         update_found(ret);
                         params->int_params.pop_back();
                     }
@@ -395,16 +395,16 @@ public:
 
             if (node->param_childrens[(int)ParamType::UINT])
             {
-                char c = req.url[pos];
+                char c = req_url[pos];
                 if ((c >= '0' && c <= '9') || c == '+')
                 {
                     char* eptr;
                     errno = 0;
-                    unsigned long long int value = strtoull(req.url.data()+pos, &eptr, 10);
-                    if (errno != ERANGE && eptr != req.url.data()+pos)
+                    unsigned long long int value = strtoull(req_url.data()+pos, &eptr, 10);
+                    if (errno != ERANGE && eptr != req_url.data()+pos)
                     {
                         params->uint_params.push_back(value);
-                        auto ret = find(req, &nodes_[node->param_childrens[(int)ParamType::UINT]], eptr - req.url.data(), params);
+                        auto ret = find(req_url, &nodes_[node->param_childrens[(int)ParamType::UINT]], eptr - req_url.data(), params);
                         update_found(ret);
                         params->uint_params.pop_back();
                     }
@@ -413,16 +413,16 @@ public:
 
             if (node->param_childrens[(int)ParamType::DOUBLE])
             {
-                char c = req.url[pos];
+                char c = req_url[pos];
                 if ((c >= '0' && c <= '9') || c == '+' || c == '-' || c == '.')
                 {
                     char* eptr;
                     errno = 0;
-                    double value = strtod(req.url.data()+pos, &eptr);
-                    if (errno != ERANGE && eptr != req.url.data()+pos)
+                    double value = strtod(req_url.data()+pos, &eptr);
+                    if (errno != ERANGE && eptr != req_url.data()+pos)
                     {
                         params->double_params.push_back(value);
-                        auto ret = find(req, &nodes_[node->param_childrens[(int)ParamType::DOUBLE]], eptr - req.url.data(), params);
+                        auto ret = find(req_url, &nodes_[node->param_childrens[(int)ParamType::DOUBLE]], eptr - req_url.data(), params);
                         update_found(ret);
                         params->double_params.pop_back();
                     }
@@ -432,16 +432,16 @@ public:
             if (node->param_childrens[(int)ParamType::STRING])
             {
                 size_t epos = pos;
-                for(; epos < req.url.size(); epos ++)
+                for(; epos < req_url.size(); epos ++)
                 {
-                    if (req.url[epos] == '/')
+                    if (req_url[epos] == '/')
                         break;
                 }
 
                 if (epos != pos)
                 {
-                    params->string_params.push_back(req.url.substr(pos, epos-pos));
-                    auto ret = find(req, &nodes_[node->param_childrens[(int)ParamType::STRING]], epos, params);
+                    params->string_params.push_back(req_url.substr(pos, epos-pos));
+                    auto ret = find(req_url, &nodes_[node->param_childrens[(int)ParamType::STRING]], epos, params);
                     update_found(ret);
                     params->string_params.pop_back();
                 }
@@ -449,12 +449,12 @@ public:
 
             if (node->param_childrens[(int)ParamType::PATH])
             {
-                size_t epos = req.url.size();
+                size_t epos = req_url.size();
 
                 if (epos != pos)
                 {
-                    params->string_params.push_back(req.url.substr(pos, epos-pos));
-                    auto ret = find(req, &nodes_[node->param_childrens[(int)ParamType::PATH]], epos, params);
+                    params->string_params.push_back(req_url.substr(pos, epos-pos));
+                    auto ret = find(req_url, &nodes_[node->param_childrens[(int)ParamType::PATH]], epos, params);
                     update_found(ret);
                     params->string_params.pop_back();
                 }
@@ -465,9 +465,9 @@ public:
                 const std::string& fragment = kv.first;
                 const Node* child = &nodes_[kv.second];
 
-                if (req.url.compare(pos, fragment.size(), fragment) == 0)
+                if (req_url.compare(pos, fragment.size(), fragment) == 0)
                 {
-                    auto ret = find(req, child, pos + fragment.size(), params);
+                    auto ret = find(req_url, child, pos + fragment.size(), params);
                     update_found(ret);
                 }
             }
@@ -623,13 +623,16 @@ public:
 
         void handle(const request& req, response& res)
         {
-            auto found = trie_.find(req);
+            // remove url params            
+            auto editedUrl = req.url.substr(0, req.url.find("?"));
+
+            auto found = trie_.find(editedUrl);
 
             unsigned rule_index = found.first;
 
             if (!rule_index)
             {
-				CROW_LOG_DEBUG << "Cannot match rules " << req.url;
+				CROW_LOG_DEBUG << "Cannot match rules " << editedUrl;
                 res = response(404);
 				res.end();
                 return;
