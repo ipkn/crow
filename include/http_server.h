@@ -2,9 +2,12 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/asio.hpp>
+#include <boost/variant.hpp>
 #include <cstdint>
 #include <atomic>
 #include <future>
+#include <typeinfo>
+#include <typeindex>
 
 #include <memory>
 
@@ -22,17 +25,21 @@ namespace crow
     class Server
     {
     public:
-        Server(Handler* handler, uint16_t port, uint16_t concurrency = 1)
-            : acceptor_(io_service_, tcp::endpoint(asio::ip::address(), port)), 
+        Server(Handler* handler)
+            : acceptor_(io_service_), 
             signals_(io_service_, SIGINT, SIGTERM),
-            handler_(handler), 
-            concurrency_(concurrency),
-            port_(port)
+            handler_(handler)
         {
         }
 
         void run()
         {
+            tcp::endpoint endpoint(asio::ip::address(), port_);
+            acceptor_.open(endpoint.protocol());
+            acceptor_.set_option(tcp::acceptor::reuse_address(true));
+            acceptor_.bind(endpoint);
+            acceptor_.listen();
+
             if (concurrency_ < 0)
                 concurrency_ = 1;
 
@@ -84,6 +91,70 @@ namespace crow
                 io_service->stop();
         }
 
+        void set_port(uint16_t port)
+        {
+            port_ = port;
+        }
+
+        void set_concurrency(uint16_t concurrency) 
+        {
+            if (concurrency < 1)
+                concurrency = 1;
+            concurrency_ = concurrency;
+        }
+
+        /*template <int N>
+        void* get_middleware_helper(type_index t_ti)
+        {
+            if(N >= 2) {//tuple_size<decltype(middlewares_)>::value){
+                return nullptr;
+            }
+
+            decltype(std::get<N>(middlewares_)) mw = std::get<N>(middlewares_);
+            type_index mw_ti = typeid(mw);
+            
+            if(mw_ti == t_ti) {
+                //return nullptr;
+                return (void*)&std::get<N>(middlewares_);
+
+            } else {
+                //return nullptr;
+                return get_middleware_helper<N+1>(t_ti);
+            }
+        }*/
+
+        // http://stackoverflow.com/a/8194518/254190 (edited a bit)
+        template <size_t n, typename... T>
+        void* dynamic_get_impl(size_t i, const std::tuple<T...>& tpl)
+        {
+            if (i == n)
+                return (void*)&std::get<n>(tpl);
+            else if (n == sizeof...(T) - 1)
+                throw std::out_of_range("Tuple element out of range.");
+            else
+                return dynamic_get_impl<(n < sizeof...(T)-1 ? n+1 : 0)>(i, tpl);
+        }
+
+        template <typename U, typename... T>
+        U* dynamic_get(size_t i, const std::tuple<T...>& tpl)
+        {
+            return static_cast<U*>(dynamic_get_impl<0>(i, tpl));
+        }
+
+        template <typename T>
+        T* get_middleware()
+        {
+            type_index t_ti = typeid(T);
+
+            for(int i = 0; i < tuple_size<decltype(middlewares_)>::value; ++i) {
+                auto mw = dynamic_get<T, Middlewares...>(i, middlewares_);
+                if(type_index(typeid(*mw)) == t_ti) {
+                    return mw;
+                }
+            }
+            return nullptr;
+        }
+
     private:
         asio::io_service& pick_io_service()
         {
@@ -117,7 +188,7 @@ namespace crow
         Handler* handler_;
         uint16_t concurrency_{1};
         std::string server_name_ = "Crow/0.1";
-        uint16_t port_;
+        uint16_t port_{80};
         unsigned int roundrobin_index_{};
 
         std::tuple<Middlewares...> middlewares_;
