@@ -103,26 +103,6 @@ namespace crow
             concurrency_ = concurrency;
         }
 
-        /*template <int N>
-        void* get_middleware_helper(type_index t_ti)
-        {
-            if(N >= 2) {//tuple_size<decltype(middlewares_)>::value){
-                return nullptr;
-            }
-
-            decltype(std::get<N>(middlewares_)) mw = std::get<N>(middlewares_);
-            type_index mw_ti = typeid(mw);
-            
-            if(mw_ti == t_ti) {
-                //return nullptr;
-                return (void*)&std::get<N>(middlewares_);
-
-            } else {
-                //return nullptr;
-                return get_middleware_helper<N+1>(t_ti);
-            }
-        }*/
-
         // http://stackoverflow.com/a/8194518/254190 (edited a bit)
         template <size_t n, typename... T>
         void* dynamic_get_impl(size_t i, const std::tuple<T...>& tpl)
