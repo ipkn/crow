@@ -165,23 +165,31 @@ namespace crow
         {
             cancel_deadline_timer();
             bool is_invalid_request = false;
-            bool add_keep_alive = false;
+            add_keep_alive_ = false;
 
             req_ = std::move(parser_.to_request());
             request& req = req_;
             if (parser_.check_version(1, 0))
             {
                 // HTTP/1.0
-                if (!(req.headers.count("connection") && boost::iequals(req.get_header_value("connection"),"Keep-Alive")))
-                    close_connection_ = true;
+                if (req.headers.count("connection"))
+                {
+                    if (boost::iequals(req.get_header_value("connection"),"Keep-Alive"))
+                        add_keep_alive_ = true;
+                }
                 else
-                    add_keep_alive = true;
+                    close_connection_ = true;
             }
             else if (parser_.check_version(1, 1))
             {
                 // HTTP/1.1
-                if (req.headers.count("connection") && req.get_header_value("connection") == "close")
-                    close_connection_ = true;
+                if (req.headers.count("connection"))
+                {
+                    if (req.get_header_value("connection") == "close")
+                        close_connection_ = true;
+                    else if (boost::iequals(req.get_header_value("connection"),"Keep-Alive"))
+                        add_keep_alive_ = true;
+                }
                 if (!req.headers.count("host"))
                 {
                     is_invalid_request = true;
@@ -196,8 +204,6 @@ namespace crow
             need_to_call_after_handlers_ = false;
             if (!is_invalid_request)
             {
-                if (add_keep_alive)
-                    res.set_header("connection", "Keep-Alive");
                 res.complete_request_handler_ = []{};
                 res.is_alive_helper_ = [this]()->bool{ return socket_.is_open(); };
 
@@ -210,16 +216,18 @@ namespace crow
                     res.complete_request_handler_ = [this]{ this->complete_request(); };
                     need_to_call_after_handlers_ = true;
                     handler_->handle(req, res);
+                    if (add_keep_alive_)
+                        res.set_header("connection", "Keep-Alive");
                 }
                 else
                 {
                     complete_request();
                 }
             }
-			else
-			{
-				complete_request();
-			}
+            else
+            {
+                complete_request();
+            }
         }
 
         void complete_request()
@@ -241,11 +249,11 @@ namespace crow
             //auto self = this->shared_from_this();
             res.complete_request_handler_ = nullptr;
             
-			if (!socket_.is_open())
+            if (!socket_.is_open())
             {
                 //CROW_LOG_DEBUG << this << " delete (socket is closed) " << is_reading << ' ' << is_writing;
                 //delete this;
-				return;
+                return;
             }
 
             static std::unordered_map<int, std::string> statusCodes = {
@@ -274,7 +282,7 @@ namespace crow
             static std::string crlf = "\r\n";
 
             buffers_.clear();
-            buffers_.reserve(4*(res.headers.size()+4)+3);
+            buffers_.reserve(4*(res.headers.size()+5)+3);
 
             if (res.body.empty() && res.json_value.t() == json::type::Object)
             {
@@ -291,10 +299,6 @@ namespace crow
             if (res.code >= 400 && res.body.empty())
                 res.body = statusCodes[res.code].substr(9);
 
-            bool has_content_length = false;
-            bool has_date = false;
-            bool has_server = false;
-
             for(auto& kv : res.headers)
             {
                 buffers_.emplace_back(kv.first.data(), kv.first.size());
@@ -302,15 +306,9 @@ namespace crow
                 buffers_.emplace_back(kv.second.data(), kv.second.size());
                 buffers_.emplace_back(crlf.data(), crlf.size());
 
-                if (boost::iequals(kv.first, "content-length"))
-                    has_content_length = true;
-                if (boost::iequals(kv.first, "date"))
-                    has_date = true;
-                if (boost::iequals(kv.first, "server"))
-                    has_server = true;
             }
 
-            if (!has_content_length)
+            if (!res.headers.count("content-length"))
             {
                 content_length_ = std::to_string(res.body.size());
                 static std::string content_length_tag = "Content-Length: ";
@@ -318,19 +316,25 @@ namespace crow
                 buffers_.emplace_back(content_length_.data(), content_length_.size());
                 buffers_.emplace_back(crlf.data(), crlf.size());
             }
-            if (!has_server)
+            if (!res.headers.count("server"))
             {
                 static std::string server_tag = "Server: ";
                 buffers_.emplace_back(server_tag.data(), server_tag.size());
                 buffers_.emplace_back(server_name_.data(), server_name_.size());
                 buffers_.emplace_back(crlf.data(), crlf.size());
             }
-            if (!has_date)
+            if (!res.headers.count("date"))
             {
                 static std::string date_tag = "Date: ";
                 date_str_ = get_cached_date_str();
                 buffers_.emplace_back(date_tag.data(), date_tag.size());
                 buffers_.emplace_back(date_str_.data(), date_str_.size());
+                buffers_.emplace_back(crlf.data(), crlf.size());
+            }
+            if (add_keep_alive_)
+            {
+                static std::string keep_alive_tag = "Connetion: Keep-Alive";
+                buffers_.emplace_back(keep_alive_tag.data(), keep_alive_tag.size());
                 buffers_.emplace_back(crlf.data(), crlf.size());
             }
 
@@ -484,6 +488,7 @@ namespace crow
         bool is_writing{};
         bool need_to_call_after_handlers_;
         bool need_to_start_read_after_complete_{};
+        bool add_keep_alive_{};
 
         std::tuple<Middlewares...>& middlewares_;
         detail::context<Middlewares...> ctx_;
