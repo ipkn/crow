@@ -165,6 +165,7 @@ namespace crow
         {
             cancel_deadline_timer();
             bool is_invalid_request = false;
+            bool add_keep_alive = false;
 
             req_ = std::move(parser_.to_request());
             request& req = req_;
@@ -173,6 +174,8 @@ namespace crow
                 // HTTP/1.0
                 if (!(req.headers.count("connection") && boost::iequals(req.get_header_value("connection"),"Keep-Alive")))
                     close_connection_ = true;
+                else
+                    add_keep_alive = true;
             }
             else if (parser_.check_version(1, 1))
             {
@@ -193,6 +196,8 @@ namespace crow
             need_to_call_after_handlers_ = false;
             if (!is_invalid_request)
             {
+                if (add_keep_alive)
+                    res.set_header("connection", "Keep-Alive");
                 res.complete_request_handler_ = []{};
                 res.is_alive_helper_ = [this]()->bool{ return socket_.is_open(); };
 
