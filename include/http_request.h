@@ -20,6 +20,7 @@ namespace crow
     {
         HTTPMethod method;
         std::string url;
+        ci_map url_params;
         ci_map headers;
         std::string body;
 
@@ -30,8 +31,8 @@ namespace crow
         {
         }
 
-        request(HTTPMethod method, std::string url, ci_map headers, std::string body)
-            : method(method), url(std::move(url)), headers(std::move(headers)), body(std::move(body))
+        request(HTTPMethod method, std::string url, ci_map url_params, ci_map headers, std::string body)
+            : method(method), url(std::move(url)), url_params(std::move(url_params)), headers(std::move(headers)), body(std::move(body))
         {
         }
 

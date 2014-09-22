@@ -68,8 +68,20 @@ int main()
         return crow::response{os.str()};
     });
 
+    CROW_ROUTE(app, "/params")
+    ([](const crow::request& req){
+        std::ostringstream os;
+        os << "Params:\n";
+        for (auto& i : req.url_params) {
+            os << "key = " << i.first << ", val = " << i.second << '\n';
+        }
+        return crow::response{os.str()};
+    });
+
+    
+
     // ignore all log
-    crow::logger::setLogLevel(crow::LogLevel::CRITICAL);
+    crow::logger::setLogLevel(crow::LogLevel::DEBUG);
     //crow::logger::setHandler(std::make_shared<ExampleLogHandler>());
 
     app.port(18080)
