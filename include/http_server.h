@@ -24,17 +24,30 @@ namespace crow
         Server(Handler* handler)
             : acceptor_(io_service_), 
             signals_(io_service_, SIGINT, SIGTERM),
-            handler_(handler)
+            handler_(handler),
+            listening_(false)
+        {
+        }
+
+        Server(Handler* handler, uint16_t port, uint16_t concurrency = 1)
+            : acceptor_(io_service_, tcp::endpoint(asio::ip::address(), port)), 
+            signals_(io_service_, SIGINT, SIGTERM),
+            handler_(handler), 
+            concurrency_(concurrency),
+            port_(port),
+            listening_(true)
         {
         }
 
         void run()
         {
-            tcp::endpoint endpoint(asio::ip::address(), port_);
-            acceptor_.open(endpoint.protocol());
-            acceptor_.set_option(tcp::acceptor::reuse_address(true));
-            acceptor_.bind(endpoint);
-            acceptor_.listen();
+            if(!listening_) {
+                tcp::endpoint endpoint(asio::ip::address(), port_);
+                acceptor_.open(endpoint.protocol());
+                acceptor_.set_option(tcp::acceptor::reuse_address(true));
+                acceptor_.bind(endpoint);
+                acceptor_.listen();
+            }
 
             if (concurrency_ < 0)
                 concurrency_ = 1;
@@ -140,7 +153,7 @@ namespace crow
         std::string server_name_ = "Crow/0.1";
         uint16_t port_{80};
         unsigned int roundrobin_index_{};
-
+        bool listening_;
         std::tuple<Middlewares...> middlewares_;
 
     };

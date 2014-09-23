@@ -150,7 +150,7 @@ TEST(RoutingTest)
 
     app.validate();
     //app.debug_print();
-	{
+    {
         request req;
         response res;
 
@@ -159,7 +159,7 @@ TEST(RoutingTest)
         app.handle(req, res);
 
         ASSERT_EQUAL(404, res.code);
-	}
+    }
 
     {
         request req;
@@ -254,8 +254,7 @@ TEST(server_handling_error_request)
     static char buf[2048];
     SimpleApp app;
     CROW_ROUTE(app, "/")([]{return "A";});
-    Server<SimpleApp> server(&app);
-    server.set_port(45451);
+    Server<SimpleApp> server(&app, 45451);
     auto _ = async(launch::async, [&]{server.run();});
     std::string sendmsg = "POX";
     asio::io_service is;
@@ -286,10 +285,8 @@ TEST(multi_server)
     CROW_ROUTE(app1, "/")([]{return "A";});
     CROW_ROUTE(app2, "/")([]{return "B";});
 
-    Server<SimpleApp> server1(&app1);
-    Server<SimpleApp> server2(&app2);
-    server1.set_port(45451);
-    server2.set_port(45452);
+    Server<SimpleApp> server1(&app1, 45451);
+    Server<SimpleApp> server2(&app2, 45452);
 
     auto _ = async(launch::async, [&]{server1.run();});
     auto _2 = async(launch::async, [&]{server2.run();});
@@ -327,7 +324,7 @@ TEST(multi_server)
 
 TEST(json_read)
 {
-	{
+    {
         const char* json_error_tests[] = 
         {
             "{} 3", "{{}", "{3}",
@@ -351,7 +348,7 @@ TEST(json_read)
                 return;
             }
         }
-	}
+    }
 
     auto x = json::load(R"({"message":"hello, world"})");
     if (!x)
@@ -364,24 +361,24 @@ TEST(json_read)
     //ASSERT_THROW(3 == x["message"]);
     ASSERT_EQUAL(12, x["message"].size());
 
-    std::string s = R"({"int":3,     "ints"  :[1,2,3,4,5]		})";
+    std::string s = R"({"int":3,     "ints"  :[1,2,3,4,5]       })";
     auto y = json::load(s);
     ASSERT_EQUAL(3, y["int"]);
     ASSERT_EQUAL(3.0, y["int"]);
     ASSERT_NOTEQUAL(3.01, y["int"]);
-	ASSERT_EQUAL(5, y["ints"].size());
-	ASSERT_EQUAL(1, y["ints"][0]);
-	ASSERT_EQUAL(2, y["ints"][1]);
-	ASSERT_EQUAL(3, y["ints"][2]);
-	ASSERT_EQUAL(4, y["ints"][3]);
-	ASSERT_EQUAL(5, y["ints"][4]);
-	ASSERT_EQUAL(1u, y["ints"][0]);
-	ASSERT_EQUAL(1.f, y["ints"][0]);
+    ASSERT_EQUAL(5, y["ints"].size());
+    ASSERT_EQUAL(1, y["ints"][0]);
+    ASSERT_EQUAL(2, y["ints"][1]);
+    ASSERT_EQUAL(3, y["ints"][2]);
+    ASSERT_EQUAL(4, y["ints"][3]);
+    ASSERT_EQUAL(5, y["ints"][4]);
+    ASSERT_EQUAL(1u, y["ints"][0]);
+    ASSERT_EQUAL(1.f, y["ints"][0]);
 
-	int q = (int)y["ints"][1];
-	ASSERT_EQUAL(2, q);
-	q = y["ints"][2].i();
-	ASSERT_EQUAL(3, q);
+    int q = (int)y["ints"][1];
+    ASSERT_EQUAL(2, q);
+    q = y["ints"][2].i();
+    ASSERT_EQUAL(3, q);
 
 }
 
@@ -522,8 +519,7 @@ struct NullSimpleMiddleware
 TEST(middleware_simple)
 {
     App<NullMiddleware, NullSimpleMiddleware> app;
-    decltype(app)::server_t server(&app);
-    server.set_port(45451);
+    decltype(app)::server_t server(&app, 45451);
     CROW_ROUTE(app, "/")([&](const crow::request& req)
     {
         app.get_context<NullMiddleware>(req);
@@ -638,8 +634,7 @@ TEST(middleware_context)
         return "";
     });
 
-    decltype(app)::server_t server(&app);
-    server.set_port(45451);
+    decltype(app)::server_t server(&app, 45451);
     auto _ = async(launch::async, [&]{server.run();});
     std::string sendmsg = "GET /\r\n\r\n";
     asio::io_service is;
@@ -705,8 +700,7 @@ TEST(middleware_cookieparser)
         return "";
     });
 
-    decltype(app)::server_t server(&app);
-    server.set_port(45451);
+    decltype(app)::server_t server(&app, 45451);
     auto _ = async(launch::async, [&]{server.run();});
     std::string sendmsg = "GET /\r\nCookie: key1=value1; key2=\"val\\\"ue2\"\r\n\r\n";
     asio::io_service is;
@@ -736,8 +730,7 @@ TEST(bug_quick_repeated_request)
         return "hello";
     });
 
-    decltype(app)::server_t server(&app);
-    server.set_port(45451);
+    decltype(app)::server_t server(&app, 45451);
     auto _ = async(launch::async, [&]{server.run();});
     std::string sendmsg = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
     asio::io_service is;
