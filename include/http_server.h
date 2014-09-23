@@ -2,13 +2,9 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/asio.hpp>
-#include <boost/variant.hpp>
 #include <cstdint>
 #include <atomic>
 #include <future>
-#include <typeinfo>
-#include <typeindex>
-
 #include <memory>
 
 #include "http_connection.h"
