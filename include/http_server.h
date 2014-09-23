@@ -103,36 +103,10 @@ namespace crow
             concurrency_ = concurrency;
         }
 
-        // http://stackoverflow.com/a/8194518/254190 (edited a bit)
-        template <size_t n, typename... T>
-        void* dynamic_get_impl(size_t i, const std::tuple<T...>& tpl)
-        {
-            if (i == n)
-                return (void*)&std::get<n>(tpl);
-            else if (n == sizeof...(T) - 1)
-                throw std::out_of_range("Tuple element out of range.");
-            else
-                return dynamic_get_impl<(n < sizeof...(T)-1 ? n+1 : 0)>(i, tpl);
-        }
-
-        template <typename U, typename... T>
-        U* dynamic_get(size_t i, const std::tuple<T...>& tpl)
-        {
-            return static_cast<U*>(dynamic_get_impl<0>(i, tpl));
-        }
-
         template <typename T>
         T* get_middleware()
         {
-            type_index t_ti = typeid(T);
-
-            for(int i = 0; i < tuple_size<decltype(middlewares_)>::value; ++i) {
-                auto mw = dynamic_get<T, Middlewares...>(i, middlewares_);
-                if(type_index(typeid(*mw)) == t_ti) {
-                    return mw;
-                }
-            }
-            return nullptr;
+            return utility::get_element_by_type_ptr<T, Middlewares...>(middlewares_);
         }
 
     private:

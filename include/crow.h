@@ -91,7 +91,7 @@ namespace crow
         T* get_middleware()
         {
             static_assert(black_magic::contains<T, Middlewares...>::value, "App doesn't have the specified middleware type.");
-            return server_.get_middleware<T>();
+            return server_.template get_middleware<T>();
         }
 
     private:
