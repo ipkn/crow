@@ -25,7 +25,8 @@ namespace crow
             : acceptor_(io_service_), 
             signals_(io_service_, SIGINT, SIGTERM),
             handler_(handler),
-            listening_(false)
+            listening_(false),
+            running_(false)
         {
         }
 
@@ -35,18 +36,25 @@ namespace crow
             handler_(handler), 
             concurrency_(concurrency),
             port_(port),
-            listening_(true)
+            listening_(true),
+            running_(false)
         {
         }
 
         void run()
         {
+            if(running_)
+                return;
+
+            running_ = true;
+            
             if(!listening_) {
                 tcp::endpoint endpoint(asio::ip::address(), port_);
                 acceptor_.open(endpoint.protocol());
                 acceptor_.set_option(tcp::acceptor::reuse_address(true));
                 acceptor_.bind(endpoint);
                 acceptor_.listen();
+                listening_ = true;
             }
 
             if (concurrency_ < 0)
@@ -154,6 +162,7 @@ namespace crow
         uint16_t port_{80};
         unsigned int roundrobin_index_{};
         bool listening_;
+        bool running_;
         std::tuple<Middlewares...> middlewares_;
 
     };
