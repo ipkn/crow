@@ -40,7 +40,7 @@ namespace crow
             const char param_delimiter = '=';
             ci_map ret;
 
-            int qMarkPos = url.find("?");
+            unsigned int qMarkPos = url.find("?");
             if(!(qMarkPos >=0 && qMarkPos != (url.length()-1))) {
                 return ret;
             }
