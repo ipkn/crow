@@ -15,7 +15,6 @@ include_directories( ${Boost_INCLUDE_DIR} )
 
 set(PROJECT_INCLUDE_DIR 
 ${PROJECT_SOURCE_DIR}/include
-${PROJECT_SOURCE_DIR}/http-parser
 )
 
 include_directories("${PROJECT_INCLUDE_DIR}")
@@ -30,13 +29,12 @@ add_test(NAME crow_test COMMAND ${CMAKE_CURRENT_BINARY_DIR}/tests/unittest)
 add_test(NAME template_test COMMAND ${CMAKE_CURRENT_BINARY_DIR}/tests/template/test.py WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/tests/template)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/amalgamate)
-add_custom_target(amalgamation ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/amalgamate/crow_all.h)
-file(COPY DIRECTORY ${PROJECT_SOURCE_DIR}/include DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
-    FILES_MATCHING 
-    PATTERN "*.h")
 
-add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/amalgamate/crow_all.h 
-    COMMAND python ${PROJECT_SOURCE_DIR}/amalgamate/merge_all.py
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/amalgamate/crow_all.h
+    COMMAND python ${PROJECT_SOURCE_DIR}/amalgamate/merge_all.py ${PROJECT_SOURCE_DIR}/include
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/amalgamate/crow_all.h ${PROJECT_SOURCE_DIR}/amalgamate
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/amalgamate
+    DEPENDS ${PROJECT_SOURCE_DIR}/include/*.h
     )
 
+add_custom_target(amalgamation ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/amalgamate/crow_all.h)
