@@ -1,13 +1,20 @@
 import glob
+import os
 import re
 from collections import defaultdict
+import sys
+
+header_path = "../include"
+if len(sys.argv) > 1:
+    header_path = sys.argv[1]
+
 OUTPUT = 'crow_all.h'
 re_depends = re.compile('^#include "(.*)"', re.MULTILINE)
-headers = [x.rsplit('/',1)[-1] for x in glob.glob('../include/*.h')]
+headers = [x.rsplit('/',1)[-1] for x in glob.glob(os.path.join(header_path,'*.h'))]
 print headers
 edges = defaultdict(list)
 for header in headers:
-    d = open("../include/" + header).read().decode('utf8')
+    d = open(os.path.join(header_path, header)).read().decode('utf8')
     match = re_depends.findall(d)
     for m in match:
         # m should included before header
@@ -36,7 +43,7 @@ for x in edges:
 print order
 build = []
 for header in order:
-    d = open("../include/" + header).read().decode('utf8')
+    d = open(os.path.join(header_path, header)).read().decode('utf8')
     build.append(re_depends.sub(lambda x:'\n', d))
     build.append('\n')
 

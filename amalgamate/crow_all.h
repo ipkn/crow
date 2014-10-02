@@ -6234,7 +6234,7 @@ public:
             optimize();
         }
 
-        std::pair<unsigned, routing_params> find(const request& req, const Node* node = nullptr, unsigned pos = 0, routing_params* params = nullptr) const
+        std::pair<unsigned, routing_params> find(const std::string& req_url, const Node* node = nullptr, unsigned pos = 0, routing_params* params = nullptr) const
         {
             routing_params empty;
             if (params == nullptr)
@@ -6245,7 +6245,7 @@ public:
 
             if (node == nullptr)
                 node = head();
-            if (pos == req.url.size())
+            if (pos == req_url.size())
                 return {node->rule_index, *params};
 
             auto update_found = [&found, &match_params](std::pair<unsigned, routing_params>& ret)
@@ -6259,16 +6259,16 @@ public:
 
             if (node->param_childrens[(int)ParamType::INT])
             {
-                char c = req.url[pos];
+                char c = req_url[pos];
                 if ((c >= '0' && c <= '9') || c == '+' || c == '-')
                 {
                     char* eptr;
                     errno = 0;
-                    long long int value = strtoll(req.url.data()+pos, &eptr, 10);
-                    if (errno != ERANGE && eptr != req.url.data()+pos)
+                    long long int value = strtoll(req_url.data()+pos, &eptr, 10);
+                    if (errno != ERANGE && eptr != req_url.data()+pos)
                     {
                         params->int_params.push_back(value);
-                        auto ret = find(req, &nodes_[node->param_childrens[(int)ParamType::INT]], eptr - req.url.data(), params);
+                        auto ret = find(req_url, &nodes_[node->param_childrens[(int)ParamType::INT]], eptr - req_url.data(), params);
                         update_found(ret);
                         params->int_params.pop_back();
                     }
@@ -6277,16 +6277,16 @@ public:
 
             if (node->param_childrens[(int)ParamType::UINT])
             {
-                char c = req.url[pos];
+                char c = req_url[pos];
                 if ((c >= '0' && c <= '9') || c == '+')
                 {
                     char* eptr;
                     errno = 0;
-                    unsigned long long int value = strtoull(req.url.data()+pos, &eptr, 10);
-                    if (errno != ERANGE && eptr != req.url.data()+pos)
+                    unsigned long long int value = strtoull(req_url.data()+pos, &eptr, 10);
+                    if (errno != ERANGE && eptr != req_url.data()+pos)
                     {
                         params->uint_params.push_back(value);
-                        auto ret = find(req, &nodes_[node->param_childrens[(int)ParamType::UINT]], eptr - req.url.data(), params);
+                        auto ret = find(req_url, &nodes_[node->param_childrens[(int)ParamType::UINT]], eptr - req_url.data(), params);
                         update_found(ret);
                         params->uint_params.pop_back();
                     }
@@ -6295,16 +6295,16 @@ public:
 
             if (node->param_childrens[(int)ParamType::DOUBLE])
             {
-                char c = req.url[pos];
+                char c = req_url[pos];
                 if ((c >= '0' && c <= '9') || c == '+' || c == '-' || c == '.')
                 {
                     char* eptr;
                     errno = 0;
-                    double value = strtod(req.url.data()+pos, &eptr);
-                    if (errno != ERANGE && eptr != req.url.data()+pos)
+                    double value = strtod(req_url.data()+pos, &eptr);
+                    if (errno != ERANGE && eptr != req_url.data()+pos)
                     {
                         params->double_params.push_back(value);
-                        auto ret = find(req, &nodes_[node->param_childrens[(int)ParamType::DOUBLE]], eptr - req.url.data(), params);
+                        auto ret = find(req_url, &nodes_[node->param_childrens[(int)ParamType::DOUBLE]], eptr - req_url.data(), params);
                         update_found(ret);
                         params->double_params.pop_back();
                     }
@@ -6314,16 +6314,16 @@ public:
             if (node->param_childrens[(int)ParamType::STRING])
             {
                 size_t epos = pos;
-                for(; epos < req.url.size(); epos ++)
+                for(; epos < req_url.size(); epos ++)
                 {
-                    if (req.url[epos] == '/')
+                    if (req_url[epos] == '/')
                         break;
                 }
 
                 if (epos != pos)
                 {
-                    params->string_params.push_back(req.url.substr(pos, epos-pos));
-                    auto ret = find(req, &nodes_[node->param_childrens[(int)ParamType::STRING]], epos, params);
+                    params->string_params.push_back(req_url.substr(pos, epos-pos));
+                    auto ret = find(req_url, &nodes_[node->param_childrens[(int)ParamType::STRING]], epos, params);
                     update_found(ret);
                     params->string_params.pop_back();
                 }
@@ -6331,12 +6331,12 @@ public:
 
             if (node->param_childrens[(int)ParamType::PATH])
             {
-                size_t epos = req.url.size();
+                size_t epos = req_url.size();
 
                 if (epos != pos)
                 {
-                    params->string_params.push_back(req.url.substr(pos, epos-pos));
-                    auto ret = find(req, &nodes_[node->param_childrens[(int)ParamType::PATH]], epos, params);
+                    params->string_params.push_back(req_url.substr(pos, epos-pos));
+                    auto ret = find(req_url, &nodes_[node->param_childrens[(int)ParamType::PATH]], epos, params);
                     update_found(ret);
                     params->string_params.pop_back();
                 }
@@ -6347,9 +6347,9 @@ public:
                 const std::string& fragment = kv.first;
                 const Node* child = &nodes_[kv.second];
 
-                if (req.url.compare(pos, fragment.size(), fragment) == 0)
+                if (req_url.compare(pos, fragment.size(), fragment) == 0)
                 {
-                    auto ret = find(req, child, pos + fragment.size(), params);
+                    auto ret = find(req_url, child, pos + fragment.size(), params);
                     update_found(ret);
                 }
             }
@@ -6505,13 +6505,16 @@ public:
 
         void handle(const request& req, response& res)
         {
-            auto found = trie_.find(req);
+            // remove url params            
+            auto editedUrl = req.url.substr(0, req.url.find("?"));
+
+            auto found = trie_.find(editedUrl);
 
             unsigned rule_index = found.first;
 
             if (!rule_index)
             {
-				CROW_LOG_DEBUG << "Cannot match rules " << req.url;
+				CROW_LOG_DEBUG << "Cannot match rules " << editedUrl;
                 res = response(404);
 				res.end();
                 return;
@@ -6774,20 +6777,31 @@ namespace crow
         {
             cancel_deadline_timer();
             bool is_invalid_request = false;
+            add_keep_alive_ = false;
 
             req_ = std::move(parser_.to_request());
             request& req = req_;
             if (parser_.check_version(1, 0))
             {
                 // HTTP/1.0
-                if (!(req.headers.count("connection") && boost::iequals(req.get_header_value("connection"),"Keep-Alive")))
+                if (req.headers.count("connection"))
+                {
+                    if (boost::iequals(req.get_header_value("connection"),"Keep-Alive"))
+                        add_keep_alive_ = true;
+                }
+                else
                     close_connection_ = true;
             }
             else if (parser_.check_version(1, 1))
             {
                 // HTTP/1.1
-                if (req.headers.count("connection") && req.get_header_value("connection") == "close")
-                    close_connection_ = true;
+                if (req.headers.count("connection"))
+                {
+                    if (req.get_header_value("connection") == "close")
+                        close_connection_ = true;
+                    else if (boost::iequals(req.get_header_value("connection"),"Keep-Alive"))
+                        add_keep_alive_ = true;
+                }
                 if (!req.headers.count("host"))
                 {
                     is_invalid_request = true;
@@ -6814,16 +6828,18 @@ namespace crow
                     res.complete_request_handler_ = [this]{ this->complete_request(); };
                     need_to_call_after_handlers_ = true;
                     handler_->handle(req, res);
+                    if (add_keep_alive_)
+                        res.set_header("connection", "Keep-Alive");
                 }
                 else
                 {
                     complete_request();
                 }
             }
-			else
-			{
-				complete_request();
-			}
+            else
+            {
+                complete_request();
+            }
         }
 
         void complete_request()
@@ -6845,11 +6861,11 @@ namespace crow
             //auto self = this->shared_from_this();
             res.complete_request_handler_ = nullptr;
             
-			if (!socket_.is_open())
+            if (!socket_.is_open())
             {
                 //CROW_LOG_DEBUG << this << " delete (socket is closed) " << is_reading << ' ' << is_writing;
                 //delete this;
-				return;
+                return;
             }
 
             static std::unordered_map<int, std::string> statusCodes = {
@@ -6878,7 +6894,7 @@ namespace crow
             static std::string crlf = "\r\n";
 
             buffers_.clear();
-            buffers_.reserve(4*(res.headers.size()+4)+3);
+            buffers_.reserve(4*(res.headers.size()+5)+3);
 
             if (res.body.empty() && res.json_value.t() == json::type::Object)
             {
@@ -6895,10 +6911,6 @@ namespace crow
             if (res.code >= 400 && res.body.empty())
                 res.body = statusCodes[res.code].substr(9);
 
-            bool has_content_length = false;
-            bool has_date = false;
-            bool has_server = false;
-
             for(auto& kv : res.headers)
             {
                 buffers_.emplace_back(kv.first.data(), kv.first.size());
@@ -6906,15 +6918,9 @@ namespace crow
                 buffers_.emplace_back(kv.second.data(), kv.second.size());
                 buffers_.emplace_back(crlf.data(), crlf.size());
 
-                if (boost::iequals(kv.first, "content-length"))
-                    has_content_length = true;
-                if (boost::iequals(kv.first, "date"))
-                    has_date = true;
-                if (boost::iequals(kv.first, "server"))
-                    has_server = true;
             }
 
-            if (!has_content_length)
+            if (!res.headers.count("content-length"))
             {
                 content_length_ = std::to_string(res.body.size());
                 static std::string content_length_tag = "Content-Length: ";
@@ -6922,19 +6928,25 @@ namespace crow
                 buffers_.emplace_back(content_length_.data(), content_length_.size());
                 buffers_.emplace_back(crlf.data(), crlf.size());
             }
-            if (!has_server)
+            if (!res.headers.count("server"))
             {
                 static std::string server_tag = "Server: ";
                 buffers_.emplace_back(server_tag.data(), server_tag.size());
                 buffers_.emplace_back(server_name_.data(), server_name_.size());
                 buffers_.emplace_back(crlf.data(), crlf.size());
             }
-            if (!has_date)
+            if (!res.headers.count("date"))
             {
                 static std::string date_tag = "Date: ";
                 date_str_ = get_cached_date_str();
                 buffers_.emplace_back(date_tag.data(), date_tag.size());
                 buffers_.emplace_back(date_str_.data(), date_str_.size());
+                buffers_.emplace_back(crlf.data(), crlf.size());
+            }
+            if (add_keep_alive_)
+            {
+                static std::string keep_alive_tag = "Connetion: Keep-Alive";
+                buffers_.emplace_back(keep_alive_tag.data(), keep_alive_tag.size());
                 buffers_.emplace_back(crlf.data(), crlf.size());
             }
 
@@ -7088,6 +7100,7 @@ namespace crow
         bool is_writing{};
         bool need_to_call_after_handlers_;
         bool need_to_start_read_after_complete_{};
+        bool add_keep_alive_{};
 
         std::tuple<Middlewares...>& middlewares_;
         detail::context<Middlewares...> ctx_;
