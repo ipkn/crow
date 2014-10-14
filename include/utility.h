@@ -67,7 +67,9 @@ namespace crow
         constexpr bool is_equ_p(const char* a, const char* b, unsigned n)
         {
             return
-                *a == 0 || *b == 0
+                *a == 0 && *b == 0 && n == 0 
+                    ? true :
+                (*a == 0 || *b == 0)
                     ? false :
                 n == 0
                     ? true :

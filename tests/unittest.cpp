@@ -250,6 +250,79 @@ TEST(handler_with_response)
     });
 }
 
+TEST(http_method)
+{
+    SimpleApp app;
+
+    CROW_ROUTE(app, "/")
+        .methods("POST"_method, "GET"_method)
+    ([](const request& req){ 
+        if (req.method == "GET"_method) 
+            return "2"; 
+        else 
+            return "1"; 
+    });
+
+    CROW_ROUTE(app, "/get_only")
+        .methods("GET"_method)
+    ([](const request& req){ 
+        return "get"; 
+    });
+    CROW_ROUTE(app, "/post_only")
+        .methods("POST"_method)
+    ([](const request& req){ 
+        return "post"; 
+    });
+
+
+    // cannot have multiple handlers for the same url
+    //CROW_ROUTE(app, "/")
+    //.methods("GET"_method)
+    //([]{ return "2"; });
+
+    {
+        request req;
+        response res;
+
+        req.url = "/";
+        app.handle(req, res);
+
+        ASSERT_EQUAL("2", res.body);
+    }
+    {
+        request req;
+        response res;
+
+        req.url = "/";
+        req.method = "POST"_method;
+        app.handle(req, res);
+
+        ASSERT_EQUAL("1", res.body);
+    }
+
+    {
+        request req;
+        response res;
+
+        req.url = "/get_only";
+        app.handle(req, res);
+
+        ASSERT_EQUAL("get", res.body);
+    }
+
+    {
+        request req;
+        response res;
+
+        req.url = "/get_only";
+        req.method = "POST"_method;
+        app.handle(req, res);
+
+        ASSERT_NOTEQUAL("get", res.body);
+    }
+
+}
+
 TEST(server_handling_error_request)
 {
     static char buf[2048];
@@ -283,8 +356,8 @@ TEST(multi_server)
 {
     static char buf[2048];
     SimpleApp app1, app2;
-    CROW_ROUTE(app1, "/")([]{return "A";});
-    CROW_ROUTE(app2, "/")([]{return "B";});
+    CROW_ROUTE(app1, "/").methods("GET"_method, "POST"_method)([]{return "A";});
+    CROW_ROUTE(app2, "/").methods("GET"_method, "POST"_method)([]{return "B";});
 
     Server<SimpleApp> server1(&app1, 45451);
     Server<SimpleApp> server2(&app2, 45452);
@@ -297,7 +370,6 @@ TEST(multi_server)
     {
         asio::ip::tcp::socket c(is);
         c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
-
 
         c.send(asio::buffer(sendmsg));
 

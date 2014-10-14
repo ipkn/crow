@@ -67,7 +67,9 @@ namespace crow
         constexpr bool is_equ_p(const char* a, const char* b, unsigned n)
         {
             return
-                *a == 0 || *b == 0
+                *a == 0 && *b == 0 && n == 0 
+                    ? true :
+                (*a == 0 || *b == 0)
                     ? false :
                 n == 0
                     ? true :
@@ -6113,8 +6115,13 @@ namespace crow
 
         virtual void handle(const request&, response&, const routing_params&) = 0;
 
-    protected:
+        uint32_t methods()
+        {
+            return methods_;
+        }
 
+    protected:
+        uint32_t methods_{1<<(int)HTTPMethod::GET};
     };
 
     template <typename ... Args>
@@ -6234,6 +6241,7 @@ namespace crow
         self_t& methods(HTTPMethod method)
         {
             methods_ = 1<<(int)method;
+            return *this;
         }
 
         template <typename ... MethodArgs>
@@ -6241,6 +6249,7 @@ namespace crow
         {
             methods(args_method...);
             methods_ |= 1<<(int)method;
+            return *this;
         }
 
         void validate()
@@ -6344,7 +6353,6 @@ namespace crow
 
         std::string rule_;
         std::string name_;
-        uint32_t methods_{1<<(int)HTTPMethod::GET};
 
         template <typename T, int Pos>
         struct call_pair
@@ -6725,7 +6733,15 @@ public:
             if (rule_index >= rules_.size())
                 throw std::runtime_error("Trie internal structure corrupted!");
 
-            CROW_LOG_DEBUG << "Matched rule '" << ((TaggedRule<>*)rules_[rule_index].get())->rule_ << "'";
+            if ((rules_[rule_index]->methods() & (1<<(uint32_t)req.method)) == 0)
+            {
+				CROW_LOG_DEBUG << "Rule found but method mismatch: " << req.url << " with " << method_name(req.method) << "(" << (uint32_t)req.method << ") / " << rules_[rule_index]->methods();
+                res = response(404);
+				res.end();
+                return;
+            }
+
+            CROW_LOG_DEBUG << "Matched rule '" << ((TaggedRule<>*)rules_[rule_index].get())->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->methods();
 
             rules_[rule_index]->handle(req, res, found.second);
         }
