@@ -71,14 +71,19 @@ int main()
     CROW_ROUTE(app, "/params")
     ([](const crow::request& req){
         std::ostringstream os;
-        os << "Params:\n";
-        for (auto& i : req.url_params) {
-            os << "key = " << i.first << ", val = " << i.second << '\n';
+        os << "Params: " << req.url_params << "\n\n"; 
+        os << "The key 'foo' was " << (req.url_params.get("foo") == nullptr ? "not " : "") << "found.\n";
+        if(req.url_params.get("pew") != nullptr) {
+            double countD = boost::lexical_cast<double>(req.url_params.get("pew"));
+            os << "The value of 'pew' is " <<  countD << '\n';
+        }
+        auto count = req.url_params.get_list("count");
+        os << "The key 'count' contains " << count.size() << " value(s).\n";
+        for(const auto& countVal : count) {
+            os << " - " << countVal << '\n';
         }
         return crow::response{os.str()};
-    });
-
-    
+    });    
 
     // ignore all log
     crow::logger::setLogLevel(crow::LogLevel::DEBUG);

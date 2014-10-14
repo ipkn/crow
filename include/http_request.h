@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "ci_map.h"
+#include "query_string.h"
 
 namespace crow
 {
@@ -19,8 +20,9 @@ namespace crow
     struct request
     {
         HTTPMethod method;
+        std::string raw_url;
         std::string url;
-        ci_map url_params;
+        query_string url_params;
         ci_map headers;
         std::string body;
 
@@ -31,8 +33,8 @@ namespace crow
         {
         }
 
-        request(HTTPMethod method, std::string url, ci_map url_params, ci_map headers, std::string body)
-            : method(method), url(std::move(url)), url_params(std::move(url_params)), headers(std::move(headers)), body(std::move(body))
+        request(HTTPMethod method, std::string raw_url, std::string url, query_string url_params, ci_map headers, std::string body)
+            : method(method), raw_url(std::move(raw_url)), url(std::move(url)), url_params(std::move(url_params)), headers(std::move(headers)), body(std::move(body))
         {
         }
 

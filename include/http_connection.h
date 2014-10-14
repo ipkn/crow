@@ -232,7 +232,7 @@ namespace crow
 
         void complete_request()
         {
-            CROW_LOG_INFO << "Response: " << this << ' ' << req_.url << ' ' << res.code << ' ' << close_connection_;
+            CROW_LOG_INFO << "Response: " << this << ' ' << req_.raw_url << ' ' << res.code << ' ' << close_connection_;
 
             if (need_to_call_after_handlers_)
             {

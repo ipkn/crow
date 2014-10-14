@@ -623,16 +623,13 @@ public:
 
         void handle(const request& req, response& res)
         {
-            // remove url params            
-            auto editedUrl = req.url.substr(0, req.url.find("?"));
-
-            auto found = trie_.find(editedUrl);
+            auto found = trie_.find(req.url);
 
             unsigned rule_index = found.first;
 
             if (!rule_index)
             {
-				CROW_LOG_DEBUG << "Cannot match rules " << editedUrl;
+				CROW_LOG_DEBUG << "Cannot match rules " << req.url;
                 res = response(404);
 				res.end();
                 return;
