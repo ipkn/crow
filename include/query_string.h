@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <string>
 
-using namespace std;
-
 // ----------------------------------------------------------------------------
 // qs_parse (modified)
 // https://github.com/bartgrantham/qs_parse
@@ -273,16 +271,16 @@ namespace crow
 
         }
 
-        char* get (const string name) const
+        char* get (const std::string name) const
         {
             char* ret = qs_k2v(name.c_str(), _kv_pairs, _kv_size);
             return ret != 0 ? ret : nullptr;
         }
 
-        vector<char*> get_list (const string name) const
+        vector<char*> get_list (const std::string name) const
         {
             vector<char*> ret;
-            string plus = name + "[]";            
+            std::string plus = name + "[]";            
             char* tmp = nullptr;
             int count = 0;
             do
