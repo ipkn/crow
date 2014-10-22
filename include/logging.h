@@ -28,7 +28,7 @@ namespace crow
     class CerrLogHandler : public ILogHandler {
         public:
             void log(std::string message, LogLevel level) override {
-                cerr << message;
+                std::cerr << message;
             }
     };
 
@@ -56,7 +56,7 @@ namespace crow
             ~logger() {
     #ifdef CROW_ENABLE_LOGGING
                 if(level_ >= get_current_log_level()) {
-                    stringstream_ << endl;
+                    stringstream_ << std::endl;
                     get_handler_ref()->log(stringstream_.str(), level_);
                 }
     #endif

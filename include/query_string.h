@@ -41,7 +41,7 @@ char * qs_scanvalue(const char * key, const char * qs, char * val, size_t val_le
 #define HEX2DEC(x)  (((x)>='0'&&(x)<='9') ? (x)-48 : ((x)>='A'&&(x)<='F') ? (x)-55 : ((x)>='a'&&(x)<='f') ? (x)-87 : 0)
 #define ISQSCHR(x) ((((x)=='=')||((x)=='#')||((x)=='&')||((x)=='\0')) ? 0 : 1)
 
-int qs_strncmp(const char * s, const char * qs, register size_t n)
+inline int qs_strncmp(const char * s, const char * qs, register size_t n)
 {
     int i=0;
     register unsigned char u1, u2, unyb, lnyb;
@@ -89,7 +89,7 @@ int qs_strncmp(const char * s, const char * qs, register size_t n)
 }
 
 
-int qs_parse(char * qs, char * qs_kv[], int qs_kv_size)
+inline int qs_parse(char * qs, char * qs_kv[], int qs_kv_size)
 {
     int i, j;
     char * substr_ptr;
@@ -132,7 +132,7 @@ int qs_parse(char * qs, char * qs_kv[], int qs_kv_size)
 }
 
 
-int qs_decode(char * qs)
+inline int qs_decode(char * qs)
 {
     int i=0, j=0;
 
@@ -161,7 +161,7 @@ int qs_decode(char * qs)
 }
 
 
-char * qs_k2v(const char * key, char * const * qs_kv, int qs_kv_size, int nth = 0)
+inline char * qs_k2v(const char * key, char * const * qs_kv, int qs_kv_size, int nth = 0)
 {
     int i;
     size_t key_len, skip;
@@ -192,7 +192,7 @@ char * qs_k2v(const char * key, char * const * qs_kv, int qs_kv_size, int nth = 
 }
 
 
-char * qs_scanvalue(const char * key, const char * qs, char * val, size_t val_len)
+inline char * qs_scanvalue(const char * key, const char * qs, char * val, size_t val_len)
 {
     size_t i, key_len;
     const char * tmp;
@@ -257,7 +257,7 @@ namespace crow
             _url[0] = 0;
         }
 
-        friend ostream& operator<<(ostream& os, const query_string& qs)
+        friend std::ostream& operator<<(std::ostream& os, const query_string& qs)
         {
             os << "[ ";
             for(int i = 0; i < qs._kv_size; ++i) {
@@ -277,9 +277,9 @@ namespace crow
             return ret != 0 ? ret : nullptr;
         }
 
-        vector<char*> get_list (const std::string name) const
+        std::vector<char*> get_list (const std::string name) const
         {
-            vector<char*> ret;
+            std::vector<char*> ret;
             std::string plus = name + "[]";            
             char* tmp = nullptr;
             int count = 0;
