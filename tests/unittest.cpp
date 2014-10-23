@@ -863,6 +863,7 @@ TEST(simple_url_params)
 
         ASSERT_TRUE(last_url_params.get("missing") == nullptr);
         ASSERT_TRUE(last_url_params.get("foobar") != nullptr);
+        ASSERT_TRUE(last_url_params.get_list("missing").empty());
     }
     // check multiple presence
     sendmsg = "GET /params?foo&bar&baz\r\n\r\n";

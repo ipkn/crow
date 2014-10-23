@@ -9,6 +9,10 @@ if (Tcmalloc_FOUND)
 target_link_libraries(example ${Tcmalloc_LIBRARIES})
 endif(Tcmalloc_FOUND)
 
+add_executable(example_with_all example_with_all.cpp)
+#target_link_libraries(example crow)
+target_link_libraries(example_with_all ${Boost_LIBRARIES} )
+
 add_custom_command(OUTPUT example_test.py
         COMMAND ${CMAKE_COMMAND} -E
         copy ${PROJECT_SOURCE_DIR}/example_test.py ${CMAKE_CURRENT_BINARY_DIR}/example_test.py
