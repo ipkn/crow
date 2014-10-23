@@ -1,14 +1,17 @@
 #pragma once
 
 #include <stdio.h>
+#include <string.h>
 #include <string>
+#include <vector>
+#include <iostream>
 
 // ----------------------------------------------------------------------------
 // qs_parse (modified)
 // https://github.com/bartgrantham/qs_parse
 // ----------------------------------------------------------------------------
 /*  Similar to strncmp, but handles URL-encoding for either string  */
-int qs_strncmp(const char * s, const char * qs, register size_t n);
+int qs_strncmp(const char * s, const char * qs, size_t n);
 
 
 /*  Finds the beginning of each key/value pair and stores a pointer in qs_kv.
@@ -37,30 +40,30 @@ char * qs_scanvalue(const char * key, const char * qs, char * val, size_t val_le
 #undef _qsSORTING
 
 // isxdigit _is_ available in <ctype.h>, but let's avoid another header instead
-#define ISHEX(x)    ((((x)>='0'&&(x)<='9') || ((x)>='A'&&(x)<='F') || ((x)>='a'&&(x)<='f')) ? 1 : 0)
-#define HEX2DEC(x)  (((x)>='0'&&(x)<='9') ? (x)-48 : ((x)>='A'&&(x)<='F') ? (x)-55 : ((x)>='a'&&(x)<='f') ? (x)-87 : 0)
-#define ISQSCHR(x) ((((x)=='=')||((x)=='#')||((x)=='&')||((x)=='\0')) ? 0 : 1)
+#define CROW_QS_ISHEX(x)    ((((x)>='0'&&(x)<='9') || ((x)>='A'&&(x)<='F') || ((x)>='a'&&(x)<='f')) ? 1 : 0)
+#define CROW_QS_HEX2DEC(x)  (((x)>='0'&&(x)<='9') ? (x)-48 : ((x)>='A'&&(x)<='F') ? (x)-55 : ((x)>='a'&&(x)<='f') ? (x)-87 : 0)
+#define CROW_QS_ISQSCHR(x) ((((x)=='=')||((x)=='#')||((x)=='&')||((x)=='\0')) ? 0 : 1)
 
-inline int qs_strncmp(const char * s, const char * qs, register size_t n)
+inline int qs_strncmp(const char * s, const char * qs, size_t n)
 {
     int i=0;
-    register unsigned char u1, u2, unyb, lnyb;
+    unsigned char u1, u2, unyb, lnyb;
 
     while(n-- > 0)
     {
         u1 = (unsigned char) *s++;
         u2 = (unsigned char) *qs++;
 
-        if ( ! ISQSCHR(u1) ) {  u1 = '\0';  }
-        if ( ! ISQSCHR(u2) ) {  u2 = '\0';  }
+        if ( ! CROW_QS_ISQSCHR(u1) ) {  u1 = '\0';  }
+        if ( ! CROW_QS_ISQSCHR(u2) ) {  u2 = '\0';  }
 
         if ( u1 == '+' ) {  u1 = ' ';  }
         if ( u1 == '%' ) // easier/safer than scanf
         {
             unyb = (unsigned char) *s++;
             lnyb = (unsigned char) *s++;
-            if ( ISHEX(unyb) && ISHEX(lnyb) )
-                u1 = (HEX2DEC(unyb) * 16) + HEX2DEC(lnyb);
+            if ( CROW_QS_ISHEX(unyb) && CROW_QS_ISHEX(lnyb) )
+                u1 = (CROW_QS_HEX2DEC(unyb) * 16) + CROW_QS_HEX2DEC(lnyb);
             else
                 u1 = '\0';
         }
@@ -70,8 +73,8 @@ inline int qs_strncmp(const char * s, const char * qs, register size_t n)
         {
             unyb = (unsigned char) *qs++;
             lnyb = (unsigned char) *qs++;
-            if ( ISHEX(unyb) && ISHEX(lnyb) )
-                u2 = (HEX2DEC(unyb) * 16) + HEX2DEC(lnyb);
+            if ( CROW_QS_ISHEX(unyb) && CROW_QS_ISHEX(lnyb) )
+                u2 = (CROW_QS_HEX2DEC(unyb) * 16) + CROW_QS_HEX2DEC(lnyb);
             else
                 u2 = '\0';
         }
@@ -82,7 +85,7 @@ inline int qs_strncmp(const char * s, const char * qs, register size_t n)
             return 0;
         i++;
     }
-    if ( ISQSCHR(*qs) )
+    if ( CROW_QS_ISQSCHR(*qs) )
         return -1;
     else
         return 0;
@@ -136,17 +139,17 @@ inline int qs_decode(char * qs)
 {
     int i=0, j=0;
 
-    while( ISQSCHR(qs[j]) )
+    while( CROW_QS_ISQSCHR(qs[j]) )
     {
         if ( qs[j] == '+' ) {  qs[i] = ' ';  }
         else if ( qs[j] == '%' ) // easier/safer than scanf
         {
-            if ( ! ISHEX(qs[j+1]) || ! ISHEX(qs[j+2]) )
+            if ( ! CROW_QS_ISHEX(qs[j+1]) || ! CROW_QS_ISHEX(qs[j+2]) )
             {
                 qs[i] = '\0';
                 return i;
             }
-            qs[i] = (HEX2DEC(qs[j+1]) * 16) + HEX2DEC(qs[j+2]);
+            qs[i] = (CROW_QS_HEX2DEC(qs[j+1]) * 16) + CROW_QS_HEX2DEC(qs[j+2]);
             j+=2;
         }
         else
@@ -229,75 +232,77 @@ inline char * qs_scanvalue(const char * key, const char * qs, char * val, size_t
 }
 // ----------------------------------------------------------------------------
 
-// TODO to save allocs, capping url size to 2048 seems sane and reasonable but
-// crow should *technically* return a 413 if a URL is longer than this.
-#define MAX_URL_SIZE (2048)
-
-#define NUM_KV_PAIRS (256)
-#define VAL_SIZE (256)
 
 namespace crow 
 {
     class query_string
     {
     public:
+        static const int MAX_KEY_VALUE_PAIRS_COUNT = 256;
+
         query_string()
         {
 
         }
+
         query_string(std::string url)
+            : url_(std::move(url))
         {
-            if(url.length() <= MAX_URL_SIZE) {
-                memset(_url, 0, MAX_URL_SIZE); // overkill?            
-                memcpy(_url, url.c_str(), url.length());
-            }
-            _kv_size = qs_parse(_url, _kv_pairs, NUM_KV_PAIRS);
+            if (url_.empty())
+                return;
+
+            key_value_pairs_.resize(MAX_KEY_VALUE_PAIRS_COUNT);
+
+            int count = qs_parse(&url_[0], &key_value_pairs_[0], MAX_KEY_VALUE_PAIRS_COUNT);
+            key_value_pairs_.resize(count);
         }
-        void clear() {
-            _url[0] = 0;
+
+        void clear() 
+        {
+            key_value_pairs_.clear();
+            url_.clear();
         }
 
         friend std::ostream& operator<<(std::ostream& os, const query_string& qs)
         {
             os << "[ ";
-            for(int i = 0; i < qs._kv_size; ++i) {
-                os << qs._kv_pairs[i];
-                if((i + 1) < qs._kv_size) {
+            for(size_t i = 0; i < qs.key_value_pairs_.size(); ++i) {
+                if (i)
                     os << ", ";
-                }
+                os << qs.key_value_pairs_[i];
             }
             os << " ]";
             return os;
 
         }
 
-        char* get (const std::string name) const
+        char* get (const std::string& name) const
         {
-            char* ret = qs_k2v(name.c_str(), _kv_pairs, _kv_size);
-            return ret != 0 ? ret : nullptr;
+            char* ret = qs_k2v(name.c_str(), key_value_pairs_.data(), key_value_pairs_.size());
+            return ret;
         }
 
-        std::vector<char*> get_list (const std::string name) const
+        std::vector<char*> get_list (const std::string& name) const
         {
             std::vector<char*> ret;
             std::string plus = name + "[]";            
-            char* tmp = nullptr;
+            char* element = nullptr;
+
             int count = 0;
-            do
+            while(1)
             {
-                tmp = qs_k2v(plus.c_str(), _kv_pairs, _kv_size, count++);
-                if(tmp != nullptr) {
-                    ret.push_back(tmp);
-                }
-            } while(tmp != nullptr);
-            return move(ret);
+                element = qs_k2v(plus.c_str(), key_value_pairs_.data(), key_value_pairs_.size(), count++);
+                if (!element)
+                    break;
+                ret.push_back(element);
+            }
+            return ret;
         }
 
 
     private:
-        char    _url[MAX_URL_SIZE];
-        char*   _kv_pairs[NUM_KV_PAIRS];
-        int     _kv_size;
+        std::string url_;
+        std::vector<char*> key_value_pairs_;
     };
 
 } // end namespace

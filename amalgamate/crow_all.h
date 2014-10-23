@@ -1,338 +1,17 @@
 #pragma once
 
-#include <cstdint>
-#include <stdexcept>
-#include <tuple>
-#include <type_traits>
-
-namespace crow
-{
-	namespace black_magic
-	{
-		struct OutOfRange
-		{
-			OutOfRange(unsigned pos, unsigned length) {}
-		};
-		constexpr unsigned requires_in_range( unsigned i, unsigned len )
-		{
-			return i >= len ? throw OutOfRange(i, len) : i;
-		}
-
-		class const_str
-		{
-			const char * const begin_;
-			unsigned size_;
-
-			public:
-			template< unsigned N >
-				constexpr const_str( const char(&arr)[N] ) : begin_(arr), size_(N - 1) {
-					static_assert( N >= 1, "not a string literal");
-				}
-			constexpr char operator[]( unsigned i ) const { 
-				return requires_in_range(i, size_), begin_[i]; 
-			}
-
-			constexpr operator const char *() const { 
-				return begin_; 
-			}
-
-			constexpr const char* begin() const { return begin_; }
-			constexpr const char* end() const { return begin_ + size_; }
-
-			constexpr unsigned size() const { 
-				return size_; 
-			}
-		};
-
-
-		constexpr unsigned find_closing_tag(const_str s, unsigned p)
-		{
-			return s[p] == '>' ? p : find_closing_tag(s, p+1);
-		}
-
-        constexpr bool is_valid(const_str s, unsigned i = 0, int f = 0)
-        {
-            return 
-                i == s.size()
-                    ? f == 0 :
-                f < 0 || f >= 2
-                    ? false :
-                s[i] == '<'
-                    ? is_valid(s, i+1, f+1) :
-                s[i] == '>'
-                    ? is_valid(s, i+1, f-1) :
-                is_valid(s, i+1, f);
-        }
-
-        constexpr bool is_equ_p(const char* a, const char* b, unsigned n)
-        {
-            return
-                *a == 0 && *b == 0 && n == 0 
-                    ? true :
-                (*a == 0 || *b == 0)
-                    ? false :
-                n == 0
-                    ? true :
-                *a != *b
-                    ? false :
-                is_equ_p(a+1, b+1, n-1);
-        }
-
-        constexpr bool is_equ_n(const_str a, unsigned ai, const_str b, unsigned bi, unsigned n)
-        {
-            return 
-                ai + n > a.size() || bi + n > b.size() 
-                    ? false :
-                n == 0 
-                    ? true : 
-                a[ai] != b[bi] 
-                    ? false : 
-                is_equ_n(a,ai+1,b,bi+1,n-1);
-        }
-
-        constexpr bool is_int(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<int>", 0, 5);
-        }
-
-        constexpr bool is_uint(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<uint>", 0, 6);
-        }
-
-        constexpr bool is_float(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<float>", 0, 7) ||
-                is_equ_n(s, i, "<double>", 0, 8);
-        }
-
-        constexpr bool is_str(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<str>", 0, 5) ||
-                is_equ_n(s, i, "<string>", 0, 8);
-        }
-
-        constexpr bool is_path(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<path>", 0, 6);
-        }
-
-        constexpr uint64_t get_parameter_tag(const_str s, unsigned p = 0)
-        {
-            return
-                p == s.size() 
-                    ?  0 :
-                s[p] == '<' ? ( 
-                    is_int(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 1 :
-                    is_uint(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 2 :
-                    is_float(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 3 :
-                    is_str(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 4 :
-                    is_path(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 5 :
-                    throw std::runtime_error("invalid parameter type")
-                    ) : 
-                get_parameter_tag(s, p+1);
-        }
-
-        template <typename ... T>
-        struct S
-        {
-            template <typename U>
-            using push = S<U, T...>;
-            template <typename U>
-            using push_back = S<T..., U>;
-            template <template<typename ... Args> class U>
-            using rebind = U<T...>;
-        };
-template <typename F, typename Set>
-        struct CallHelper;
-        template <typename F, typename ...Args>
-        struct CallHelper<F, S<Args...>>
-        {
-            template <typename F1, typename ...Args1, typename = 
-                decltype(std::declval<F1>()(std::declval<Args1>()...))
-                >
-            static char __test(int);
-
-            template <typename ...>
-            static int __test(...);
-
-            static constexpr bool value = sizeof(__test<F, Args...>(0)) == sizeof(char);
-        };
-
-
-        template <int N>
-        struct single_tag_to_type
-        {
-        };
-
-        template <>
-        struct single_tag_to_type<1>
-        {
-            using type = int64_t;
-        };
-
-        template <>
-        struct single_tag_to_type<2>
-        {
-            using type = uint64_t;
-        };
-
-        template <>
-        struct single_tag_to_type<3>
-        {
-            using type = double;
-        };
-
-        template <>
-        struct single_tag_to_type<4>
-        {
-            using type = std::string;
-        };
-
-        template <>
-        struct single_tag_to_type<5>
-        {
-            using type = std::string;
-        };
-
-
-        template <uint64_t Tag> 
-        struct arguments
-        {
-            using subarguments = typename arguments<Tag/6>::type;
-            using type = 
-                typename subarguments::template push<typename single_tag_to_type<Tag%6>::type>;
-        };
-
-        template <> 
-        struct arguments<0>
-        {
-            using type = S<>;
-        };
-
-        template <typename ... T>
-        struct last_element_type
-        {
-            using type = typename std::tuple_element<sizeof...(T)-1, std::tuple<T...>>::type;
-        };
-
-
-        template <>
-        struct last_element_type<>
-        {
-        };
-
-
-        // from http://stackoverflow.com/questions/13072359/c11-compile-time-array-with-logarithmic-evaluation-depth
-        template<class T> using Invoke = typename T::type;
-
-        template<unsigned...> struct seq{ using type = seq; };
-
-        template<class S1, class S2> struct concat;
-
-        template<unsigned... I1, unsigned... I2>
-        struct concat<seq<I1...>, seq<I2...>>
-          : seq<I1..., (sizeof...(I1)+I2)...>{};
-
-        template<class S1, class S2>
-        using Concat = Invoke<concat<S1, S2>>;
-
-        template<unsigned N> struct gen_seq;
-        template<unsigned N> using GenSeq = Invoke<gen_seq<N>>;
-
-        template<unsigned N>
-        struct gen_seq : Concat<GenSeq<N/2>, GenSeq<N - N/2>>{};
-
-        template<> struct gen_seq<0> : seq<>{};
-        template<> struct gen_seq<1> : seq<0>{};
-
-        template <typename Seq, typename Tuple> 
-        struct pop_back_helper;
-
-        template <unsigned ... N, typename Tuple>
-        struct pop_back_helper<seq<N...>, Tuple>
-        {
-            template <template <typename ... Args> class U>
-            using rebind = U<typename std::tuple_element<N, Tuple>::type...>;
-        };
-
-        template <typename ... T>
-        struct pop_back //: public pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>
-        {
-            template <template <typename ... Args> class U>
-            using rebind = typename pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>::template rebind<U>;
-        };
-
-        template <>
-        struct pop_back<>
-        {
-            template <template <typename ... Args> class U>
-            using rebind = U<>;
-        };
-
-        // from http://stackoverflow.com/questions/2118541/check-if-c0x-parameter-pack-contains-a-type
-        template < typename Tp, typename... List >
-        struct contains : std::true_type {};
-
-        template < typename Tp, typename Head, typename... Rest >
-        struct contains<Tp, Head, Rest...>
-        : std::conditional< std::is_same<Tp, Head>::value,
-            std::true_type,
-            contains<Tp, Rest...>
-        >::type {};
-
-        template < typename Tp >
-        struct contains<Tp> : std::false_type {};
-
-        template <typename T>
-        struct empty_context
-        {
-        };
-	}
-}
-
-
-
-#pragma once
-// settings for crow
-// TODO - replace with runtime config. libucl?
-
-/* #ifdef - enables debug mode */
-#define CROW_ENABLE_DEBUG
-
-/* #ifdef - enables logging */
-#define CROW_ENABLE_LOGGING
-
-/* #define - specifies log level */
-/*
-	DEBUG 		= 0
-	INFO 		= 1
-	WARNING		= 2
-	ERROR		= 3
-	CRITICAL 	= 4
-
-    default to INFO
-*/
-#define CROW_LOG_LEVEL 1
-
-
-
-#pragma once
-
 #include <stdio.h>
+#include <string.h>
 #include <string>
+#include <vector>
+#include <iostream>
 
 // ----------------------------------------------------------------------------
 // qs_parse (modified)
 // https://github.com/bartgrantham/qs_parse
 // ----------------------------------------------------------------------------
 /*  Similar to strncmp, but handles URL-encoding for either string  */
-int qs_strncmp(const char * s, const char * qs, register size_t n);
+int qs_strncmp(const char * s, const char * qs, size_t n);
 
 
 /*  Finds the beginning of each key/value pair and stores a pointer in qs_kv.
@@ -361,30 +40,30 @@ char * qs_scanvalue(const char * key, const char * qs, char * val, size_t val_le
 #undef _qsSORTING
 
 // isxdigit _is_ available in <ctype.h>, but let's avoid another header instead
-#define ISHEX(x)    ((((x)>='0'&&(x)<='9') || ((x)>='A'&&(x)<='F') || ((x)>='a'&&(x)<='f')) ? 1 : 0)
-#define HEX2DEC(x)  (((x)>='0'&&(x)<='9') ? (x)-48 : ((x)>='A'&&(x)<='F') ? (x)-55 : ((x)>='a'&&(x)<='f') ? (x)-87 : 0)
-#define ISQSCHR(x) ((((x)=='=')||((x)=='#')||((x)=='&')||((x)=='\0')) ? 0 : 1)
+#define CROW_QS_ISHEX(x)    ((((x)>='0'&&(x)<='9') || ((x)>='A'&&(x)<='F') || ((x)>='a'&&(x)<='f')) ? 1 : 0)
+#define CROW_QS_HEX2DEC(x)  (((x)>='0'&&(x)<='9') ? (x)-48 : ((x)>='A'&&(x)<='F') ? (x)-55 : ((x)>='a'&&(x)<='f') ? (x)-87 : 0)
+#define CROW_QS_ISQSCHR(x) ((((x)=='=')||((x)=='#')||((x)=='&')||((x)=='\0')) ? 0 : 1)
 
-inline int qs_strncmp(const char * s, const char * qs, register size_t n)
+inline int qs_strncmp(const char * s, const char * qs, size_t n)
 {
     int i=0;
-    register unsigned char u1, u2, unyb, lnyb;
+    unsigned char u1, u2, unyb, lnyb;
 
     while(n-- > 0)
     {
         u1 = (unsigned char) *s++;
         u2 = (unsigned char) *qs++;
 
-        if ( ! ISQSCHR(u1) ) {  u1 = '\0';  }
-        if ( ! ISQSCHR(u2) ) {  u2 = '\0';  }
+        if ( ! CROW_QS_ISQSCHR(u1) ) {  u1 = '\0';  }
+        if ( ! CROW_QS_ISQSCHR(u2) ) {  u2 = '\0';  }
 
         if ( u1 == '+' ) {  u1 = ' ';  }
         if ( u1 == '%' ) // easier/safer than scanf
         {
             unyb = (unsigned char) *s++;
             lnyb = (unsigned char) *s++;
-            if ( ISHEX(unyb) && ISHEX(lnyb) )
-                u1 = (HEX2DEC(unyb) * 16) + HEX2DEC(lnyb);
+            if ( CROW_QS_ISHEX(unyb) && CROW_QS_ISHEX(lnyb) )
+                u1 = (CROW_QS_HEX2DEC(unyb) * 16) + CROW_QS_HEX2DEC(lnyb);
             else
                 u1 = '\0';
         }
@@ -394,8 +73,8 @@ inline int qs_strncmp(const char * s, const char * qs, register size_t n)
         {
             unyb = (unsigned char) *qs++;
             lnyb = (unsigned char) *qs++;
-            if ( ISHEX(unyb) && ISHEX(lnyb) )
-                u2 = (HEX2DEC(unyb) * 16) + HEX2DEC(lnyb);
+            if ( CROW_QS_ISHEX(unyb) && CROW_QS_ISHEX(lnyb) )
+                u2 = (CROW_QS_HEX2DEC(unyb) * 16) + CROW_QS_HEX2DEC(lnyb);
             else
                 u2 = '\0';
         }
@@ -406,7 +85,7 @@ inline int qs_strncmp(const char * s, const char * qs, register size_t n)
             return 0;
         i++;
     }
-    if ( ISQSCHR(*qs) )
+    if ( CROW_QS_ISQSCHR(*qs) )
         return -1;
     else
         return 0;
@@ -460,17 +139,17 @@ inline int qs_decode(char * qs)
 {
     int i=0, j=0;
 
-    while( ISQSCHR(qs[j]) )
+    while( CROW_QS_ISQSCHR(qs[j]) )
     {
         if ( qs[j] == '+' ) {  qs[i] = ' ';  }
         else if ( qs[j] == '%' ) // easier/safer than scanf
         {
-            if ( ! ISHEX(qs[j+1]) || ! ISHEX(qs[j+2]) )
+            if ( ! CROW_QS_ISHEX(qs[j+1]) || ! CROW_QS_ISHEX(qs[j+2]) )
             {
                 qs[i] = '\0';
                 return i;
             }
-            qs[i] = (HEX2DEC(qs[j+1]) * 16) + HEX2DEC(qs[j+2]);
+            qs[i] = (CROW_QS_HEX2DEC(qs[j+1]) * 16) + CROW_QS_HEX2DEC(qs[j+2]);
             j+=2;
         }
         else
@@ -553,267 +232,80 @@ inline char * qs_scanvalue(const char * key, const char * qs, char * val, size_t
 }
 // ----------------------------------------------------------------------------
 
-// TODO to save allocs, capping url size to 2048 seems sane and reasonable but
-// crow should *technically* return a 413 if a URL is longer than this.
-#define MAX_URL_SIZE (2048)
-
-#define NUM_KV_PAIRS (256)
-#define VAL_SIZE (256)
 
 namespace crow 
 {
     class query_string
     {
     public:
+        static const int MAX_KEY_VALUE_PAIRS_COUNT = 256;
+
         query_string()
         {
 
         }
+
         query_string(std::string url)
+            : url_(std::move(url))
         {
-            if(url.length() <= MAX_URL_SIZE) {
-                memset(_url, 0, MAX_URL_SIZE); // overkill?            
-                memcpy(_url, url.c_str(), url.length());
-            }
-            _kv_size = qs_parse(_url, _kv_pairs, NUM_KV_PAIRS);
+            if (url_.empty())
+                return;
+
+            key_value_pairs_.resize(MAX_KEY_VALUE_PAIRS_COUNT);
+
+            int count = qs_parse(&url_[0], &key_value_pairs_[0], MAX_KEY_VALUE_PAIRS_COUNT);
+            key_value_pairs_.resize(count);
         }
-        void clear() {
-            _url[0] = 0;
+
+        void clear() 
+        {
+            key_value_pairs_.clear();
+            url_.clear();
         }
 
         friend std::ostream& operator<<(std::ostream& os, const query_string& qs)
         {
             os << "[ ";
-            for(int i = 0; i < qs._kv_size; ++i) {
-                os << qs._kv_pairs[i];
-                if((i + 1) < qs._kv_size) {
+            for(size_t i = 0; i < qs.key_value_pairs_.size(); ++i) {
+                if (i)
                     os << ", ";
-                }
+                os << qs.key_value_pairs_[i];
             }
             os << " ]";
             return os;
 
         }
 
-        char* get (const std::string name) const
+        char* get (const std::string& name) const
         {
-            char* ret = qs_k2v(name.c_str(), _kv_pairs, _kv_size);
-            return ret != 0 ? ret : nullptr;
+            char* ret = qs_k2v(name.c_str(), key_value_pairs_.data(), key_value_pairs_.size());
+            return ret;
         }
 
-        std::vector<char*> get_list (const std::string name) const
+        std::vector<char*> get_list (const std::string& name) const
         {
             std::vector<char*> ret;
             std::string plus = name + "[]";            
-            char* tmp = nullptr;
+            char* element = nullptr;
+
             int count = 0;
-            do
+            while(1)
             {
-                tmp = qs_k2v(plus.c_str(), _kv_pairs, _kv_size, count++);
-                if(tmp != nullptr) {
-                    ret.push_back(tmp);
-                }
-            } while(tmp != nullptr);
-            return move(ret);
+                element = qs_k2v(plus.c_str(), key_value_pairs_.data(), key_value_pairs_.size(), count++);
+                if (!element)
+                    break;
+                ret.push_back(element);
+            }
+            return ret;
         }
 
 
     private:
-        char    _url[MAX_URL_SIZE];
-        char*   _kv_pairs[NUM_KV_PAIRS];
-        int     _kv_size;
+        std::string url_;
+        std::vector<char*> key_value_pairs_;
     };
 
 } // end namespace
-
-
-#pragma once
-
-
-
-
-namespace crow
-{
-    namespace detail
-    {
-        template <typename ... Middlewares>
-        struct partial_context
-            : public black_magic::pop_back<Middlewares...>::template rebind<partial_context>
-            , public black_magic::last_element_type<Middlewares...>::type::context
-        {
-            using parent_context = typename black_magic::pop_back<Middlewares...>::template rebind<::crow::detail::partial_context>;
-            template <int N>
-            using partial = typename std::conditional<N == sizeof...(Middlewares)-1, partial_context, typename parent_context::template partial<N>>::type;
-
-            template <typename T> 
-            typename T::context& get()
-            {
-                return static_cast<typename T::context&>(*this);
-            }
-        };
-
-        template <>
-        struct partial_context<>
-        {
-            template <int>
-            using partial = partial_context;
-        };
-
-        template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares>
-        bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx);
-
-        template <typename ... Middlewares>
-        struct context : private partial_context<Middlewares...>
-        //struct context : private Middlewares::context... // simple but less type-safe
-        {
-            template <int N, typename Context, typename Container>
-            friend typename std::enable_if<(N==0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, request& req, response& res);
-            template <int N, typename Context, typename Container>
-            friend typename std::enable_if<(N>0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, request& req, response& res);
-
-            template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares2>
-            friend bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx);
-
-            template <typename T> 
-            typename T::context& get()
-            {
-                return static_cast<typename T::context&>(*this);
-            }
-
-            template <int N>
-            using partial = typename partial_context<Middlewares...>::template partial<N>;
-        };
-    }
-}
-
-
-
-#pragma once
-
-#include <string>
-#include <cstdio>
-#include <cstdlib>
-#include <ctime>
-#include <iostream>
-#include <sstream>
-
-
-
-
-namespace crow
-{
-    enum class LogLevel
-    {
-        DEBUG,
-        INFO,
-        WARNING,
-        ERROR,
-        CRITICAL,
-    };
-
-    class ILogHandler {
-        public:
-            virtual void log(std::string message, LogLevel level) = 0;
-    };
-
-    class CerrLogHandler : public ILogHandler {
-        public:
-            void log(std::string message, LogLevel level) override {
-                std::cerr << message;
-            }
-    };
-
-    class logger {
-
-        private:
-            //
-            static std::string timestamp()
-            {
-                char date[32];
-                  time_t t = time(0);
-                  strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", gmtime(&t));
-                  return std::string(date);
-            }
-
-        public:
-
-
-            logger(std::string prefix, LogLevel level) : level_(level) {
-    #ifdef CROW_ENABLE_LOGGING
-                    stringstream_ << "(" << timestamp() << ") [" << prefix << "] ";
-    #endif
-
-            }
-            ~logger() {
-    #ifdef CROW_ENABLE_LOGGING
-                if(level_ >= get_current_log_level()) {
-                    stringstream_ << std::endl;
-                    get_handler_ref()->log(stringstream_.str(), level_);
-                }
-    #endif
-            }
-
-            //
-            template <typename T>
-            logger& operator<<(T const &value) {
-
-    #ifdef CROW_ENABLE_LOGGING
-                if(level_ >= get_current_log_level()) {
-                    stringstream_ << value;
-                }
-    #endif
-                return *this;
-            }
-
-            //
-            static void setLogLevel(LogLevel level) {
-                get_log_level_ref() = level;
-            }
-
-            static void setHandler(ILogHandler* handler) {
-                get_handler_ref() = handler;
-            }
-
-            static LogLevel get_current_log_level() {
-                return get_log_level_ref();
-            }
-
-        private:
-            //
-            static LogLevel& get_log_level_ref()
-            {
-                static LogLevel current_level = (LogLevel)CROW_LOG_LEVEL;
-                return current_level;
-            }
-            static ILogHandler*& get_handler_ref()
-            {
-                static CerrLogHandler default_handler;
-                static ILogHandler* current_handler = &default_handler;
-                return current_handler;
-            }
-
-            //
-            std::ostringstream stringstream_;
-            LogLevel level_;
-    };
-}
-
-#define CROW_LOG_CRITICAL   \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::CRITICAL) \
-            crow::logger("CRITICAL", crow::LogLevel::CRITICAL)
-#define CROW_LOG_ERROR      \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::ERROR) \
-            crow::logger("ERROR   ", crow::LogLevel::ERROR)
-#define CROW_LOG_WARNING    \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::WARNING) \
-            crow::logger("WARNING ", crow::LogLevel::WARNING)
-#define CROW_LOG_INFO       \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::INFO) \
-            crow::logger("INFO    ", crow::LogLevel::INFO)
-#define CROW_LOG_DEBUG      \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::DEBUG) \
-            crow::logger("DEBUG   ", crow::LogLevel::DEBUG)
-
 
 
 
@@ -5405,6 +4897,274 @@ http_parser_version(void) {
 
 #pragma once
 
+#include <boost/functional/hash.hpp>
+
+namespace crow
+{
+    struct ci_hash
+    {
+        size_t operator()(const std::string& key) const
+        {
+            std::size_t seed = 0;
+            std::locale locale;
+
+            for(auto c : key)
+            {
+                boost::hash_combine(seed, std::toupper(c, locale));
+            }
+
+            return seed;
+        }
+    };
+
+    struct ci_key_eq
+    {
+        bool operator()(const std::string& l, const std::string& r) const
+        {
+            return boost::iequals(l, r);
+        }
+    };
+
+    using ci_map = std::unordered_multimap<std::string, std::string, ci_hash, ci_key_eq>;
+}
+
+
+
+#pragma once
+
+#include <string>
+#include <boost/date_time/local_time/local_time.hpp>
+#include <boost/filesystem.hpp>
+
+namespace crow
+{
+    // code from http://stackoverflow.com/questions/2838524/use-boost-date-time-to-parse-and-create-http-dates
+    class DateTime
+    {
+        public:
+            DateTime()
+                : m_dt(boost::local_time::local_sec_clock::local_time(boost::local_time::time_zone_ptr()))
+            {
+            }
+            DateTime(const std::string& path)
+                : DateTime()
+            {
+                from_file(path);
+            }
+
+            // return datetime string
+            std::string str()
+            {
+                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
+                std::string result;
+                try
+                {
+                    std::stringstream ss;
+                    ss.imbue(locale_);
+                    ss << m_dt;
+                    result = ss.str();
+                }
+                catch (std::exception& e)
+                {
+                    std::cerr << "Exception: " << e.what() << std::endl;
+                }
+                return result;
+            }
+
+            // update datetime from file mod date
+            std::string from_file(const std::string& path)
+            {
+                try
+                {
+                    boost::filesystem::path p(path);
+                    boost::posix_time::ptime pt = boost::posix_time::from_time_t(
+                            boost::filesystem::last_write_time(p));
+                    m_dt = boost::local_time::local_date_time(pt, boost::local_time::time_zone_ptr());
+                }
+                catch (std::exception& e)
+                {
+                    std::cout << "Exception: " << e.what() << std::endl;
+                }
+                return str();
+            }
+
+            // parse datetime string
+            void parse(const std::string& dt)
+            {
+                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
+                std::stringstream ss(dt);
+                ss.imbue(locale_);
+                ss >> m_dt;
+            }
+
+            // boolean equal operator
+            friend bool operator==(const DateTime& left, const DateTime& right)
+            {
+                return (left.m_dt == right.m_dt);
+            }
+
+        private:
+            boost::local_time::local_date_time m_dt;
+    };
+}
+
+
+
+#pragma once
+// settings for crow
+// TODO - replace with runtime config. libucl?
+
+/* #ifdef - enables debug mode */
+#define CROW_ENABLE_DEBUG
+
+/* #ifdef - enables logging */
+#define CROW_ENABLE_LOGGING
+
+/* #define - specifies log level */
+/*
+	DEBUG 		= 0
+	INFO 		= 1
+	WARNING		= 2
+	ERROR		= 3
+	CRITICAL 	= 4
+
+    default to INFO
+*/
+#define CROW_LOG_LEVEL 1
+
+
+
+#pragma once
+
+#include <string>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <iostream>
+#include <sstream>
+
+
+
+
+namespace crow
+{
+    enum class LogLevel
+    {
+        DEBUG,
+        INFO,
+        WARNING,
+        ERROR,
+        CRITICAL,
+    };
+
+    class ILogHandler {
+        public:
+            virtual void log(std::string message, LogLevel level) = 0;
+    };
+
+    class CerrLogHandler : public ILogHandler {
+        public:
+            void log(std::string message, LogLevel level) override {
+                std::cerr << message;
+            }
+    };
+
+    class logger {
+
+        private:
+            //
+            static std::string timestamp()
+            {
+                char date[32];
+                  time_t t = time(0);
+                  strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", gmtime(&t));
+                  return std::string(date);
+            }
+
+        public:
+
+
+            logger(std::string prefix, LogLevel level) : level_(level) {
+    #ifdef CROW_ENABLE_LOGGING
+                    stringstream_ << "(" << timestamp() << ") [" << prefix << "] ";
+    #endif
+
+            }
+            ~logger() {
+    #ifdef CROW_ENABLE_LOGGING
+                if(level_ >= get_current_log_level()) {
+                    stringstream_ << std::endl;
+                    get_handler_ref()->log(stringstream_.str(), level_);
+                }
+    #endif
+            }
+
+            //
+            template <typename T>
+            logger& operator<<(T const &value) {
+
+    #ifdef CROW_ENABLE_LOGGING
+                if(level_ >= get_current_log_level()) {
+                    stringstream_ << value;
+                }
+    #endif
+                return *this;
+            }
+
+            //
+            static void setLogLevel(LogLevel level) {
+                get_log_level_ref() = level;
+            }
+
+            static void setHandler(ILogHandler* handler) {
+                get_handler_ref() = handler;
+            }
+
+            static LogLevel get_current_log_level() {
+                return get_log_level_ref();
+            }
+
+        private:
+            //
+            static LogLevel& get_log_level_ref()
+            {
+                static LogLevel current_level = (LogLevel)CROW_LOG_LEVEL;
+                return current_level;
+            }
+            static ILogHandler*& get_handler_ref()
+            {
+                static CerrLogHandler default_handler;
+                static ILogHandler* current_handler = &default_handler;
+                return current_handler;
+            }
+
+            //
+            std::ostringstream stringstream_;
+            LogLevel level_;
+    };
+}
+
+#define CROW_LOG_CRITICAL   \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::CRITICAL) \
+            crow::logger("CRITICAL", crow::LogLevel::CRITICAL)
+#define CROW_LOG_ERROR      \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::ERROR) \
+            crow::logger("ERROR   ", crow::LogLevel::ERROR)
+#define CROW_LOG_WARNING    \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::WARNING) \
+            crow::logger("WARNING ", crow::LogLevel::WARNING)
+#define CROW_LOG_INFO       \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::INFO) \
+            crow::logger("INFO    ", crow::LogLevel::INFO)
+#define CROW_LOG_DEBUG      \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::DEBUG) \
+            crow::logger("DEBUG   ", crow::LogLevel::DEBUG)
+
+
+
+
+#pragma once
+
 #include <boost/asio.hpp>
 #include <deque>
 #include <functional>
@@ -5496,80 +5256,300 @@ namespace crow
 
 #pragma once
 
-#include <string>
-#include <boost/date_time/local_time/local_time.hpp>
-#include <boost/filesystem.hpp>
+#include <cstdint>
+#include <stdexcept>
+#include <tuple>
+#include <type_traits>
 
 namespace crow
 {
-    // code from http://stackoverflow.com/questions/2838524/use-boost-date-time-to-parse-and-create-http-dates
-    class DateTime
-    {
-        public:
-            DateTime()
-                : m_dt(boost::local_time::local_sec_clock::local_time(boost::local_time::time_zone_ptr()))
-            {
-            }
-            DateTime(const std::string& path)
-                : DateTime()
-            {
-                from_file(path);
-            }
+	namespace black_magic
+	{
+		struct OutOfRange
+		{
+			OutOfRange(unsigned pos, unsigned length) {}
+		};
+		constexpr unsigned requires_in_range( unsigned i, unsigned len )
+		{
+			return i >= len ? throw OutOfRange(i, len) : i;
+		}
 
-            // return datetime string
-            std::string str()
-            {
-                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
-                std::string result;
-                try
-                {
-                    std::stringstream ss;
-                    ss.imbue(locale_);
-                    ss << m_dt;
-                    result = ss.str();
-                }
-                catch (std::exception& e)
-                {
-                    std::cerr << "Exception: " << e.what() << std::endl;
-                }
-                return result;
-            }
+		class const_str
+		{
+			const char * const begin_;
+			unsigned size_;
 
-            // update datetime from file mod date
-            std::string from_file(const std::string& path)
-            {
-                try
-                {
-                    boost::filesystem::path p(path);
-                    boost::posix_time::ptime pt = boost::posix_time::from_time_t(
-                            boost::filesystem::last_write_time(p));
-                    m_dt = boost::local_time::local_date_time(pt, boost::local_time::time_zone_ptr());
-                }
-                catch (std::exception& e)
-                {
-                    std::cout << "Exception: " << e.what() << std::endl;
-                }
-                return str();
-            }
+			public:
+			template< unsigned N >
+				constexpr const_str( const char(&arr)[N] ) : begin_(arr), size_(N - 1) {
+					static_assert( N >= 1, "not a string literal");
+				}
+			constexpr char operator[]( unsigned i ) const { 
+				return requires_in_range(i, size_), begin_[i]; 
+			}
 
-            // parse datetime string
-            void parse(const std::string& dt)
-            {
-                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
-                std::stringstream ss(dt);
-                ss.imbue(locale_);
-                ss >> m_dt;
-            }
+			constexpr operator const char *() const { 
+				return begin_; 
+			}
 
-            // boolean equal operator
-            friend bool operator==(const DateTime& left, const DateTime& right)
-            {
-                return (left.m_dt == right.m_dt);
-            }
+			constexpr const char* begin() const { return begin_; }
+			constexpr const char* end() const { return begin_ + size_; }
 
-        private:
-            boost::local_time::local_date_time m_dt;
-    };
+			constexpr unsigned size() const { 
+				return size_; 
+			}
+		};
+
+
+		constexpr unsigned find_closing_tag(const_str s, unsigned p)
+		{
+			return s[p] == '>' ? p : find_closing_tag(s, p+1);
+		}
+
+        constexpr bool is_valid(const_str s, unsigned i = 0, int f = 0)
+        {
+            return 
+                i == s.size()
+                    ? f == 0 :
+                f < 0 || f >= 2
+                    ? false :
+                s[i] == '<'
+                    ? is_valid(s, i+1, f+1) :
+                s[i] == '>'
+                    ? is_valid(s, i+1, f-1) :
+                is_valid(s, i+1, f);
+        }
+
+        constexpr bool is_equ_p(const char* a, const char* b, unsigned n)
+        {
+            return
+                *a == 0 && *b == 0 && n == 0 
+                    ? true :
+                (*a == 0 || *b == 0)
+                    ? false :
+                n == 0
+                    ? true :
+                *a != *b
+                    ? false :
+                is_equ_p(a+1, b+1, n-1);
+        }
+
+        constexpr bool is_equ_n(const_str a, unsigned ai, const_str b, unsigned bi, unsigned n)
+        {
+            return 
+                ai + n > a.size() || bi + n > b.size() 
+                    ? false :
+                n == 0 
+                    ? true : 
+                a[ai] != b[bi] 
+                    ? false : 
+                is_equ_n(a,ai+1,b,bi+1,n-1);
+        }
+
+        constexpr bool is_int(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<int>", 0, 5);
+        }
+
+        constexpr bool is_uint(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<uint>", 0, 6);
+        }
+
+        constexpr bool is_float(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<float>", 0, 7) ||
+                is_equ_n(s, i, "<double>", 0, 8);
+        }
+
+        constexpr bool is_str(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<str>", 0, 5) ||
+                is_equ_n(s, i, "<string>", 0, 8);
+        }
+
+        constexpr bool is_path(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<path>", 0, 6);
+        }
+
+        constexpr uint64_t get_parameter_tag(const_str s, unsigned p = 0)
+        {
+            return
+                p == s.size() 
+                    ?  0 :
+                s[p] == '<' ? ( 
+                    is_int(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 1 :
+                    is_uint(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 2 :
+                    is_float(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 3 :
+                    is_str(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 4 :
+                    is_path(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 5 :
+                    throw std::runtime_error("invalid parameter type")
+                    ) : 
+                get_parameter_tag(s, p+1);
+        }
+
+        template <typename ... T>
+        struct S
+        {
+            template <typename U>
+            using push = S<U, T...>;
+            template <typename U>
+            using push_back = S<T..., U>;
+            template <template<typename ... Args> class U>
+            using rebind = U<T...>;
+        };
+template <typename F, typename Set>
+        struct CallHelper;
+        template <typename F, typename ...Args>
+        struct CallHelper<F, S<Args...>>
+        {
+            template <typename F1, typename ...Args1, typename = 
+                decltype(std::declval<F1>()(std::declval<Args1>()...))
+                >
+            static char __test(int);
+
+            template <typename ...>
+            static int __test(...);
+
+            static constexpr bool value = sizeof(__test<F, Args...>(0)) == sizeof(char);
+        };
+
+
+        template <int N>
+        struct single_tag_to_type
+        {
+        };
+
+        template <>
+        struct single_tag_to_type<1>
+        {
+            using type = int64_t;
+        };
+
+        template <>
+        struct single_tag_to_type<2>
+        {
+            using type = uint64_t;
+        };
+
+        template <>
+        struct single_tag_to_type<3>
+        {
+            using type = double;
+        };
+
+        template <>
+        struct single_tag_to_type<4>
+        {
+            using type = std::string;
+        };
+
+        template <>
+        struct single_tag_to_type<5>
+        {
+            using type = std::string;
+        };
+
+
+        template <uint64_t Tag> 
+        struct arguments
+        {
+            using subarguments = typename arguments<Tag/6>::type;
+            using type = 
+                typename subarguments::template push<typename single_tag_to_type<Tag%6>::type>;
+        };
+
+        template <> 
+        struct arguments<0>
+        {
+            using type = S<>;
+        };
+
+        template <typename ... T>
+        struct last_element_type
+        {
+            using type = typename std::tuple_element<sizeof...(T)-1, std::tuple<T...>>::type;
+        };
+
+
+        template <>
+        struct last_element_type<>
+        {
+        };
+
+
+        // from http://stackoverflow.com/questions/13072359/c11-compile-time-array-with-logarithmic-evaluation-depth
+        template<class T> using Invoke = typename T::type;
+
+        template<unsigned...> struct seq{ using type = seq; };
+
+        template<class S1, class S2> struct concat;
+
+        template<unsigned... I1, unsigned... I2>
+        struct concat<seq<I1...>, seq<I2...>>
+          : seq<I1..., (sizeof...(I1)+I2)...>{};
+
+        template<class S1, class S2>
+        using Concat = Invoke<concat<S1, S2>>;
+
+        template<unsigned N> struct gen_seq;
+        template<unsigned N> using GenSeq = Invoke<gen_seq<N>>;
+
+        template<unsigned N>
+        struct gen_seq : Concat<GenSeq<N/2>, GenSeq<N - N/2>>{};
+
+        template<> struct gen_seq<0> : seq<>{};
+        template<> struct gen_seq<1> : seq<0>{};
+
+        template <typename Seq, typename Tuple> 
+        struct pop_back_helper;
+
+        template <unsigned ... N, typename Tuple>
+        struct pop_back_helper<seq<N...>, Tuple>
+        {
+            template <template <typename ... Args> class U>
+            using rebind = U<typename std::tuple_element<N, Tuple>::type...>;
+        };
+
+        template <typename ... T>
+        struct pop_back //: public pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>
+        {
+            template <template <typename ... Args> class U>
+            using rebind = typename pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>::template rebind<U>;
+        };
+
+        template <>
+        struct pop_back<>
+        {
+            template <template <typename ... Args> class U>
+            using rebind = U<>;
+        };
+
+        // from http://stackoverflow.com/questions/2118541/check-if-c0x-parameter-pack-contains-a-type
+        template < typename Tp, typename... List >
+        struct contains : std::true_type {};
+
+        template < typename Tp, typename Head, typename... Rest >
+        struct contains<Tp, Head, Rest...>
+        : std::conditional< std::is_same<Tp, Head>::value,
+            std::true_type,
+            contains<Tp, Rest...>
+        >::type {};
+
+        template < typename Tp >
+        struct contains<Tp> : std::false_type {};
+
+        template <typename T>
+        struct empty_context
+        {
+        };
+	}
 }
 
 
@@ -5698,41 +5678,6 @@ constexpr crow::HTTPMethod operator "" _method(const char* str, size_t len)
         throw std::runtime_error("invalid http method");
 };
 
-
-
-
-#pragma once
-
-#include <boost/functional/hash.hpp>
-
-namespace crow
-{
-    struct ci_hash
-    {
-        size_t operator()(const std::string& key) const
-        {
-            std::size_t seed = 0;
-            std::locale locale;
-
-            for(auto c : key)
-            {
-                boost::hash_combine(seed, std::toupper(c, locale));
-            }
-
-            return seed;
-        }
-    };
-
-    struct ci_key_eq
-    {
-        bool operator()(const std::string& l, const std::string& r) const
-        {
-            return boost::iequals(l, r);
-        }
-    };
-
-    using ci_map = std::unordered_multimap<std::string, std::string, ci_hash, ci_key_eq>;
-}
 
 
 
@@ -6074,6 +6019,185 @@ namespace crow
             std::function<void()> complete_request_handler_;
             std::function<bool()> is_alive_helper_;
     };
+}
+
+
+
+#pragma once
+#include <boost/algorithm/string/trim.hpp>
+
+
+
+
+
+namespace crow
+{
+    // Any middleware requires following 3 members:
+
+    // struct context;
+    //      storing data for the middleware; can be read from another middleware or handlers
+
+    // before_handle
+    //      called before handling the request.
+    //      if res.end() is called, the operation is halted. 
+    //      (still call after_handle of this middleware)
+    //      2 signatures:
+    //      void before_handle(request& req, response& res, context& ctx)
+    //          if you only need to access this middlewares context.
+    //      template <typename AllContext>
+    //      void before_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    //          you can access another middlewares' context by calling `all_ctx.template get<MW>()'
+    //          ctx == all_ctx.template get<CurrentMiddleware>()
+
+    // after_handle
+    //      called after handling the request.
+    //      void after_handle(request& req, response& res, context& ctx)
+    //      template <typename AllContext>
+    //      void after_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+
+    struct CookieParser
+    {
+        struct context
+        {
+            std::unordered_map<std::string, std::string> jar;
+            std::unordered_map<std::string, std::string> cookies_to_add;
+
+            std::string get_cookie(const std::string& key)
+            {
+                if (jar.count(key))
+                    return jar[key];
+                return {};
+            }
+
+            void set_cookie(const std::string& key, const std::string& value)
+            {
+                cookies_to_add.emplace(key, value);
+            }
+        };
+
+        void before_handle(request& req, response& res, context& ctx)
+        {
+            int count = req.headers.count("Cookie");
+            if (!count)
+                return;
+            if (count > 1)
+            {
+                res.code = 400;
+                res.end();
+                return;
+            }
+            std::string cookies = req.get_header_value("Cookie");
+            size_t pos = 0;
+            while(pos < cookies.size())
+            {
+                size_t pos_equal = cookies.find('=', pos);
+                if (pos_equal == cookies.npos)
+                    break;
+                std::string name = cookies.substr(pos, pos_equal-pos);
+                boost::trim(name);
+                pos = pos_equal+1;
+                while(pos < cookies.size() && cookies[pos] == ' ') pos++;
+                if (pos == cookies.size())
+                    break;
+
+                std::string value;
+
+                if (cookies[pos] == '"')
+                {
+                    int dquote_meet_count = 0;
+                    pos ++;
+                    size_t pos_dquote = pos-1;
+                    do
+                    {
+                        pos_dquote = cookies.find('"', pos_dquote+1);
+                        dquote_meet_count ++;
+                    } while(pos_dquote < cookies.size() && cookies[pos_dquote-1] == '\\');
+                    if (pos_dquote == cookies.npos)
+                        break;
+
+                    if (dquote_meet_count == 1)
+                        value = cookies.substr(pos, pos_dquote - pos);
+                    else
+                    {
+                        value.clear();
+                        value.reserve(pos_dquote-pos);
+                        for(size_t p = pos; p < pos_dquote; p++)
+                        {
+                            // FIXME minimal escaping
+                            if (cookies[p] == '\\' && p + 1 < pos_dquote)
+                            {
+                                p++;
+                                if (cookies[p] == '\\' || cookies[p] == '"')
+                                    value += cookies[p];
+                                else
+                                {
+                                    value += '\\';
+                                    value += cookies[p];
+                                }
+                            }
+                            else
+                                value += cookies[p];
+                        }
+                    }
+
+                    ctx.jar.emplace(std::move(name), std::move(value));
+                    pos = cookies.find(";", pos_dquote+1);
+                    if (pos == cookies.npos)
+                        break;
+                    pos++;
+                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
+                    if (pos == cookies.size())
+                        break;
+                }
+                else
+                {
+                    size_t pos_semicolon = cookies.find(';', pos);
+                    value = cookies.substr(pos, pos_semicolon - pos);
+                    boost::trim(value);
+                    ctx.jar.emplace(std::move(name), std::move(value));
+                    pos = pos_semicolon;
+                    if (pos == cookies.npos)
+                        break;
+                    pos ++;
+                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
+                    if (pos == cookies.size())
+                        break;
+                }
+            }
+        }
+
+        void after_handle(request& req, response& res, context& ctx)
+        {
+            for(auto& cookie:ctx.cookies_to_add)
+            {
+                res.add_header("Set-Cookie", cookie.first + "=" + cookie.second);
+            }
+        }
+    };
+
+    /*
+    App<CookieParser, AnotherJarMW> app;
+    A B C
+    A::context
+        int aa;
+
+    ctx1 : public A::context
+    ctx2 : public ctx1, public B::context
+    ctx3 : public ctx2, public C::context
+
+    C depends on A
+
+    C::handle
+        context.aaa
+
+    App::context : private CookieParser::contetx, ... 
+    {
+        jar
+
+    }
+
+    SimpleApp
+    */
 }
 
 
@@ -6756,180 +6880,62 @@ public:
 
 
 #pragma once
-#include <boost/algorithm/string/trim.hpp>
-
 
 
 
 
 namespace crow
 {
-    // Any middleware requires following 3 members:
-
-    // struct context;
-    //      storing data for the middleware; can be read from another middleware or handlers
-
-    // before_handle
-    //      called before handling the request.
-    //      if res.end() is called, the operation is halted. 
-    //      (still call after_handle of this middleware)
-    //      2 signatures:
-    //      void before_handle(request& req, response& res, context& ctx)
-    //          if you only need to access this middlewares context.
-    //      template <typename AllContext>
-    //      void before_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
-    //          you can access another middlewares' context by calling `all_ctx.template get<MW>()'
-    //          ctx == all_ctx.template get<CurrentMiddleware>()
-
-    // after_handle
-    //      called after handling the request.
-    //      void after_handle(request& req, response& res, context& ctx)
-    //      template <typename AllContext>
-    //      void after_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
-
-    struct CookieParser
+    namespace detail
     {
-        struct context
+        template <typename ... Middlewares>
+        struct partial_context
+            : public black_magic::pop_back<Middlewares...>::template rebind<partial_context>
+            , public black_magic::last_element_type<Middlewares...>::type::context
         {
-            std::unordered_map<std::string, std::string> jar;
-            std::unordered_map<std::string, std::string> cookies_to_add;
+            using parent_context = typename black_magic::pop_back<Middlewares...>::template rebind<::crow::detail::partial_context>;
+            template <int N>
+            using partial = typename std::conditional<N == sizeof...(Middlewares)-1, partial_context, typename parent_context::template partial<N>>::type;
 
-            std::string get_cookie(const std::string& key)
+            template <typename T> 
+            typename T::context& get()
             {
-                if (jar.count(key))
-                    return jar[key];
-                return {};
-            }
-
-            void set_cookie(const std::string& key, const std::string& value)
-            {
-                cookies_to_add.emplace(key, value);
+                return static_cast<typename T::context&>(*this);
             }
         };
 
-        void before_handle(request& req, response& res, context& ctx)
+        template <>
+        struct partial_context<>
         {
-            int count = req.headers.count("Cookie");
-            if (!count)
-                return;
-            if (count > 1)
-            {
-                res.code = 400;
-                res.end();
-                return;
-            }
-            std::string cookies = req.get_header_value("Cookie");
-            size_t pos = 0;
-            while(pos < cookies.size())
-            {
-                size_t pos_equal = cookies.find('=', pos);
-                if (pos_equal == cookies.npos)
-                    break;
-                std::string name = cookies.substr(pos, pos_equal-pos);
-                boost::trim(name);
-                pos = pos_equal+1;
-                while(pos < cookies.size() && cookies[pos] == ' ') pos++;
-                if (pos == cookies.size())
-                    break;
+            template <int>
+            using partial = partial_context;
+        };
 
-                std::string value;
+        template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares>
+        bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx);
 
-                if (cookies[pos] == '"')
-                {
-                    int dquote_meet_count = 0;
-                    pos ++;
-                    size_t pos_dquote = pos-1;
-                    do
-                    {
-                        pos_dquote = cookies.find('"', pos_dquote+1);
-                        dquote_meet_count ++;
-                    } while(pos_dquote < cookies.size() && cookies[pos_dquote-1] == '\\');
-                    if (pos_dquote == cookies.npos)
-                        break;
-
-                    if (dquote_meet_count == 1)
-                        value = cookies.substr(pos, pos_dquote - pos);
-                    else
-                    {
-                        value.clear();
-                        value.reserve(pos_dquote-pos);
-                        for(size_t p = pos; p < pos_dquote; p++)
-                        {
-                            // FIXME minimal escaping
-                            if (cookies[p] == '\\' && p + 1 < pos_dquote)
-                            {
-                                p++;
-                                if (cookies[p] == '\\' || cookies[p] == '"')
-                                    value += cookies[p];
-                                else
-                                {
-                                    value += '\\';
-                                    value += cookies[p];
-                                }
-                            }
-                            else
-                                value += cookies[p];
-                        }
-                    }
-
-                    ctx.jar.emplace(std::move(name), std::move(value));
-                    pos = cookies.find(";", pos_dquote+1);
-                    if (pos == cookies.npos)
-                        break;
-                    pos++;
-                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
-                    if (pos == cookies.size())
-                        break;
-                }
-                else
-                {
-                    size_t pos_semicolon = cookies.find(';', pos);
-                    value = cookies.substr(pos, pos_semicolon - pos);
-                    boost::trim(value);
-                    ctx.jar.emplace(std::move(name), std::move(value));
-                    pos = pos_semicolon;
-                    if (pos == cookies.npos)
-                        break;
-                    pos ++;
-                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
-                    if (pos == cookies.size())
-                        break;
-                }
-            }
-        }
-
-        void after_handle(request& req, response& res, context& ctx)
+        template <typename ... Middlewares>
+        struct context : private partial_context<Middlewares...>
+        //struct context : private Middlewares::context... // simple but less type-safe
         {
-            for(auto& cookie:ctx.cookies_to_add)
+            template <int N, typename Context, typename Container>
+            friend typename std::enable_if<(N==0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, request& req, response& res);
+            template <int N, typename Context, typename Container>
+            friend typename std::enable_if<(N>0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, request& req, response& res);
+
+            template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares2>
+            friend bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx);
+
+            template <typename T> 
+            typename T::context& get()
             {
-                res.add_header("Set-Cookie", cookie.first + "=" + cookie.second);
+                return static_cast<typename T::context&>(*this);
             }
-        }
-    };
 
-    /*
-    App<CookieParser, AnotherJarMW> app;
-    A B C
-    A::context
-        int aa;
-
-    ctx1 : public A::context
-    ctx2 : public ctx1, public B::context
-    ctx3 : public ctx2, public C::context
-
-    C depends on A
-
-    C::handle
-        context.aaa
-
-    App::context : private CookieParser::contetx, ... 
-    {
-        jar
-
+            template <int N>
+            using partial = typename partial_context<Middlewares...>::template partial<N>;
+        };
     }
-
-    SimpleApp
-    */
 }
 
 
