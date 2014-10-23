@@ -11,6 +11,7 @@
 #include "json.h"
 #include "mustache.h"
 #include "middleware.h"
+#include "query_string.h"
 
 using namespace std;
 using namespace crow;
@@ -826,6 +827,122 @@ TEST(bug_quick_repeated_request)
                     c.close();
                 }));
         }
+    }
+    server.stop();
+}
+
+TEST(simple_url_params)
+{
+    static char buf[2048];
+
+    SimpleApp app;
+
+    query_string last_url_params;
+
+    CROW_ROUTE(app, "/params")
+    ([&last_url_params](const crow::request& req){
+        last_url_params = move(req.url_params);
+        return "OK";
+    });
+
+    ///params?h=1&foo=bar&lol&count[]=1&count[]=4&pew=5.2
+
+    decltype(app)::server_t server(&app, 45451);
+    auto _ = async(launch::async, [&]{server.run();});
+    asio::io_service is;
+    std::string sendmsg;
+
+    // check single presence
+    sendmsg = "GET /params?foobar\r\n\r\n";
+    {
+        asio::ip::tcp::socket c(is);
+        c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
+        c.send(asio::buffer(sendmsg));
+        c.receive(asio::buffer(buf, 2048));
+        c.close();
+
+        ASSERT_TRUE(last_url_params.get("missing") == nullptr);
+        ASSERT_TRUE(last_url_params.get("foobar") != nullptr);
+    }
+    // check multiple presence
+    sendmsg = "GET /params?foo&bar&baz\r\n\r\n";
+    {
+        asio::ip::tcp::socket c(is);
+        c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
+        c.send(asio::buffer(sendmsg));
+        c.receive(asio::buffer(buf, 2048));
+        c.close();
+
+        ASSERT_TRUE(last_url_params.get("missing") == nullptr);
+        ASSERT_TRUE(last_url_params.get("foo") != nullptr);
+        ASSERT_TRUE(last_url_params.get("bar") != nullptr);
+        ASSERT_TRUE(last_url_params.get("baz") != nullptr);
+    }
+    // check single value
+    sendmsg = "GET /params?hello=world\r\n\r\n";
+    {
+        asio::ip::tcp::socket c(is);
+        c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
+        c.send(asio::buffer(sendmsg));
+        c.receive(asio::buffer(buf, 2048));
+        c.close();        
+
+        ASSERT_EQUAL(string(last_url_params.get("hello")), "world");
+    }
+    // check multiple value
+    sendmsg = "GET /params?hello=world&left=right&up=down\r\n\r\n";
+    {
+        asio::ip::tcp::socket c(is);
+        c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
+        c.send(asio::buffer(sendmsg));
+        c.receive(asio::buffer(buf, 2048));
+        c.close();
+
+        ASSERT_EQUAL(string(last_url_params.get("hello")), "world");
+        ASSERT_EQUAL(string(last_url_params.get("left")), "right");
+        ASSERT_EQUAL(string(last_url_params.get("up")),  "down");
+    }
+    // check multiple value, multiple types
+    sendmsg = "GET /params?int=100&double=123.45&boolean=1\r\n\r\n";
+    {
+        asio::ip::tcp::socket c(is);
+        c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
+        c.send(asio::buffer(sendmsg));
+        c.receive(asio::buffer(buf, 2048));        
+        c.close();    
+
+        ASSERT_EQUAL(boost::lexical_cast<int>(last_url_params.get("int")), 100);
+        ASSERT_EQUAL(boost::lexical_cast<double>(last_url_params.get("double")), 123.45);
+        ASSERT_EQUAL(boost::lexical_cast<bool>(last_url_params.get("boolean")), true);
+    }
+    // check single array value
+    sendmsg = "GET /params?tmnt[]=leonardo\r\n\r\n";
+    {
+        asio::ip::tcp::socket c(is);
+
+        c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
+        c.send(asio::buffer(sendmsg));
+        c.receive(asio::buffer(buf, 2048));
+        c.close();        
+        
+        ASSERT_TRUE(last_url_params.get("tmnt") == nullptr);
+        ASSERT_EQUAL(last_url_params.get_list("tmnt").size(), 1);
+        ASSERT_EQUAL(string(last_url_params.get_list("tmnt")[0]), "leonardo");
+    }
+    // check multiple array value
+    sendmsg = "GET /params?tmnt[]=leonardo&tmnt[]=donatello&tmnt[]=raphael\r\n\r\n";
+    {
+        asio::ip::tcp::socket c(is);
+
+        c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
+        c.send(asio::buffer(sendmsg));
+        c.receive(asio::buffer(buf, 2048));
+        c.close();        
+        
+        ASSERT_EQUAL(last_url_params.get_list("tmnt").size(), 3);
+        ASSERT_EQUAL(string(last_url_params.get_list("tmnt")[0]), "leonardo");
+        ASSERT_EQUAL(string(last_url_params.get_list("tmnt")[1]), "donatello");
+        ASSERT_EQUAL(string(last_url_params.get_list("tmnt")[2]), "raphael");
     }
     server.stop();
 }

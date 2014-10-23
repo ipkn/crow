@@ -3,6 +3,8 @@
 #include <string>
 #include <unordered_map>
 #include <boost/algorithm/string.hpp>
+#include <boost/tokenizer.hpp>
+#include <algorithm>
 
 #include "http_request.h"
 
@@ -20,7 +22,7 @@ namespace crow
         static int on_url(http_parser* self_, const char* at, size_t length)
         {
             HTTPParser* self = static_cast<HTTPParser*>(self_);
-            self->url.insert(self->url.end(), at, at+length);
+            self->raw_url.insert(self->raw_url.end(), at, at+length);
             return 0;
         }
         static int on_header_field(http_parser* self_, const char* at, size_t length)
@@ -76,6 +78,11 @@ namespace crow
         static int on_message_complete(http_parser* self_)
         {
             HTTPParser* self = static_cast<HTTPParser*>(self_);
+
+            // url params
+            self->url = self->raw_url.substr(0, self->raw_url.find("?"));
+            self->url_params = query_string(self->raw_url);
+
             self->process_message();
             return 0;
         }
@@ -111,10 +118,12 @@ namespace crow
         void clear()
         {
             url.clear();
+            raw_url.clear();
             header_building_state = 0;
             header_field.clear();
             header_value.clear();
             headers.clear();
+            url_params.clear();
             body.clear();
         }
 
@@ -130,7 +139,7 @@ namespace crow
 
         request to_request() const
         {
-            return request{(HTTPMethod)method, std::move(url), std::move(headers), std::move(body)};
+            return request{(HTTPMethod)method, std::move(raw_url), std::move(url), std::move(url_params), std::move(headers), std::move(body)};
         }
 
         bool check_version(int major, int minor) const
@@ -138,11 +147,14 @@ namespace crow
             return http_major == major && http_minor == minor;
         }
 
+        std::string raw_url;
         std::string url;
+
         int header_building_state = 0;
         std::string header_field;
         std::string header_value;
         ci_map headers;
+        query_string url_params;
         std::string body;
 
         Handler* handler_;
