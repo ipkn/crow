@@ -69,7 +69,7 @@ namespace crow
         void run()
         {
             validate();
-            server_t server(this, port_, concurrency_);
+            server_t server(this, port_, &middlewares_, concurrency_);
             server.run();
         }
 
@@ -89,11 +89,19 @@ namespace crow
             return ctx.template get<T>();
         }
 
+        template <typename T>
+        T* get_middleware()
+        {
+            return utility::get_element_by_type_ptr<T, Middlewares...>(middlewares_);
+        }
+
     private:
         uint16_t port_ = 80;
         uint16_t concurrency_ = 1;
 
         Router router_;
+
+        std::tuple<Middlewares...> middlewares_;
     };
     template <typename ... Middlewares>
     using App = Crow<Middlewares...>;
