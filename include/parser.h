@@ -6,6 +6,7 @@
 #include <boost/tokenizer.hpp>
 #include <algorithm>
 
+#include "http_parser_merged.h"
 #include "http_request.h"
 
 namespace crow
