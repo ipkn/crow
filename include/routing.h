@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <memory>
 #include <boost/lexical_cast.hpp>
+#include <vector>
 
 #include "common.h"
 #include "http_response.h"

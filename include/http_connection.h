@@ -5,6 +5,7 @@
 #include <boost/array.hpp>
 #include <atomic>
 #include <chrono>
+#include <vector>
 
 #include "http_parser_merged.h"
 
