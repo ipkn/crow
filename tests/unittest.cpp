@@ -151,7 +151,7 @@ TEST(RoutingTest)
 
     app.validate();
     //app.debug_print();
-	{
+    {
         request req;
         response res;
 
@@ -160,7 +160,7 @@ TEST(RoutingTest)
         app.handle(req, res);
 
         ASSERT_EQUAL(404, res.code);
-	}
+    }
 
     {
         request req;
@@ -397,7 +397,7 @@ TEST(multi_server)
 
 TEST(json_read)
 {
-	{
+    {
         const char* json_error_tests[] = 
         {
             "{} 3", "{{}", "{3}",
@@ -421,7 +421,7 @@ TEST(json_read)
                 return;
             }
         }
-	}
+    }
 
     auto x = json::load(R"({"message":"hello, world"})");
     if (!x)
@@ -434,24 +434,24 @@ TEST(json_read)
     //ASSERT_THROW(3 == x["message"]);
     ASSERT_EQUAL(12, x["message"].size());
 
-    std::string s = R"({"int":3,     "ints"  :[1,2,3,4,5]		})";
+    std::string s = R"({"int":3,     "ints"  :[1,2,3,4,5]       })";
     auto y = json::load(s);
     ASSERT_EQUAL(3, y["int"]);
     ASSERT_EQUAL(3.0, y["int"]);
     ASSERT_NOTEQUAL(3.01, y["int"]);
-	ASSERT_EQUAL(5, y["ints"].size());
-	ASSERT_EQUAL(1, y["ints"][0]);
-	ASSERT_EQUAL(2, y["ints"][1]);
-	ASSERT_EQUAL(3, y["ints"][2]);
-	ASSERT_EQUAL(4, y["ints"][3]);
-	ASSERT_EQUAL(5, y["ints"][4]);
-	ASSERT_EQUAL(1u, y["ints"][0]);
-	ASSERT_EQUAL(1.f, y["ints"][0]);
+    ASSERT_EQUAL(5, y["ints"].size());
+    ASSERT_EQUAL(1, y["ints"][0]);
+    ASSERT_EQUAL(2, y["ints"][1]);
+    ASSERT_EQUAL(3, y["ints"][2]);
+    ASSERT_EQUAL(4, y["ints"][3]);
+    ASSERT_EQUAL(5, y["ints"][4]);
+    ASSERT_EQUAL(1u, y["ints"][0]);
+    ASSERT_EQUAL(1.f, y["ints"][0]);
 
-	int q = (int)y["ints"][1];
-	ASSERT_EQUAL(2, q);
-	q = y["ints"][2].i();
-	ASSERT_EQUAL(3, q);
+    int q = (int)y["ints"][1];
+    ASSERT_EQUAL(2, q);
+    q = y["ints"][2].i();
+    ASSERT_EQUAL(3, q);
 
 }
 

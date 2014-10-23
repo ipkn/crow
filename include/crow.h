@@ -27,6 +27,7 @@ namespace crow
         using self_t = Crow;
         using server_t = Server<Crow, Middlewares...>;
         Crow()
+        : server_(this)
         {
         }
 
@@ -44,7 +45,7 @@ namespace crow
 
         self_t& port(std::uint16_t port)
         {
-            port_ = port;
+            server_.set_port(port);
             return *this;
         }
 
@@ -55,9 +56,7 @@ namespace crow
 
         self_t& concurrency(std::uint16_t concurrency)
         {
-            if (concurrency < 1)
-                concurrency = 1;
-            concurrency_ = concurrency;
+            server_.set_concurrency(concurrency);
             return *this;
         }
 
@@ -69,8 +68,7 @@ namespace crow
         void run()
         {
             validate();
-            server_t server(this, port_, concurrency_);
-            server.run();
+            server_.run();
         }
 
         void debug_print()
@@ -89,10 +87,16 @@ namespace crow
             return ctx.template get<T>();
         }
 
-    private:
-        uint16_t port_ = 80;
-        uint16_t concurrency_ = 1;
+        template <typename T>
+        T* get_middleware()
+        {
+            static_assert(black_magic::contains<T, Middlewares...>::value, "App doesn't have the specified middleware type.");
+            return server_.template get_middleware<T>();
+        }
 
+    private:
+
+        server_t server_;
         Router router_;
     };
     template <typename ... Middlewares>
