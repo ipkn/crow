@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <atomic>
 #include <future>
+#include <vector>
 
 #include <memory>
 

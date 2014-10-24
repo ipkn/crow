@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <memory>
 #include <boost/lexical_cast.hpp>
+#include <vector>
 
 #include "common.h"
 #include "http_response.h"
@@ -629,16 +630,13 @@ public:
 
         void handle(const request& req, response& res)
         {
-            // remove url params            
-            auto editedUrl = req.url.substr(0, req.url.find("?"));
-
-            auto found = trie_.find(editedUrl);
+            auto found = trie_.find(req.url);
 
             unsigned rule_index = found.first;
 
             if (!rule_index)
             {
-				CROW_LOG_DEBUG << "Cannot match rules " << editedUrl;
+				CROW_LOG_DEBUG << "Cannot match rules " << req.url;
                 res = response(404);
 				res.end();
                 return;
@@ -649,7 +647,7 @@ public:
 
             if ((rules_[rule_index]->methods() & (1<<(uint32_t)req.method)) == 0)
             {
-				CROW_LOG_DEBUG << "Rule found but method mismatch: " << editedUrl << " with " << method_name(req.method) << "(" << (uint32_t)req.method << ") / " << rules_[rule_index]->methods();
+				CROW_LOG_DEBUG << "Rule found but method mismatch: " << req.url << " with " << method_name(req.method) << "(" << (uint32_t)req.method << ") / " << rules_[rule_index]->methods();
                 res = response(404);
 				res.end();
                 return;

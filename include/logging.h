@@ -9,8 +9,6 @@
 
 #include "settings.h"
 
-using namespace std;
-
 namespace crow
 {
     enum class LogLevel
@@ -24,13 +22,13 @@ namespace crow
 
     class ILogHandler {
         public:
-            virtual void log(string message, LogLevel level) = 0;
+            virtual void log(std::string message, LogLevel level) = 0;
     };
 
     class CerrLogHandler : public ILogHandler {
         public:
-            void log(string message, LogLevel level) override {
-                cerr << message;
+            void log(std::string message, LogLevel level) override {
+                std::cerr << message;
             }
     };
 
@@ -38,18 +36,18 @@ namespace crow
 
         private:
             //
-            static string timestamp()
+            static std::string timestamp()
             {
                 char date[32];
                   time_t t = time(0);
                   strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", gmtime(&t));
-                  return string(date);
+                  return std::string(date);
             }
 
         public:
 
 
-            logger(string prefix, LogLevel level) : level_(level) {
+            logger(std::string prefix, LogLevel level) : level_(level) {
     #ifdef CROW_ENABLE_LOGGING
                     stringstream_ << "(" << timestamp() << ") [" << prefix << "] ";
     #endif
@@ -58,7 +56,7 @@ namespace crow
             ~logger() {
     #ifdef CROW_ENABLE_LOGGING
                 if(level_ >= get_current_log_level()) {
-                    stringstream_ << endl;
+                    stringstream_ << std::endl;
                     get_handler_ref()->log(stringstream_.str(), level_);
                 }
     #endif
@@ -104,7 +102,7 @@ namespace crow
             }
 
             //
-            ostringstream stringstream_;
+            std::ostringstream stringstream_;
             LogLevel level_;
     };
 }

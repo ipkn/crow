@@ -1,6 +1,8 @@
 #pragma once
 
 #include "utility.h"
+#include "http_request.h"
+#include "http_response.h"
 
 namespace crow
 {

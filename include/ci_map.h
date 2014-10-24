@@ -1,6 +1,8 @@
 #pragma once
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/functional/hash.hpp>
+#include <unordered_map>
 
 namespace crow
 {

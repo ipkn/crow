@@ -1,7 +1,9 @@
 #pragma once
 
+#include <vector>
 #include <string>
 #include <stdexcept>
+#include <iostream>
 #include "utility.h"
 
 namespace crow
