@@ -1134,7 +1134,7 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (uint16_t value)
+            wvalue& operator = (unsigned short value)
             {
                 reset();
                 t_ = type::Number;
@@ -1142,7 +1142,7 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (int16_t value)
+            wvalue& operator = (short value)
             {
                 reset();
                 t_ = type::Number;
@@ -1150,7 +1150,7 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (uint32_t value)
+            wvalue& operator = (long long value)
             {
                 reset();
                 t_ = type::Number;
@@ -1158,7 +1158,7 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (int32_t value)
+            wvalue& operator = (long value)
             {
                 reset();
                 t_ = type::Number;
@@ -1166,7 +1166,7 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (uint64_t value)
+            wvalue& operator = (int value)
             {
                 reset();
                 t_ = type::Number;
@@ -1174,7 +1174,23 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (int64_t value)
+            wvalue& operator = (unsigned long long value)
+            {
+                reset();
+                t_ = type::Number;
+                d = (double)value;
+                return *this;
+            }
+
+            wvalue& operator = (unsigned long value)
+            {
+                reset();
+                t_ = type::Number;
+                d = (double)value;
+                return *this;
+            }
+
+            wvalue& operator = (unsigned int value)
             {
                 reset();
                 t_ = type::Number;

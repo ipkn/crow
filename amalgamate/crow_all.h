@@ -569,6 +569,39 @@ namespace crow
 
         }
 
+        query_string(const query_string& qs)
+            : url_(qs.url_)
+        {
+            for(auto p:qs.key_value_pairs_)
+            {
+                key_value_pairs_.push_back((char*)(p-qs.url_.c_str()+url_.c_str()));
+            }
+        }
+
+        query_string& operator = (const query_string& qs)
+        {
+            url_ = qs.url_;
+            key_value_pairs_.clear();
+            for(auto p:qs.key_value_pairs_)
+            {
+                key_value_pairs_.push_back((char*)(p-qs.url_.c_str()+url_.c_str()));
+            }
+            return *this;
+        }
+
+        query_string& operator = (query_string&& qs)
+        {
+            key_value_pairs_ = std::move(qs.key_value_pairs_);
+            char* old_data = (char*)qs.url_.c_str();
+            url_ = std::move(qs.url_);
+            for(auto& p:key_value_pairs_)
+            {
+                p += (char*)url_.c_str() - old_data;
+            }
+            return *this;
+        }
+
+
         query_string(std::string url)
             : url_(std::move(url))
         {
@@ -1898,7 +1931,7 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (uint16_t value)
+            wvalue& operator = (unsigned short value)
             {
                 reset();
                 t_ = type::Number;
@@ -1906,7 +1939,7 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (int16_t value)
+            wvalue& operator = (short value)
             {
                 reset();
                 t_ = type::Number;
@@ -1914,7 +1947,7 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (uint32_t value)
+            wvalue& operator = (long long value)
             {
                 reset();
                 t_ = type::Number;
@@ -1922,7 +1955,7 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (int32_t value)
+            wvalue& operator = (long value)
             {
                 reset();
                 t_ = type::Number;
@@ -1930,7 +1963,7 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (uint64_t value)
+            wvalue& operator = (int value)
             {
                 reset();
                 t_ = type::Number;
@@ -1938,7 +1971,23 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (int64_t value)
+            wvalue& operator = (unsigned long long value)
+            {
+                reset();
+                t_ = type::Number;
+                d = (double)value;
+                return *this;
+            }
+
+            wvalue& operator = (unsigned long value)
+            {
+                reset();
+                t_ = type::Number;
+                d = (double)value;
+                return *this;
+            }
+
+            wvalue& operator = (unsigned int value)
             {
                 reset();
                 t_ = type::Number;
