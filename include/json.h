@@ -824,9 +824,9 @@ namespace crow
                                     return {};*/
                                 break;
                             case '.':
-                                state = (NumberParsingState)"\7\7\7\4\7\7\7"[state];
+                                state = (NumberParsingState)"\7\7\4\4\7\7\7"[state];
                                 /*
-                                if (state == NumberParsingState::Digits)
+                                if (state == NumberParsingState::Digits || state == NumberParsingState::ZeroFirst)
                                 {
                                     state = NumberParsingState::DigitsAfterPoints;
                                 }
