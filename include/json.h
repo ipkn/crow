@@ -284,6 +284,15 @@ namespace crow
                 return boost::lexical_cast<double>(start_, end_-start_);
             }
 
+            bool b() const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                if (t() != type::True && t() != type::False)
+                    throw std::runtime_error("value is not boolean");
+#endif
+                return t() == type::True;
+            }
+
             void unescape() const
             {
                 if (*(start_-1))

@@ -453,6 +453,14 @@ TEST(json_read)
 	q = y["ints"][2].i();
 	ASSERT_EQUAL(3, q);
 
+    std::string s2 = R"({"bools":[true, false], "doubles":[1.2, -3.4]})";
+    auto z = json::load(s2);
+    ASSERT_EQUAL(2, z["bools"].size());
+    ASSERT_EQUAL(2, z["doubles"].size());
+    ASSERT_EQUAL(true, z["bools"][0].b());
+    ASSERT_EQUAL(false, z["bools"][1].b());
+    ASSERT_EQUAL(1.2, z["doubles"][0].d());
+    ASSERT_EQUAL(-3.4, z["doubles"][1].d());
 }
 
 TEST(json_read_real)
