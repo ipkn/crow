@@ -185,7 +185,7 @@ inline char * qs_k2v(const char * key, char * const * qs_kv, int qs_kv_size, int
             // return (zero-char value) ? ptr to trailing '\0' : ptr to value
             if(nth == 0)
                 return qs_kv[i] + skip;
-            else 
+            else
                 --nth;
         }
     }
@@ -233,7 +233,7 @@ inline char * qs_scanvalue(const char * key, const char * qs, char * val, size_t
 // ----------------------------------------------------------------------------
 
 
-namespace crow 
+namespace crow
 {
     class query_string
     {
@@ -290,7 +290,7 @@ namespace crow
             key_value_pairs_.resize(count);
         }
 
-        void clear() 
+        void clear()
         {
             key_value_pairs_.clear();
             url_.clear();
@@ -318,7 +318,7 @@ namespace crow
         std::vector<char*> get_list (const std::string& name) const
         {
             std::vector<char*> ret;
-            std::string plus = name + "[]";            
+            std::string plus = name + "[]";
             char* element = nullptr;
 
             int count = 0;

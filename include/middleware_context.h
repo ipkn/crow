@@ -17,7 +17,7 @@ namespace crow
             template <int N>
             using partial = typename std::conditional<N == sizeof...(Middlewares)-1, partial_context, typename parent_context::template partial<N>>::type;
 
-            template <typename T> 
+            template <typename T>
             typename T::context& get()
             {
                 return static_cast<typename T::context&>(*this);
@@ -46,7 +46,7 @@ namespace crow
             template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares2>
             friend bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx);
 
-            template <typename T> 
+            template <typename T>
             typename T::context& get()
             {
                 return static_cast<typename T::context&>(*this);

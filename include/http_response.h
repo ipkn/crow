@@ -42,7 +42,7 @@ namespace crow
         response(std::string body) : body(std::move(body)) {}
         response(json::wvalue&& json_value) : json_value(std::move(json_value)) {}
         response(int code, std::string body) : body(std::move(body)), code(code) {}
-        response(const json::wvalue& json_value) : body(json::dump(json_value)) 
+        response(const json::wvalue& json_value) : body(json::dump(json_value))
         {
             set_header("Content-Type", "application/json");
         }
@@ -60,7 +60,7 @@ namespace crow
             json_value = std::move(r.json_value);
             code = r.code;
             headers = std::move(r.headers);
-			completed_ = r.completed_;
+            completed_ = r.completed_;
             return *this;
         }
 
@@ -88,7 +88,7 @@ namespace crow
             if (!completed_)
             {
                 completed_ = true;
-                
+
                 if (complete_request_handler_)
                 {
                     complete_request_handler_();

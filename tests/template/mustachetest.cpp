@@ -16,7 +16,7 @@ string read_all(const string& filename)
 
 int main()
 {
-    auto data = json::load(read_all("data")); 
+    auto data = json::load(read_all("data"));
     auto templ = compile(read_all("template"));
     auto partials = json::load(read_all("partials"));
     set_loader([&](std::string name)->std::string

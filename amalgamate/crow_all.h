@@ -1,2312 +1,336 @@
 #pragma once
 
-#include <stdio.h>
-#include <string.h>
-#include <string>
-#include <vector>
-#include <iostream>
+#include <cstdint>
+#include <stdexcept>
+#include <tuple>
+#include <type_traits>
 
-// ----------------------------------------------------------------------------
-// qs_parse (modified)
-// https://github.com/bartgrantham/qs_parse
-// ----------------------------------------------------------------------------
-/*  Similar to strncmp, but handles URL-encoding for either string  */
-int qs_strncmp(const char * s, const char * qs, size_t n);
-
-
-/*  Finds the beginning of each key/value pair and stores a pointer in qs_kv.
- *  Also decodes the value portion of the k/v pair *in-place*.  In a future
- *  enhancement it will also have a compile-time option of sorting qs_kv
- *  alphabetically by key.  */
-int qs_parse(char * qs, char * qs_kv[], int qs_kv_size);
-
-
-/*  Used by qs_parse to decode the value portion of a k/v pair  */
-int qs_decode(char * qs);
-
-
-/*  Looks up the value according to the key on a pre-processed query string
- *  A future enhancement will be a compile-time option to look up the key
- *  in a pre-sorted qs_kv array via a binary search.  */
-//char * qs_k2v(const char * key, char * qs_kv[], int qs_kv_size);
- char * qs_k2v(const char * key, char * const * qs_kv, int qs_kv_size, int nth);
-
-
-/*  Non-destructive lookup of value, based on key.  User provides the
- *  destinaton string and length.  */
-char * qs_scanvalue(const char * key, const char * qs, char * val, size_t val_len);
-
-// TODO: implement sorting of the qs_kv array; for now ensure it's not compiled
-#undef _qsSORTING
-
-// isxdigit _is_ available in <ctype.h>, but let's avoid another header instead
-#define CROW_QS_ISHEX(x)    ((((x)>='0'&&(x)<='9') || ((x)>='A'&&(x)<='F') || ((x)>='a'&&(x)<='f')) ? 1 : 0)
-#define CROW_QS_HEX2DEC(x)  (((x)>='0'&&(x)<='9') ? (x)-48 : ((x)>='A'&&(x)<='F') ? (x)-55 : ((x)>='a'&&(x)<='f') ? (x)-87 : 0)
-#define CROW_QS_ISQSCHR(x) ((((x)=='=')||((x)=='#')||((x)=='&')||((x)=='\0')) ? 0 : 1)
-
-inline int qs_strncmp(const char * s, const char * qs, size_t n)
+namespace crow
 {
-    int i=0;
-    unsigned char u1, u2, unyb, lnyb;
-
-    while(n-- > 0)
+    namespace black_magic
     {
-        u1 = (unsigned char) *s++;
-        u2 = (unsigned char) *qs++;
-
-        if ( ! CROW_QS_ISQSCHR(u1) ) {  u1 = '\0';  }
-        if ( ! CROW_QS_ISQSCHR(u2) ) {  u2 = '\0';  }
-
-        if ( u1 == '+' ) {  u1 = ' ';  }
-        if ( u1 == '%' ) // easier/safer than scanf
+        struct OutOfRange
         {
-            unyb = (unsigned char) *s++;
-            lnyb = (unsigned char) *s++;
-            if ( CROW_QS_ISHEX(unyb) && CROW_QS_ISHEX(lnyb) )
-                u1 = (CROW_QS_HEX2DEC(unyb) * 16) + CROW_QS_HEX2DEC(lnyb);
-            else
-                u1 = '\0';
+            OutOfRange(unsigned pos, unsigned length) {}
+        };
+        constexpr unsigned requires_in_range( unsigned i, unsigned len )
+        {
+            return i >= len ? throw OutOfRange(i, len) : i;
         }
 
-        if ( u2 == '+' ) {  u2 = ' ';  }
-        if ( u2 == '%' ) // easier/safer than scanf
+        class const_str
         {
-            unyb = (unsigned char) *qs++;
-            lnyb = (unsigned char) *qs++;
-            if ( CROW_QS_ISHEX(unyb) && CROW_QS_ISHEX(lnyb) )
-                u2 = (CROW_QS_HEX2DEC(unyb) * 16) + CROW_QS_HEX2DEC(lnyb);
-            else
-                u2 = '\0';
+            const char * const begin_;
+            unsigned size_;
+
+            public:
+            template< unsigned N >
+                constexpr const_str( const char(&arr)[N] ) : begin_(arr), size_(N - 1) {
+                    static_assert( N >= 1, "not a string literal");
+                }
+            constexpr char operator[]( unsigned i ) const {
+                return requires_in_range(i, size_), begin_[i];
+            }
+
+            constexpr operator const char *() const {
+                return begin_;
+            }
+
+            constexpr const char* begin() const { return begin_; }
+            constexpr const char* end() const { return begin_ + size_; }
+
+            constexpr unsigned size() const {
+                return size_;
+            }
+        };
+
+
+        constexpr unsigned find_closing_tag(const_str s, unsigned p)
+        {
+            return s[p] == '>' ? p : find_closing_tag(s, p+1);
         }
 
-        if ( u1 != u2 )
-            return u1 - u2;
-        if ( u1 == '\0' )
-            return 0;
-        i++;
+        constexpr bool is_valid(const_str s, unsigned i = 0, int f = 0)
+        {
+            return
+                i == s.size()
+                    ? f == 0 :
+                f < 0 || f >= 2
+                    ? false :
+                s[i] == '<'
+                    ? is_valid(s, i+1, f+1) :
+                s[i] == '>'
+                    ? is_valid(s, i+1, f-1) :
+                is_valid(s, i+1, f);
+        }
+
+        constexpr bool is_equ_p(const char* a, const char* b, unsigned n)
+        {
+            return
+                *a == 0 && *b == 0 && n == 0
+                    ? true :
+                (*a == 0 || *b == 0)
+                    ? false :
+                n == 0
+                    ? true :
+                *a != *b
+                    ? false :
+                is_equ_p(a+1, b+1, n-1);
+        }
+
+        constexpr bool is_equ_n(const_str a, unsigned ai, const_str b, unsigned bi, unsigned n)
+        {
+            return
+                ai + n > a.size() || bi + n > b.size()
+                    ? false :
+                n == 0
+                    ? true :
+                a[ai] != b[bi]
+                    ? false :
+                is_equ_n(a,ai+1,b,bi+1,n-1);
+        }
+
+        constexpr bool is_int(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<int>", 0, 5);
+        }
+
+        constexpr bool is_uint(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<uint>", 0, 6);
+        }
+
+        constexpr bool is_float(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<float>", 0, 7) ||
+                is_equ_n(s, i, "<double>", 0, 8);
+        }
+
+        constexpr bool is_str(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<str>", 0, 5) ||
+                is_equ_n(s, i, "<string>", 0, 8);
+        }
+
+        constexpr bool is_path(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<path>", 0, 6);
+        }
+
+        constexpr uint64_t get_parameter_tag(const_str s, unsigned p = 0)
+        {
+            return
+                p == s.size()
+                    ?  0 :
+                s[p] == '<' ? (
+                    is_int(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 1 :
+                    is_uint(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 2 :
+                    is_float(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 3 :
+                    is_str(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 4 :
+                    is_path(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 5 :
+                    throw std::runtime_error("invalid parameter type")
+                    ) :
+                get_parameter_tag(s, p+1);
+        }
+
+        template <typename ... T>
+        struct S
+        {
+            template <typename U>
+            using push = S<U, T...>;
+            template <typename U>
+            using push_back = S<T..., U>;
+            template <template<typename ... Args> class U>
+            using rebind = U<T...>;
+        };
+template <typename F, typename Set>
+        struct CallHelper;
+        template <typename F, typename ...Args>
+        struct CallHelper<F, S<Args...>>
+        {
+            template <typename F1, typename ...Args1, typename =
+                decltype(std::declval<F1>()(std::declval<Args1>()...))
+                >
+            static char __test(int);
+
+            template <typename ...>
+            static int __test(...);
+
+            static constexpr bool value = sizeof(__test<F, Args...>(0)) == sizeof(char);
+        };
+
+
+        template <int N>
+        struct single_tag_to_type
+        {
+        };
+
+        template <>
+        struct single_tag_to_type<1>
+        {
+            using type = int64_t;
+        };
+
+        template <>
+        struct single_tag_to_type<2>
+        {
+            using type = uint64_t;
+        };
+
+        template <>
+        struct single_tag_to_type<3>
+        {
+            using type = double;
+        };
+
+        template <>
+        struct single_tag_to_type<4>
+        {
+            using type = std::string;
+        };
+
+        template <>
+        struct single_tag_to_type<5>
+        {
+            using type = std::string;
+        };
+
+
+        template <uint64_t Tag>
+        struct arguments
+        {
+            using subarguments = typename arguments<Tag/6>::type;
+            using type =
+                typename subarguments::template push<typename single_tag_to_type<Tag%6>::type>;
+        };
+
+        template <>
+        struct arguments<0>
+        {
+            using type = S<>;
+        };
+
+        template <typename ... T>
+        struct last_element_type
+        {
+            using type = typename std::tuple_element<sizeof...(T)-1, std::tuple<T...>>::type;
+        };
+
+
+        template <>
+        struct last_element_type<>
+        {
+        };
+
+
+        // from http://stackoverflow.com/questions/13072359/c11-compile-time-array-with-logarithmic-evaluation-depth
+        template<class T> using Invoke = typename T::type;
+
+        template<unsigned...> struct seq{ using type = seq; };
+
+        template<class S1, class S2> struct concat;
+
+        template<unsigned... I1, unsigned... I2>
+        struct concat<seq<I1...>, seq<I2...>>
+          : seq<I1..., (sizeof...(I1)+I2)...>{};
+
+        template<class S1, class S2>
+        using Concat = Invoke<concat<S1, S2>>;
+
+        template<unsigned N> struct gen_seq;
+        template<unsigned N> using GenSeq = Invoke<gen_seq<N>>;
+
+        template<unsigned N>
+        struct gen_seq : Concat<GenSeq<N/2>, GenSeq<N - N/2>>{};
+
+        template<> struct gen_seq<0> : seq<>{};
+        template<> struct gen_seq<1> : seq<0>{};
+
+        template <typename Seq, typename Tuple>
+        struct pop_back_helper;
+
+        template <unsigned ... N, typename Tuple>
+        struct pop_back_helper<seq<N...>, Tuple>
+        {
+            template <template <typename ... Args> class U>
+            using rebind = U<typename std::tuple_element<N, Tuple>::type...>;
+        };
+
+        template <typename ... T>
+        struct pop_back //: public pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>
+        {
+            template <template <typename ... Args> class U>
+            using rebind = typename pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>::template rebind<U>;
+        };
+
+        template <>
+        struct pop_back<>
+        {
+            template <template <typename ... Args> class U>
+            using rebind = U<>;
+        };
+
+        // from http://stackoverflow.com/questions/2118541/check-if-c0x-parameter-pack-contains-a-type
+        template < typename Tp, typename... List >
+        struct contains : std::true_type {};
+
+        template < typename Tp, typename Head, typename... Rest >
+        struct contains<Tp, Head, Rest...>
+        : std::conditional< std::is_same<Tp, Head>::value,
+            std::true_type,
+            contains<Tp, Rest...>
+        >::type {};
+
+        template < typename Tp >
+        struct contains<Tp> : std::false_type {};
+
+        template <typename T>
+        struct empty_context
+        {
+        };
     }
-    if ( CROW_QS_ISQSCHR(*qs) )
-        return -1;
-    else
-        return 0;
 }
 
 
-inline int qs_parse(char * qs, char * qs_kv[], int qs_kv_size)
+
+#pragma once
+
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/functional/hash.hpp>
+#include <unordered_map>
+
+namespace crow
 {
-    int i, j;
-    char * substr_ptr;
-
-    for(i=0; i<qs_kv_size; i++)  qs_kv[i] = NULL;
-
-    // find the beginning of the k/v substrings
-    if ( (substr_ptr = strchr(qs, '?')) != NULL )
-        substr_ptr++;
-    else
-        substr_ptr = qs;
-
-    i=0;
-    while(i<qs_kv_size)
+    struct ci_hash
     {
-        qs_kv[i] = substr_ptr;
-        j = strcspn(substr_ptr, "&");
-        if ( substr_ptr[j] == '\0' ) {  break;  }
-        substr_ptr += j + 1;
-        i++;
-    }
-    i++;  // x &'s -> means x iterations of this loop -> means *x+1* k/v pairs
-
-    // we only decode the values in place, the keys could have '='s in them
-    // which will hose our ability to distinguish keys from values later
-    for(j=0; j<i; j++)
-    {
-        substr_ptr = qs_kv[j] + strcspn(qs_kv[j], "=&#");
-        if ( substr_ptr[0] == '&' )  // blank value: skip decoding
-            substr_ptr[0] = '\0';
-        else
-            qs_decode(++substr_ptr);
-    }
-
-#ifdef _qsSORTING
-// TODO: qsort qs_kv, using qs_strncmp() for the comparison
-#endif
-
-    return i;
-}
-
-
-inline int qs_decode(char * qs)
-{
-    int i=0, j=0;
-
-    while( CROW_QS_ISQSCHR(qs[j]) )
-    {
-        if ( qs[j] == '+' ) {  qs[i] = ' ';  }
-        else if ( qs[j] == '%' ) // easier/safer than scanf
+        size_t operator()(const std::string& key) const
         {
-            if ( ! CROW_QS_ISHEX(qs[j+1]) || ! CROW_QS_ISHEX(qs[j+2]) )
+            std::size_t seed = 0;
+            std::locale locale;
+
+            for(auto c : key)
             {
-                qs[i] = '\0';
-                return i;
+                boost::hash_combine(seed, std::toupper(c, locale));
             }
-            qs[i] = (CROW_QS_HEX2DEC(qs[j+1]) * 16) + CROW_QS_HEX2DEC(qs[j+2]);
-            j+=2;
+
+            return seed;
         }
-        else
-        {
-            qs[i] = qs[j];
-        }
-        i++;  j++;
-    }
-    qs[i] = '\0';
-
-    return i;
-}
-
-
-inline char * qs_k2v(const char * key, char * const * qs_kv, int qs_kv_size, int nth = 0)
-{
-    int i;
-    size_t key_len, skip;
-
-    key_len = strlen(key);
-
-#ifdef _qsSORTING
-// TODO: binary search for key in the sorted qs_kv
-#else  // _qsSORTING
-    for(i=0; i<qs_kv_size; i++)
-    {
-        // we rely on the unambiguous '=' to find the value in our k/v pair
-        if ( qs_strncmp(key, qs_kv[i], key_len) == 0 )
-        {
-            skip = strcspn(qs_kv[i], "=");
-            if ( qs_kv[i][skip] == '=' )
-                skip++;
-            // return (zero-char value) ? ptr to trailing '\0' : ptr to value
-            if(nth == 0)
-                return qs_kv[i] + skip;
-            else 
-                --nth;
-        }
-    }
-#endif  // _qsSORTING
-
-    return NULL;
-}
-
-
-inline char * qs_scanvalue(const char * key, const char * qs, char * val, size_t val_len)
-{
-    size_t i, key_len;
-    const char * tmp;
-
-    // find the beginning of the k/v substrings
-    if ( (tmp = strchr(qs, '?')) != NULL )
-        qs = tmp + 1;
-
-    key_len = strlen(key);
-    while(qs[0] != '#' && qs[0] != '\0')
-    {
-        if ( qs_strncmp(key, qs, key_len) == 0 )
-            break;
-        qs += strcspn(qs, "&") + 1;
-    }
-
-    if ( qs[0] == '\0' ) return NULL;
-
-    qs += strcspn(qs, "=&#");
-    if ( qs[0] == '=' )
-    {
-        qs++;
-        i = strcspn(qs, "&=#");
-        strncpy(val, qs, (val_len-1)<(i+1) ? (val_len-1) : (i+1));
-        qs_decode(val);
-    }
-    else
-    {
-        if ( val_len > 0 )
-            val[0] = '\0';
-    }
-
-    return val;
-}
-// ----------------------------------------------------------------------------
-
-
-namespace crow 
-{
-    class query_string
-    {
-    public:
-        static const int MAX_KEY_VALUE_PAIRS_COUNT = 256;
-
-        query_string()
-        {
-
-        }
-
-        query_string(const query_string& qs)
-            : url_(qs.url_)
-        {
-            for(auto p:qs.key_value_pairs_)
-            {
-                key_value_pairs_.push_back((char*)(p-qs.url_.c_str()+url_.c_str()));
-            }
-        }
-
-        query_string& operator = (const query_string& qs)
-        {
-            url_ = qs.url_;
-            key_value_pairs_.clear();
-            for(auto p:qs.key_value_pairs_)
-            {
-                key_value_pairs_.push_back((char*)(p-qs.url_.c_str()+url_.c_str()));
-            }
-            return *this;
-        }
-
-        query_string& operator = (query_string&& qs)
-        {
-            key_value_pairs_ = std::move(qs.key_value_pairs_);
-            char* old_data = (char*)qs.url_.c_str();
-            url_ = std::move(qs.url_);
-            for(auto& p:key_value_pairs_)
-            {
-                p += (char*)url_.c_str() - old_data;
-            }
-            return *this;
-        }
-
-
-        query_string(std::string url)
-            : url_(std::move(url))
-        {
-            if (url_.empty())
-                return;
-
-            key_value_pairs_.resize(MAX_KEY_VALUE_PAIRS_COUNT);
-
-            int count = qs_parse(&url_[0], &key_value_pairs_[0], MAX_KEY_VALUE_PAIRS_COUNT);
-            key_value_pairs_.resize(count);
-        }
-
-        void clear() 
-        {
-            key_value_pairs_.clear();
-            url_.clear();
-        }
-
-        friend std::ostream& operator<<(std::ostream& os, const query_string& qs)
-        {
-            os << "[ ";
-            for(size_t i = 0; i < qs.key_value_pairs_.size(); ++i) {
-                if (i)
-                    os << ", ";
-                os << qs.key_value_pairs_[i];
-            }
-            os << " ]";
-            return os;
-
-        }
-
-        char* get (const std::string& name) const
-        {
-            char* ret = qs_k2v(name.c_str(), key_value_pairs_.data(), key_value_pairs_.size());
-            return ret;
-        }
-
-        std::vector<char*> get_list (const std::string& name) const
-        {
-            std::vector<char*> ret;
-            std::string plus = name + "[]";            
-            char* element = nullptr;
-
-            int count = 0;
-            while(1)
-            {
-                element = qs_k2v(plus.c_str(), key_value_pairs_.data(), key_value_pairs_.size(), count++);
-                if (!element)
-                    break;
-                ret.push_back(element);
-            }
-            return ret;
-        }
-
-
-    private:
-        std::string url_;
-        std::vector<char*> key_value_pairs_;
     };
 
-} // end namespace
-
-
-
-#pragma once
-
-//#define CROW_JSON_NO_ERROR_CHECK
-
-#include <string>
-#include <unordered_map>
-#include <iostream>
-#include <algorithm>
-#include <memory>
-#include <boost/lexical_cast.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/operators.hpp>
-#include <vector>
-
-#if defined(__GNUG__) || defined(__clang__)
-#define crow_json_likely(x) __builtin_expect(x, 1)
-#define crow_json_unlikely(x) __builtin_expect(x, 0)
-#else
-#define crow_json_likely(x) x
-#define crow_json_unlikely(x) x
-#endif
-
-
-namespace crow
-{
-	namespace mustache
-	{
-		class template_t;
-	}
-
-    namespace json
+    struct ci_key_eq
     {
-        inline void escape(const std::string& str, std::string& ret)
+        bool operator()(const std::string& l, const std::string& r) const
         {
-            ret.reserve(ret.size() + str.size()+str.size()/4);
-            for(char c:str)
-            {
-                switch(c)
-                {
-                    case '"': ret += "\\\""; break;
-                    case '\\': ret += "\\\\"; break;
-                    case '\n': ret += "\\n"; break;
-                    case '\b': ret += "\\b"; break;
-                    case '\f': ret += "\\f"; break;
-                    case '\r': ret += "\\r"; break;
-                    case '\t': ret += "\\t"; break;
-                    default:
-                        if (0 <= c && c < 0x20)
-                        {
-                            ret += "\\u00";
-                            auto to_hex = [](char c)
-                            {
-                                c = c&0xf;
-                                if (c < 10)
-                                    return '0' + c;
-                                return 'a'+c-10;
-                            };
-                            ret += to_hex(c/16);
-                            ret += to_hex(c%16);
-                        }
-                        else
-                            ret += c;
-                        break;
-                }
-            }
+            return boost::iequals(l, r);
         }
-        inline std::string escape(const std::string& str)
-        {
-            std::string ret;
-            escape(str, ret);
-            return ret;
-        }
+    };
 
-        enum class type : char
-        {
-            Null,
-            False,
-            True,
-            Number,
-            String,
-            List,
-            Object,
-        };
-
-        class rvalue;
-        rvalue load(const char* data, size_t size);
-
-        namespace detail 
-        {
-
-            struct r_string 
-                : boost::less_than_comparable<r_string>,
-                boost::less_than_comparable<r_string, std::string>,
-                boost::equality_comparable<r_string>,
-                boost::equality_comparable<r_string, std::string>
-            {
-                r_string() {};
-                r_string(char* s, char* e)
-                    : s_(s), e_(e)
-                {};
-                ~r_string()
-                {
-                    if (owned_)
-                        delete[] s_;
-                }
-
-                r_string(const r_string& r)
-                {
-                    *this = r;
-                }
-
-                r_string(r_string&& r)
-                {
-                    *this = r;
-                }
-
-                r_string& operator = (r_string&& r)
-                {
-                    s_ = r.s_;
-                    e_ = r.e_;
-                    owned_ = r.owned_;
-                    return *this;
-                }
-
-                r_string& operator = (const r_string& r)
-                {
-                    s_ = r.s_;
-                    e_ = r.e_;
-                    owned_ = 0;
-                    return *this;
-                }
-
-                operator std::string () const
-                {
-                    return std::string(s_, e_);
-                }
-
-
-                const char* begin() const { return s_; }
-                const char* end() const { return e_; }
-                size_t size() const { return end() - begin(); }
-
-                using iterator = const char*;
-                using const_iterator = const char*;
-
-                char* s_;
-                mutable char* e_;
-                uint8_t owned_{0};
-                friend std::ostream& operator << (std::ostream& os, const r_string& s)
-                {
-                    os << (std::string)s;
-                    return os;
-                }
-            private:
-                void force(char* s, uint32_t length)
-                {
-                    s_ = s;
-                    owned_ = 1;
-                }
-                friend rvalue crow::json::load(const char* data, size_t size);
-            };
-
-            inline bool operator < (const r_string& l, const r_string& r)
-            {
-                return boost::lexicographical_compare(l,r);
-            }
-
-            inline bool operator < (const r_string& l, const std::string& r)
-            {
-                return boost::lexicographical_compare(l,r);
-            }
-
-            inline bool operator > (const r_string& l, const std::string& r)
-            {
-                return boost::lexicographical_compare(r,l);
-            }
-
-            inline bool operator == (const r_string& l, const r_string& r)
-            {
-                return boost::equals(l,r);
-            }
-
-            inline bool operator == (const r_string& l, const std::string& r)
-            {
-                return boost::equals(l,r);
-            }
-        }
-
-        class rvalue
-        {
-            static const int cached_bit = 2;
-            static const int error_bit = 4;
-        public:
-		    rvalue() noexcept : option_{error_bit} 
-			{}
-            rvalue(type t) noexcept
-                : lsize_{}, lremain_{}, t_{t}
-            {}
-            rvalue(type t, char* s, char* e)  noexcept
-                : start_{s},
-                end_{e},
-                t_{t}
-            {}
-
-            rvalue(const rvalue& r)
-            : start_(r.start_),
-                end_(r.end_),
-                key_(r.key_),
-                t_(r.t_),
-                option_(r.option_)
-            {
-                copy_l(r);
-            }
-
-            rvalue(rvalue&& r) noexcept
-            {
-                *this = std::move(r);
-            }
-
-            rvalue& operator = (const rvalue& r)
-            {
-                start_ = r.start_;
-                end_ = r.end_;
-                key_ = r.key_;
-                copy_l(r);
-                t_ = r.t_;
-                option_ = r.option_;
-                return *this;
-            }
-            rvalue& operator = (rvalue&& r) noexcept
-            {
-                start_ = r.start_;
-                end_ = r.end_;
-                key_ = std::move(r.key_);
-                l_ = std::move(r.l_);
-                lsize_ = r.lsize_;
-                lremain_ = r.lremain_;
-                t_ = r.t_;
-                option_ = r.option_;
-                return *this;
-            }
-
-            explicit operator bool() const noexcept
-            {
-                return (option_ & error_bit) == 0;
-            }
-
-            explicit operator int64_t() const
-            {
-                return i();
-            }
-
-            explicit operator int() const
-            {
-                return i();
-            }
-
-            type t() const
-            {
-#ifndef CROW_JSON_NO_ERROR_CHECK
-                if (option_ & error_bit)
-                {
-                    throw std::runtime_error("invalid json object");
-                }
-#endif
-                return t_;
-            }
-
-            int64_t i() const
-            {
-#ifndef CROW_JSON_NO_ERROR_CHECK
-                if (t() != type::Number)
-                    throw std::runtime_error("value is not number");
-#endif
-                return boost::lexical_cast<int64_t>(start_, end_-start_);
-            }
-
-            double d() const
-            {
-#ifndef CROW_JSON_NO_ERROR_CHECK
-                if (t() != type::Number)
-                    throw std::runtime_error("value is not number");
-#endif
-                return boost::lexical_cast<double>(start_, end_-start_);
-            }
-
-            bool b() const
-            {
-#ifndef CROW_JSON_NO_ERROR_CHECK
-                if (t() != type::True && t() != type::False)
-                    throw std::runtime_error("value is not boolean");
-#endif
-                return t() == type::True;
-            }
-
-            void unescape() const
-            {
-                if (*(start_-1))
-                {
-                    char* head = start_;
-                    char* tail = start_;
-                    while(head != end_)
-                    {
-                        if (*head == '\\')
-                        {
-                            switch(*++head)
-                            {
-                                case '"':  *tail++ = '"'; break;
-                                case '\\': *tail++ = '\\'; break;
-                                case '/':  *tail++ = '/'; break;
-                                case 'b':  *tail++ = '\b'; break;
-                                case 'f':  *tail++ = '\f'; break;
-                                case 'n':  *tail++ = '\n'; break;
-                                case 'r':  *tail++ = '\r'; break;
-                                case 't':  *tail++ = '\t'; break;
-                                case 'u':
-                                    {
-                                        auto from_hex = [](char c)
-                                        {
-                                            if (c >= 'a')
-                                                return c - 'a' + 10;
-                                            if (c >= 'A')
-                                                return c - 'A' + 10;
-                                            return c - '0';
-                                        };
-                                        unsigned int code = 
-                                            (from_hex(head[1])<<12) + 
-                                            (from_hex(head[2])<< 8) + 
-                                            (from_hex(head[3])<< 4) + 
-                                            from_hex(head[4]);
-                                        if (code >= 0x800)
-                                        {
-                                            *tail++ = 0b11100000 | (code >> 12);
-                                            *tail++ = 0b10000000 | ((code >> 6) & 0b111111);
-                                            *tail++ = 0b10000000 | (code & 0b111111);
-                                        }
-                                        else if (code >= 0x80)
-                                        {
-                                            *tail++ = 0b11000000 | (code >> 6);
-                                            *tail++ = 0b10000000 | (code & 0b111111);
-                                        }
-                                        else
-                                        {
-                                            *tail++ = code;
-                                        }
-                                        head += 4;
-                                    }
-                                    break;
-                            }
-                        }
-                        else
-                            *tail++ = *head;
-                        head++;
-                    }
-                    end_ = tail;
-                    *end_ = 0;
-                    *(start_-1) = 0;
-                }
-            }
-
-            detail::r_string s() const
-            {
-#ifndef CROW_JSON_NO_ERROR_CHECK
-                if (t() != type::String)
-                    throw std::runtime_error("value is not string");
-#endif
-                unescape();
-                return detail::r_string{start_, end_};
-            }
-
-            bool has(const char* str) const
-            {
-                return has(std::string(str));
-            }
-
-            bool has(const std::string& str) const
-            {
-                struct Pred 
-                {
-                    bool operator()(const rvalue& l, const rvalue& r) const
-                    {
-                        return l.key_ < r.key_;
-                    };
-                    bool operator()(const rvalue& l, const std::string& r) const
-                    {
-                        return l.key_ < r;
-                    };
-                    bool operator()(const std::string& l, const rvalue& r) const
-                    {
-                        return l < r.key_;
-                    };
-                };
-                if (!is_cached())
-                {
-                    std::sort(begin(), end(), Pred());
-                    set_cached();
-                }
-                auto it = lower_bound(begin(), end(), str, Pred());
-                return it != end() && it->key_ == str;
-            }
-
-			int count(const std::string& str)
-			{
-				return has(str) ? 1 : 0;
-			}
-
-            rvalue* begin() const 
-			{ 
-#ifndef CROW_JSON_NO_ERROR_CHECK
-                if (t() != type::Object && t() != type::List)
-                    throw std::runtime_error("value is not a container");
-#endif
-				return l_.get(); 
-			}
-            rvalue* end() const 
-			{ 
-#ifndef CROW_JSON_NO_ERROR_CHECK
-                if (t() != type::Object && t() != type::List)
-                    throw std::runtime_error("value is not a container");
-#endif
-				return l_.get()+lsize_; 
-			}
-
-			const detail::r_string& key() const
-			{
-				return key_;
-			}
-
-            size_t size() const
-            {
-                if (t() == type::String)
-                    return s().size();
-#ifndef CROW_JSON_NO_ERROR_CHECK
-                if (t() != type::Object && t() != type::List)
-                    throw std::runtime_error("value is not a container");
-#endif
-                return lsize_;
-            }
-
-			const rvalue& operator[](int index) const
-			{
-#ifndef CROW_JSON_NO_ERROR_CHECK
-                if (t() != type::List)
-                    throw std::runtime_error("value is not a list");
-				if (index >= (int)lsize_ || index < 0)
-                    throw std::runtime_error("list out of bound");
-#endif
-				return l_[index];
-			}
-
-			const rvalue& operator[](size_t index) const
-			{
-#ifndef CROW_JSON_NO_ERROR_CHECK
-                if (t() != type::List)
-                    throw std::runtime_error("value is not a list");
-				if (index >= lsize_)
-                    throw std::runtime_error("list out of bound");
-#endif
-				return l_[index];
-			}
-
-            const rvalue& operator[](const char* str) const
-            {
-                return this->operator[](std::string(str));
-            }
-
-            const rvalue& operator[](const std::string& str) const
-            {
-#ifndef CROW_JSON_NO_ERROR_CHECK
-                if (t() != type::Object)
-                    throw std::runtime_error("value is not an object");
-#endif
-                struct Pred 
-                {
-                    bool operator()(const rvalue& l, const rvalue& r) const
-                    {
-                        return l.key_ < r.key_;
-                    };
-                    bool operator()(const rvalue& l, const std::string& r) const
-                    {
-                        return l.key_ < r;
-                    };
-                    bool operator()(const std::string& l, const rvalue& r) const
-                    {
-                        return l < r.key_;
-                    };
-                };
-                if (!is_cached())
-                {
-                    std::sort(begin(), end(), Pred());
-                    set_cached();
-                }
-                auto it = lower_bound(begin(), end(), str, Pred());
-                if (it != end() && it->key_ == str)
-                    return *it;
-#ifndef CROW_JSON_NO_ERROR_CHECK
-                throw std::runtime_error("cannot find key");
-#else
-                static rvalue nullValue;
-                return nullValue;
-#endif
-            }
-
-            void set_error()
-            {
-                option_|=error_bit;
-            }
-
-            bool error() const
-            {
-                return (option_&error_bit)!=0;
-            }
-        private:
-            bool is_cached() const
-            {
-                return (option_&cached_bit)!=0;
-            }
-            void set_cached() const
-            {
-                option_ |= cached_bit;
-            }
-            void copy_l(const rvalue& r)
-            {
-                if (r.t() != type::Object && r.t() != type::List)
-                    return;
-                lsize_ = r.lsize_;
-                lremain_ = 0;
-                l_.reset(new rvalue[lsize_]);
-                std::copy(r.begin(), r.end(), begin());
-            }
-
-            void emplace_back(rvalue&& v)
-            {
-                if (!lremain_)
-                {
-                    int new_size = lsize_ + lsize_;
-                    if (new_size - lsize_ > 60000)
-                        new_size = lsize_ + 60000;
-                    if (new_size < 4)
-                        new_size = 4;
-                    rvalue* p = new rvalue[new_size];
-                    rvalue* p2 = p;
-                    for(auto& x : *this)
-                        *p2++ = std::move(x);
-                    l_.reset(p);
-                    lremain_ = new_size - lsize_;
-                }
-                l_[lsize_++] = std::move(v);
-                lremain_ --;
-            }
-
-            mutable char* start_;
-            mutable char* end_;
-            detail::r_string key_;
-            std::unique_ptr<rvalue[]> l_;
-            uint32_t lsize_;
-            uint16_t lremain_;
-            type t_;
-            mutable uint8_t option_{0};
-
-            friend rvalue load_nocopy_internal(char* data, size_t size);
-            friend rvalue load(const char* data, size_t size);
-            friend std::ostream& operator <<(std::ostream& os, const rvalue& r)
-            {
-                switch(r.t_)
-                {
-
-                case type::Null: os << "null"; break;
-                case type::False: os << "false"; break;
-                case type::True: os << "true"; break;
-                case type::Number: os << r.d(); break;
-                case type::String: os << '"' << r.s() << '"'; break;
-                case type::List: 
-                    {
-                        os << '['; 
-                        bool first = true;
-                        for(auto& x : r)
-                        {
-                            if (!first)
-                                os << ',';
-                            first = false;
-                            os << x;
-                        }
-                        os << ']'; 
-                    }
-                    break;
-                case type::Object:
-                    {
-                        os << '{'; 
-                        bool first = true;
-                        for(auto& x : r)
-                        {
-                            if (!first)
-                                os << ',';
-                            os << '"' << escape(x.key_) << "\":";
-                            first = false;
-                            os << x;
-                        }
-                        os << '}'; 
-                    }
-                    break;
-                }
-                return os;
-            }
-        };
-        namespace detail {
-        }
-
-        inline bool operator == (const rvalue& l, const std::string& r)
-        {
-            return l.s() == r;
-        }
-
-        inline bool operator == (const std::string& l, const rvalue& r)
-        {
-            return l == r.s();
-        }
-
-        inline bool operator != (const rvalue& l, const std::string& r)
-        {
-            return l.s() != r;
-        }
-
-        inline bool operator != (const std::string& l, const rvalue& r)
-        {
-            return l != r.s();
-        }
-
-        inline bool operator == (const rvalue& l, double r)
-        {
-            return l.d() == r;
-        }
-
-        inline bool operator == (double l, const rvalue& r)
-        {
-            return l == r.d();
-        }
-
-        inline bool operator != (const rvalue& l, double r)
-        {
-            return l.d() != r;
-        }
-
-        inline bool operator != (double l, const rvalue& r)
-        {
-            return l != r.d();
-        }
-
-
-        inline rvalue load_nocopy_internal(char* data, size_t size)
-        {
-            //static const char* escaped = "\"\\/\b\f\n\r\t";
-			struct Parser
-			{
-				Parser(char* data, size_t size)
-					: data(data)
-				{
-				}
-
-            	bool consume(char c)
-                {
-                    if (crow_json_unlikely(*data != c))
-                        return false;
-                    data++;
-                    return true;
-                }
-
-				void ws_skip()
-                {
-					while(*data == ' ' || *data == '\t' || *data == '\r' || *data == '\n') ++data;
-                };
-
-            	rvalue decode_string()
-                {
-                    if (crow_json_unlikely(!consume('"')))
-                        return {};
-                    char* start = data;
-                    uint8_t has_escaping = 0;
-                    while(1)
-                    {
-                        if (crow_json_likely(*data != '"' && *data != '\\' && *data != '\0'))
-                        {
-                            data ++;
-                        }
-                        else if (*data == '"')
-                        {
-                            *data = 0;
-                            *(start-1) = has_escaping;
-                            data++;
-                            return {type::String, start, data-1};
-                        }
-                        else if (*data == '\\')
-                        {
-                            has_escaping = 1;
-                            data++;
-                            switch(*data)
-                            {
-                                case 'u':
-                                    {
-                                        auto check = [](char c)
-                                        {
-                                            return 
-                                                ('0' <= c && c <= '9') ||
-                                                ('a' <= c && c <= 'f') ||
-                                                ('A' <= c && c <= 'F');
-                                        };
-                                        if (!(check(*(data+1)) && 
-                                            check(*(data+2)) && 
-                                            check(*(data+3)) && 
-                                            check(*(data+4))))
-                                            return {};
-                                    }
-                                    data += 5;
-                                    break;
-                                case '"':
-                                case '\\':
-                                case '/':
-                                case 'b':
-                                case 'f':
-                                case 'n':
-                                case 'r':
-                                case 't':
-                                    data ++;
-                                    break;
-                                default:
-                                    return {};
-                            }
-                        }
-                        else
-                            return {};
-                    }
-                    return {};
-                }
-
-            	rvalue decode_list()
-                {
-					rvalue ret(type::List);
-					if (crow_json_unlikely(!consume('[')))
-                    {
-                        ret.set_error();
-						return ret;
-                    }
-					ws_skip();
-					if (crow_json_unlikely(*data == ']'))
-					{
-						data++;
-						return ret;
-					}
-
-					while(1)
-					{
-                        auto v = decode_value();
-						if (crow_json_unlikely(!v))
-                        {
-                            ret.set_error();
-                            break;
-                        }
-						ws_skip();
-                        ret.emplace_back(std::move(v));
-                        if (*data == ']')
-                        {
-                            data++;
-                            break;
-                        }
-                        if (crow_json_unlikely(!consume(',')))
-                        {
-                            ret.set_error();
-                            break;
-                        }
-						ws_skip();
-					}
-                    return ret;
-                }
-
-				rvalue decode_number()
-                {
-                    char* start = data;
-
-                    enum NumberParsingState
-                    {
-                        Minus,
-                        AfterMinus,
-                        ZeroFirst,
-                        Digits,
-                        DigitsAfterPoints,
-                        E,
-                        DigitsAfterE,
-                        Invalid,
-                    } state{Minus};
-                    while(crow_json_likely(state != Invalid))
-                    {
-                        switch(*data)
-                        {
-                            case '0':
-                                state = (NumberParsingState)"\2\2\7\3\4\6\6"[state];
-                                /*if (state == NumberParsingState::Minus || state == NumberParsingState::AfterMinus)
-                                {
-                                    state = NumberParsingState::ZeroFirst;
-                                }
-                                else if (state == NumberParsingState::Digits || 
-                                    state == NumberParsingState::DigitsAfterE || 
-                                    state == NumberParsingState::DigitsAfterPoints)
-                                {
-                                    // ok; pass
-                                }
-                                else if (state == NumberParsingState::E)
-                                {
-                                    state = NumberParsingState::DigitsAfterE;
-                                }
-                                else
-                                    return {};*/
-								break;
-                            case '1': case '2': case '3': 
-                            case '4': case '5': case '6': 
-                            case '7': case '8': case '9':
-                                state = (NumberParsingState)"\3\3\7\3\4\6\6"[state];
-                                while(*(data+1) >= '0' && *(data+1) <= '9') data++;
-                                /*if (state == NumberParsingState::Minus || state == NumberParsingState::AfterMinus)
-                                {
-                                    state = NumberParsingState::Digits;
-                                }
-                                else if (state == NumberParsingState::Digits || 
-                                    state == NumberParsingState::DigitsAfterE || 
-                                    state == NumberParsingState::DigitsAfterPoints)
-                                {
-                                    // ok; pass
-                                }
-                                else if (state == NumberParsingState::E)
-                                {
-                                    state = NumberParsingState::DigitsAfterE;
-                                }
-                                else
-                                    return {};*/
-                                break;
-                            case '.':
-                                state = (NumberParsingState)"\7\7\4\4\7\7\7"[state];
-                                /*
-                                if (state == NumberParsingState::Digits || state == NumberParsingState::ZeroFirst)
-                                {
-                                    state = NumberParsingState::DigitsAfterPoints;
-                                }
-                                else
-                                    return {};
-                                */
-                                break;
-                            case '-':
-                                state = (NumberParsingState)"\1\7\7\7\7\6\7"[state];
-                                /*if (state == NumberParsingState::Minus)
-                                {
-                                    state = NumberParsingState::AfterMinus;
-                                }
-                                else if (state == NumberParsingState::E)
-                                {
-                                    state = NumberParsingState::DigitsAfterE;
-                                }
-                                else
-                                    return {};*/
-                                break;
-                            case '+':
-                                state = (NumberParsingState)"\7\7\7\7\7\6\7"[state];
-                                /*if (state == NumberParsingState::E)
-                                {
-                                    state = NumberParsingState::DigitsAfterE;
-                                }
-                                else
-                                    return {};*/
-                                break;
-                            case 'e': case 'E':
-                                state = (NumberParsingState)"\7\7\7\5\5\7\7"[state];
-                                /*if (state == NumberParsingState::Digits || 
-                                    state == NumberParsingState::DigitsAfterPoints)
-                                {
-                                    state = NumberParsingState::E;
-                                }
-                                else 
-                                    return {};*/
-                                break;
-                            default:
-                                if (crow_json_likely(state == NumberParsingState::ZeroFirst || 
-                                        state == NumberParsingState::Digits || 
-                                        state == NumberParsingState::DigitsAfterPoints || 
-                                        state == NumberParsingState::DigitsAfterE))
-                                    return {type::Number, start, data};
-                                else
-                                    return {};
-                        }
-                        data++;
-                    }
-
-                    return {};
-                }
-
-				rvalue decode_value()
-                {
-                    switch(*data)
-                    {
-                        case '[':
-							return decode_list();
-                        case '{':
-							return decode_object();
-                        case '"':
-                            return decode_string();
-                        case 't':
-                            if (//e-data >= 4 &&
-                                    data[1] == 'r' &&
-                                    data[2] == 'u' &&
-                                    data[3] == 'e')
-                            {
-                                data += 4;
-                                return {type::True};
-                            }
-                            else
-                                return {};
-                        case 'f':
-                            if (//e-data >= 5 &&
-                                    data[1] == 'a' &&
-                                    data[2] == 'l' &&
-                                    data[3] == 's' &&
-                                    data[4] == 'e')
-                            {
-                                data += 5;
-                                return {type::False};
-                            }
-                            else
-                                return {};
-                        case 'n':
-                            if (//e-data >= 4 &&
-                                    data[1] == 'u' &&
-                                    data[2] == 'l' &&
-                                    data[3] == 'l')
-                            {
-                                data += 4;
-                                return {type::Null};
-                            }
-                            else
-                                return {};
-                        //case '1': case '2': case '3': 
-                        //case '4': case '5': case '6': 
-                        //case '7': case '8': case '9':
-                        //case '0': case '-':
-                        default:
-                            return decode_number();
-                    }
-                    return {};
-                }
-
-				rvalue decode_object()
-                {
-                    rvalue ret(type::Object);
-                    if (crow_json_unlikely(!consume('{')))
-                    {
-                        ret.set_error();
-                        return ret;
-                    }
-
-					ws_skip();
-
-                    if (crow_json_unlikely(*data == '}'))
-                    {
-                        data++;
-                        return ret;
-                    }
-
-                    while(1)
-                    {
-                        auto t = decode_string();
-                        if (crow_json_unlikely(!t))
-                        {
-                            ret.set_error();
-                            break;
-                        }
-
-						ws_skip();
-                        if (crow_json_unlikely(!consume(':')))
-                        {
-                            ret.set_error();
-                            break;
-                        }
-
-						// TODO caching key to speed up (flyweight?)
-                        auto key = t.s();
-
-						ws_skip();
-                        auto v = decode_value();
-                        if (crow_json_unlikely(!v))
-                        {
-                            ret.set_error();
-                            break;
-                        }
-						ws_skip();
-
-                        v.key_ = std::move(key);
-                        ret.emplace_back(std::move(v));
-                        if (crow_json_unlikely(*data == '}'))
-                        {
-                            data++;
-                            break;
-                        }
-                        if (crow_json_unlikely(!consume(',')))
-                        {
-                            ret.set_error();
-                            break;
-                        }
-						ws_skip();
-                    }
-                    return ret;
-                }
-
-				rvalue parse()
-				{
-                    ws_skip();
-					auto ret = decode_value(); // or decode object?
-					ws_skip();
-                    if (ret && *data != '\0')
-                        ret.set_error();
-					return ret;
-				}
-
-				char* data;
-			};
-			return Parser(data, size).parse();
-        }
-        inline rvalue load(const char* data, size_t size)
-        {
-            char* s = new char[size+1];
-            memcpy(s, data, size);
-            s[size] = 0;
-            auto ret = load_nocopy_internal(s, size);
-            if (ret)
-                ret.key_.force(s, size);
-            else
-                delete[] s;
-            return ret;
-        }
-
-        inline rvalue load(const char* data)
-        {
-            return load(data, strlen(data));
-        }
-
-        inline rvalue load(const std::string& str)
-        {
-            return load(str.data(), str.size());
-        }
-
-        class wvalue
-        {
-			friend class crow::mustache::template_t;
-        public:
-            type t() const { return t_; }
-        private:
-            type t_{type::Null};
-            double d {};
-            std::string s;
-            std::unique_ptr<std::vector<wvalue>> l;
-            std::unique_ptr<std::unordered_map<std::string, wvalue>> o;
-        public:
-
-            wvalue() {}
-
-            wvalue(const rvalue& r)
-            {
-                t_ = r.t();
-                switch(r.t())
-                {
-                    case type::Null:
-                    case type::False:
-                    case type::True:
-                        return;
-                    case type::Number:
-                        d = r.d();
-                        return;
-                    case type::String:
-                        s = r.s();
-                        return;
-                    case type::List:
-                        l = std::move(std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{}));
-                        l->reserve(r.size());
-                        for(auto it = r.begin(); it != r.end(); ++it)
-                            l->emplace_back(*it);
-                        return;
-                    case type::Object:
-                        o = std::move(
-                            std::unique_ptr<
-                                    std::unordered_map<std::string, wvalue>
-                                >(
-                                new std::unordered_map<std::string, wvalue>{}));
-                        for(auto it = r.begin(); it != r.end(); ++it)
-                            o->emplace(it->key(), *it);
-                        return;
-                }
-            }
-
-            wvalue(wvalue&& r)
-            {
-                *this = std::move(r);
-            }
-
-            wvalue& operator = (wvalue&& r)
-            {
-                t_ = r.t_;
-                d = r.d;
-                s = std::move(r.s);
-                l = std::move(r.l);
-                o = std::move(r.o);
-                return *this;
-            }
-
-            void clear()
-            {
-                t_ = type::Null;
-                l.reset();
-                o.reset();
-            }
-
-            void reset()
-            {
-                t_ = type::Null;
-                l.reset();
-                o.reset();
-            }
-
-            wvalue& operator = (std::nullptr_t)
-            {
-                reset();
-                return *this;
-            }
-            wvalue& operator = (bool value)
-            {
-                reset();
-                if (value)
-                    t_ = type::True;
-                else
-                    t_ = type::False;
-                return *this;
-            }
-
-            wvalue& operator = (double value)
-            {
-                reset();
-                t_ = type::Number;
-                d = value;
-                return *this;
-            }
-
-            wvalue& operator = (unsigned short value)
-            {
-                reset();
-                t_ = type::Number;
-                d = (double)value;
-                return *this;
-            }
-
-            wvalue& operator = (short value)
-            {
-                reset();
-                t_ = type::Number;
-                d = (double)value;
-                return *this;
-            }
-
-            wvalue& operator = (long long value)
-            {
-                reset();
-                t_ = type::Number;
-                d = (double)value;
-                return *this;
-            }
-
-            wvalue& operator = (long value)
-            {
-                reset();
-                t_ = type::Number;
-                d = (double)value;
-                return *this;
-            }
-
-            wvalue& operator = (int value)
-            {
-                reset();
-                t_ = type::Number;
-                d = (double)value;
-                return *this;
-            }
-
-            wvalue& operator = (unsigned long long value)
-            {
-                reset();
-                t_ = type::Number;
-                d = (double)value;
-                return *this;
-            }
-
-            wvalue& operator = (unsigned long value)
-            {
-                reset();
-                t_ = type::Number;
-                d = (double)value;
-                return *this;
-            }
-
-            wvalue& operator = (unsigned int value)
-            {
-                reset();
-                t_ = type::Number;
-                d = (double)value;
-                return *this;
-            }
-
-            wvalue& operator=(const char* str)
-            {
-                reset();
-                t_ = type::String;
-                s = str;
-                return *this;
-            }
-
-            wvalue& operator=(const std::string& str)
-            {
-                reset();
-                t_ = type::String;
-                s = str;
-                return *this;
-            }
-
-            template <typename T>
-            wvalue& operator[](const std::vector<T>& v)
-            {
-                if (t_ != type::List)
-                    reset();
-                t_ = type::List;
-                if (!l)
-                    l = std::move(std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{}));
-                l->clear();
-                l->resize(v.size());
-                size_t idx = 0;
-                for(auto& x:v)
-                {
-                    (*l)[idx++] = x;
-                }
-                return *this;
-            }
-
-            wvalue& operator[](unsigned index)
-            {
-                if (t_ != type::List)
-                    reset();
-                t_ = type::List;
-                if (!l)
-                    l = std::move(std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{}));
-                if (l->size() < index+1)
-                    l->resize(index+1);
-                return (*l)[index];
-            }
-
-			int count(const std::string& str)
-			{
-                if (t_ != type::Object)
-                    return 0;
-                if (!o)
-                    return 0;
-                return o->count(str);
-			}
-
-            wvalue& operator[](const std::string& str)
-            {
-                if (t_ != type::Object)
-                    reset();
-                t_ = type::Object;
-                if (!o)
-                    o = std::move(
-                        std::unique_ptr<
-                                std::unordered_map<std::string, wvalue>
-                            >(
-                            new std::unordered_map<std::string, wvalue>{}));
-                return (*o)[str];
-            }
-
-            size_t estimate_length() const
-            {
-                switch(t_)
-                {
-                    case type::Null: return 4;
-                    case type::False: return 5;
-                    case type::True: return 4;
-                    case type::Number: return 30;
-                    case type::String: return 2+s.size()+s.size()/2;
-                    case type::List: 
-                        {
-                            size_t sum{};
-                            if (l)
-                            {
-                                for(auto& x:*l)
-                                {
-                                    sum += 1;
-                                    sum += x.estimate_length();
-                                }
-                            }
-                            return sum+2;
-                        }
-                    case type::Object:
-                        {
-                            size_t sum{};
-                            if (o)
-                            {
-                                for(auto& kv:*o)
-                                {
-                                    sum += 2;
-                                    sum += 2+kv.first.size()+kv.first.size()/2;
-                                    sum += kv.second.estimate_length();
-                                }
-                            }
-                            return sum+2;
-                        }
-                }
-                return 1;
-            }
-
-
-            friend void dump_internal(const wvalue& v, std::string& out);
-            friend std::string dump(const wvalue& v);
-        };
-
-        inline void dump_string(const std::string& str, std::string& out)
-        {
-            out.push_back('"');
-            escape(str, out);
-            out.push_back('"');
-        }
-        inline void dump_internal(const wvalue& v, std::string& out)
-        {
-            switch(v.t_)
-            {
-                case type::Null: out += "null"; break;
-                case type::False: out += "false"; break;
-                case type::True: out += "true"; break;
-                case type::Number: 
-                    {
-                        char outbuf[128];
-                        sprintf(outbuf, "%g", v.d);
-                        out += outbuf;
-                    }
-                    break;
-                case type::String: dump_string(v.s, out); break;
-                case type::List: 
-                     {
-                         out.push_back('[');
-                         if (v.l)
-                         {
-                             bool first = true;
-                             for(auto& x:*v.l)
-                             {
-                                 if (!first)
-                                 {
-                                     out.push_back(',');
-                                 }
-                                 first = false;
-                                 dump_internal(x, out);
-                             }
-                         }
-                         out.push_back(']');
-                     }
-                     break;
-                case type::Object:
-                     {
-                         out.push_back('{');
-                         if (v.o)
-                         {
-                             bool first = true;
-                             for(auto& kv:*v.o)
-                             {
-                                 if (!first)
-                                 {
-                                     out.push_back(',');
-                                 }
-                                 first = false;
-                                 dump_string(kv.first, out);
-                                 out.push_back(':');
-                                 dump_internal(kv.second, out);
-                             }
-                         }
-                         out.push_back('}');
-                     }
-                     break;
-            }
-        }
-
-        inline std::string dump(const wvalue& v)
-        {
-            std::string ret;
-            ret.reserve(v.estimate_length());
-            dump_internal(v, ret);
-            return ret;
-        }
-
-        //std::vector<boost::asio::const_buffer> dump_ref(wvalue& v)
-        //{
-        //}
-    }
-}
-
-#undef crow_json_likely
-#undef crow_json_unlikely
-
-
-
-#pragma once
-#include <string>
-#include <vector>
-#include <fstream>
-#include <iterator>
-#include <functional>
-
-
-namespace crow
-{
-    namespace mustache
-    {
-        using context = json::wvalue;
-
-        template_t load(const std::string& filename);
-
-        class invalid_template_exception : public std::exception
-        {
-            public:
-            invalid_template_exception(const std::string& msg)
-                : msg("crow::mustache error: " + msg)
-            {
-            }
-            virtual const char* what() const throw()
-            {
-                return msg.c_str();
-            }
-            std::string msg;
-        };
-
-        enum class ActionType
-        {
-            Ignore,
-            Tag,
-            UnescapeTag,
-            OpenBlock,
-            CloseBlock,
-            ElseBlock,
-            Partial,
-        };
-
-        struct Action
-        {
-            int start;
-            int end;
-            int pos;
-            ActionType t;
-            Action(ActionType t, int start, int end, int pos = 0) 
-                : start(start), end(end), pos(pos), t(t)
-            {}
-        };
-
-        class template_t 
-        {
-        public:
-            template_t(std::string body)
-                : body_(std::move(body))
-            {
-                // {{ {{# {{/ {{^ {{! {{> {{=
-                parse();
-            }
-
-        private:
-            std::string tag_name(const Action& action)
-            {
-                return body_.substr(action.start, action.end - action.start);
-            }
-            auto find_context(const std::string& name, const std::vector<context*>& stack)->std::pair<bool, context&>
-            {
-                if (name == ".")
-                {
-                    return {true, *stack.back()};
-                }
-                int dotPosition = name.find(".");
-                if (dotPosition == (int)name.npos)
-                {
-                    for(auto it = stack.rbegin(); it != stack.rend(); ++it)
-                    {
-                        if ((*it)->t() == json::type::Object)
-                        {
-                            if ((*it)->count(name))
-                                return {true, (**it)[name]};
-                        }
-                    }
-                }
-                else
-                {
-                    std::vector<int> dotPositions;
-                    dotPositions.push_back(-1);
-                    while(dotPosition != (int)name.npos)
-                    {
-                        dotPositions.push_back(dotPosition);
-                        dotPosition = name.find(".", dotPosition+1);
-                    }
-                    dotPositions.push_back(name.size());
-                    std::vector<std::string> names;
-                    names.reserve(dotPositions.size()-1);
-                    for(int i = 1; i < (int)dotPositions.size(); i ++)
-                        names.emplace_back(name.substr(dotPositions[i-1]+1, dotPositions[i]-dotPositions[i-1]-1));
-
-                    for(auto it = stack.rbegin(); it != stack.rend(); ++it)
-                    {
-                        context* view = *it;
-                        bool found = true;
-                        for(auto jt = names.begin(); jt != names.end(); ++jt)
-                        {
-                            if (view->t() == json::type::Object &&
-                                view->count(*jt))
-                            {
-                                view = &(*view)[*jt];
-                            }
-                            else
-                            {
-                                found = false;
-                                break;
-                            }
-                        }
-                        if (found)
-                            return {true, *view};
-                    }
-
-                }
-
-                static json::wvalue empty_str;
-                empty_str = "";
-                return {false, empty_str};
-            }
-
-            void escape(const std::string& in, std::string& out)
-            {
-                out.reserve(out.size() + in.size());
-                for(auto it = in.begin(); it != in.end(); ++it)
-                {
-                    switch(*it)
-                    {
-                        case '&': out += "&amp;"; break;
-                        case '<': out += "&lt;"; break;
-                        case '>': out += "&gt;"; break;
-                        case '"': out += "&quot;"; break;
-                        case '\'': out += "&#39;"; break;
-                        case '/': out += "&#x2F;"; break;
-                        default: out += *it; break;
-                    }
-                }
-            }
-
-            void render_internal(int actionBegin, int actionEnd, std::vector<context*>& stack, std::string& out, int indent)
-            {
-                int current = actionBegin;
-
-                if (indent)
-                    out.insert(out.size(), indent, ' ');
-
-                while(current < actionEnd)
-                {
-                    auto& fragment = fragments_[current];
-                    auto& action = actions_[current];
-                    render_fragment(fragment, indent, out);
-                    switch(action.t)
-                    {
-                        case ActionType::Ignore:
-                            // do nothing
-                            break;
-                        case ActionType::Partial:
-                            {
-                                std::string partial_name = tag_name(action);
-                                auto partial_templ = load(partial_name);
-                                int partial_indent = action.pos;
-                                partial_templ.render_internal(0, partial_templ.fragments_.size()-1, stack, out, partial_indent?indent+partial_indent:0);
-                            }
-                            break;
-                        case ActionType::UnescapeTag:
-                        case ActionType::Tag:
-                            {
-                                auto optional_ctx = find_context(tag_name(action), stack);
-                                auto& ctx = optional_ctx.second;
-                                switch(ctx.t())
-                                {
-                                    case json::type::Number:
-                                        out += json::dump(ctx);
-                                        break;
-                                    case json::type::String:
-                                        if (action.t == ActionType::Tag)
-                                            escape(ctx.s, out);
-                                        else
-                                            out += ctx.s;
-                                        break;
-                                    default:
-                                        throw std::runtime_error("not implemented tag type" + boost::lexical_cast<std::string>((int)ctx.t()));
-                                }
-                            }
-                            break;
-                        case ActionType::ElseBlock:
-                            {
-                                static context nullContext;
-                                auto optional_ctx = find_context(tag_name(action), stack);
-                                if (!optional_ctx.first)
-                                {
-                                    stack.emplace_back(&nullContext);
-                                    break;
-                                }
-
-                                auto& ctx = optional_ctx.second;
-                                switch(ctx.t())
-                                {
-                                    case json::type::List:
-                                        if (ctx.l && !ctx.l->empty())
-                                            current = action.pos;
-                                        else
-                                            stack.emplace_back(&nullContext);
-                                        break;
-                                    case json::type::False:
-                                    case json::type::Null:
-                                        stack.emplace_back(&nullContext);
-                                        break;
-                                    default:
-                                        current = action.pos;
-                                        break;
-                                }
-                                break;
-                            }
-                        case ActionType::OpenBlock:
-                            {
-                                auto optional_ctx = find_context(tag_name(action), stack);
-                                if (!optional_ctx.first)
-                                {
-                                    current = action.pos;
-                                    break;
-                                }
-
-                                auto& ctx = optional_ctx.second;
-                                switch(ctx.t())
-                                {
-                                    case json::type::List:
-                                        if (ctx.l)
-                                            for(auto it = ctx.l->begin(); it != ctx.l->end(); ++it)
-                                            {
-                                                stack.push_back(&*it);
-                                                render_internal(current+1, action.pos, stack, out, indent);
-                                                stack.pop_back();
-                                            }
-                                        current = action.pos;
-                                        break;
-                                    case json::type::Number:
-                                    case json::type::String:
-                                    case json::type::Object:
-                                    case json::type::True:
-                                        stack.push_back(&ctx);
-                                        break;
-                                    case json::type::False:
-                                    case json::type::Null:
-                                        current = action.pos;
-                                        break;
-                                    default:
-                                        throw std::runtime_error("{{#: not implemented context type: " + boost::lexical_cast<std::string>((int)ctx.t()));
-                                        break;
-                                }
-                                break;
-                            }
-                        case ActionType::CloseBlock:
-                            stack.pop_back();
-                            break;
-                        default:
-                            throw std::runtime_error("not implemented " + boost::lexical_cast<std::string>((int)action.t));
-                    }
-                    current++;
-                }
-                auto& fragment = fragments_[actionEnd];
-                render_fragment(fragment, indent, out);
-            }
-            void render_fragment(const std::pair<int, int> fragment, int indent, std::string& out)
-            {
-                if (indent)
-                {
-                    for(int i = fragment.first; i < fragment.second; i ++)
-                    {
-                        out += body_[i];
-                        if (body_[i] == '\n' && i+1 != (int)body_.size())
-                            out.insert(out.size(), indent, ' ');
-                    }
-                }
-                else
-                    out.insert(out.size(), body_, fragment.first, fragment.second-fragment.first);
-            }
-        public:
-            std::string render()
-            {
-				context empty_ctx;
-				std::vector<context*> stack;
-				stack.emplace_back(&empty_ctx);
-
-                std::string ret;
-                render_internal(0, fragments_.size()-1, stack, ret, 0);
-                return ret;
-            }
-            std::string render(context& ctx)
-            {
-				std::vector<context*> stack;
-				stack.emplace_back(&ctx);
-
-                std::string ret;
-                render_internal(0, fragments_.size()-1, stack, ret, 0);
-                return ret;
-            }
-
-        private:
-
-            void parse()
-            {
-                std::string tag_open = "{{";
-                std::string tag_close = "}}";
-
-                std::vector<int> blockPositions;
-                
-                size_t current = 0;
-                while(1)
-                {
-                    size_t idx = body_.find(tag_open, current);
-                    if (idx == body_.npos)
-                    {
-                        fragments_.emplace_back(current, body_.size());
-                        actions_.emplace_back(ActionType::Ignore, 0, 0);
-                        break;
-                    }
-                    fragments_.emplace_back(current, idx);
-
-                    idx += tag_open.size();
-                    size_t endIdx = body_.find(tag_close, idx);
-                    if (endIdx == idx)
-                    {
-                        throw invalid_template_exception("empty tag is not allowed");
-                    }
-                    if (endIdx == body_.npos)
-                    {
-                        // error, no matching tag
-                        throw invalid_template_exception("not matched opening tag");
-                    }
-                    current = endIdx + tag_close.size();
-                    switch(body_[idx])
-                    {
-                        case '#':
-                            idx++;
-                            while(body_[idx] == ' ') idx++;
-                            while(body_[endIdx-1] == ' ') endIdx--;
-                            blockPositions.emplace_back(actions_.size());
-                            actions_.emplace_back(ActionType::OpenBlock, idx, endIdx);
-                            break;
-                        case '/':
-                            idx++;
-                            while(body_[idx] == ' ') idx++;
-                            while(body_[endIdx-1] == ' ') endIdx--;
-                            {
-                                auto& matched = actions_[blockPositions.back()];
-                                if (body_.compare(idx, endIdx-idx, 
-                                        body_, matched.start, matched.end - matched.start) != 0)
-                                {
-                                    throw invalid_template_exception("not matched {{# {{/ pair: " + 
-                                        body_.substr(matched.start, matched.end - matched.start) + ", " + 
-                                        body_.substr(idx, endIdx-idx));
-                                }
-								matched.pos = actions_.size();
-                            }
-                            actions_.emplace_back(ActionType::CloseBlock, idx, endIdx, blockPositions.back());
-                            blockPositions.pop_back();
-                            break;
-                        case '^':
-                            idx++;
-                            while(body_[idx] == ' ') idx++;
-                            while(body_[endIdx-1] == ' ') endIdx--;
-                            blockPositions.emplace_back(actions_.size());
-                            actions_.emplace_back(ActionType::ElseBlock, idx, endIdx);
-                            break;
-                        case '!':
-                            // do nothing action
-                            actions_.emplace_back(ActionType::Ignore, idx+1, endIdx);
-                            break;
-                        case '>': // partial
-                            idx++;
-                            while(body_[idx] == ' ') idx++;
-                            while(body_[endIdx-1] == ' ') endIdx--;
-                            actions_.emplace_back(ActionType::Partial, idx, endIdx);
-                            break;
-                        case '{':
-                            if (tag_open != "{{" || tag_close != "}}")
-                                throw invalid_template_exception("cannot use triple mustache when delimiter changed");
-
-                            idx ++;
-                            if (body_[endIdx+2] != '}')
-                            {
-                                throw invalid_template_exception("{{{: }}} not matched");
-                            }
-                            while(body_[idx] == ' ') idx++;
-                            while(body_[endIdx-1] == ' ') endIdx--;
-                            actions_.emplace_back(ActionType::UnescapeTag, idx, endIdx);
-                            current++;
-                            break;
-                        case '&':
-                            idx ++;
-                            while(body_[idx] == ' ') idx++;
-                            while(body_[endIdx-1] == ' ') endIdx--;
-                            actions_.emplace_back(ActionType::UnescapeTag, idx, endIdx);
-                            break;
-                        case '=':
-                            // tag itself is no-op
-                            idx ++;
-                            actions_.emplace_back(ActionType::Ignore, idx, endIdx);
-                            endIdx --;
-                            if (body_[endIdx] != '=')
-                                throw invalid_template_exception("{{=: not matching = tag: "+body_.substr(idx, endIdx-idx));
-                            endIdx --;
-                            while(body_[idx] == ' ') idx++;
-                            while(body_[endIdx] == ' ') endIdx--;
-                            endIdx++;
-                            {
-                                bool succeeded = false;
-                                for(size_t i = idx; i < endIdx; i++)
-                                {
-                                    if (body_[i] == ' ')
-                                    {
-                                        tag_open = body_.substr(idx, i-idx);
-                                        while(body_[i] == ' ') i++;
-                                        tag_close = body_.substr(i, endIdx-i);
-                                        if (tag_open.empty())
-                                            throw invalid_template_exception("{{=: empty open tag");
-                                        if (tag_close.empty())
-                                            throw invalid_template_exception("{{=: empty close tag");
-
-                                        if (tag_close.find(" ") != tag_close.npos)
-                                            throw invalid_template_exception("{{=: invalid open/close tag: "+tag_open+" " + tag_close);
-                                        succeeded = true;
-                                        break;
-                                    }
-                                }
-                                if (!succeeded)
-                                    throw invalid_template_exception("{{=: cannot find space between new open/close tags");
-                            }
-                            break;
-                        default:
-                            // normal tag case;
-                            while(body_[idx] == ' ') idx++;
-                            while(body_[endIdx-1] == ' ') endIdx--;
-                            actions_.emplace_back(ActionType::Tag, idx, endIdx);
-                            break;
-                    }
-                }
-
-                // removing standalones
-                for(int i = actions_.size()-2; i >= 0; i --)
-                {
-                    if (actions_[i].t == ActionType::Tag || actions_[i].t == ActionType::UnescapeTag)
-                        continue;
-                    auto& fragment_before = fragments_[i];
-                    auto& fragment_after = fragments_[i+1];
-                    bool is_last_action = i == (int)actions_.size()-2;
-                    bool all_space_before = true;
-                    int j, k;
-                    for(j = fragment_before.second-1;j >= fragment_before.first;j--)
-                    {
-                        if (body_[j] != ' ')
-                        {
-                            all_space_before = false;
-                            break;
-                        }
-                    }
-                    if (all_space_before && i > 0)
-                        continue;
-                    if (!all_space_before && body_[j] != '\n')
-                        continue;
-                    bool all_space_after = true;
-                    for(k = fragment_after.first; k < (int)body_.size() && k < fragment_after.second; k ++)
-                    {
-                        if (body_[k] != ' ')
-                        {
-                            all_space_after = false;
-                            break;
-                        }
-                    }
-                    if (all_space_after && !is_last_action)
-                        continue;
-                    if (!all_space_after && 
-                            !(
-                                body_[k] == '\n' 
-                            || 
-                                (body_[k] == '\r' && 
-                                k + 1 < (int)body_.size() && 
-                                body_[k+1] == '\n')))
-                        continue;
-                    if (actions_[i].t == ActionType::Partial)
-                    {
-                        actions_[i].pos = fragment_before.second - j - 1;
-                    }
-                    fragment_before.second = j+1;
-                    if (!all_space_after)
-                    {
-                        if (body_[k] == '\n')
-                            k++;
-                        else 
-                            k += 2;
-                        fragment_after.first = k;
-                    }
-                }
-            }
-            
-            std::vector<std::pair<int,int>> fragments_;
-            std::vector<Action> actions_;
-            std::string body_;
-        };
-
-        inline template_t compile(const std::string& body)
-        {
-            return template_t(body);
-        }
-        namespace detail
-        {
-            inline std::string& get_template_base_directory_ref()
-            {
-                static std::string template_base_directory = "templates";
-                return template_base_directory;
-            }
-        }
-
-        inline std::string default_loader(const std::string& filename)
-        {
-            std::ifstream inf(detail::get_template_base_directory_ref() + filename);
-            if (!inf)
-                return {};
-            return {std::istreambuf_iterator<char>(inf), std::istreambuf_iterator<char>()};
-        }
-
-        namespace detail
-        {
-            inline std::function<std::string (std::string)>& get_loader_ref()
-            {
-                static std::function<std::string (std::string)> loader = default_loader;
-                return loader;
-            }
-        }
-
-        inline void set_base(const std::string& path)
-        {
-            auto& base = detail::get_template_base_directory_ref();
-            base = path;
-            if (base.back() != '\\' && 
-                base.back() != '/')
-            {
-                base += '/';
-            }
-        }
-
-        inline void set_loader(std::function<std::string(std::string)> loader)
-        {
-            detail::get_loader_ref() = std::move(loader);
-        }
-
-        inline template_t load(const std::string& filename)
-        {
-            return compile(detail::get_loader_ref()(filename));
-        }
-    }
+    using ci_map = std::unordered_multimap<std::string, std::string, ci_hash, ci_key_eq>;
 }
 
 
@@ -2457,7 +481,7 @@ enum flags
 
 
 /* Map for errno-related constants
- * 
+ *
  * The provided argument should be a macro that takes 2 arguments.
  */
 #define HTTP_ERRNO_MAP(XX)                                           \
@@ -2736,7 +760,7 @@ do {                                                                 \
     FOR##_mark = NULL;                                               \
   }                                                                  \
 } while (0)
-  
+
 /* Run the data callback FOR and consume the current byte */
 #define CALLBACK_DATA(FOR)                                           \
     CALLBACK_DATA_(FOR, p - FOR##_mark, p - data + 1)
@@ -4531,7 +2555,7 @@ static const int8_t unhex[256] =
 
   assert(((header_field_mark ? 1 : 0) +
           (header_value_mark ? 1 : 0) +
-          (url_mark ? 1 : 0)  +
+          (url_mark ? 1 : 0) +
           (body_mark ? 1 : 0) +
           (status_mark ? 1 : 0)) <= 1);
 
@@ -4956,118 +2980,2099 @@ http_parser_version(void) {
 
 #pragma once
 
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/functional/hash.hpp>
+//#define CROW_JSON_NO_ERROR_CHECK
+
+#include <string>
 #include <unordered_map>
+#include <iostream>
+#include <algorithm>
+#include <memory>
+#include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/operators.hpp>
+#include <vector>
+
+#if defined(__GNUG__) || defined(__clang__)
+#define crow_json_likely(x) __builtin_expect(x, 1)
+#define crow_json_unlikely(x) __builtin_expect(x, 0)
+#else
+#define crow_json_likely(x) x
+#define crow_json_unlikely(x) x
+#endif
+
 
 namespace crow
 {
-    struct ci_hash
+    namespace mustache
     {
-        size_t operator()(const std::string& key) const
-        {
-            std::size_t seed = 0;
-            std::locale locale;
+        class template_t;
+    }
 
-            for(auto c : key)
+    namespace json
+    {
+        inline void escape(const std::string& str, std::string& ret)
+        {
+            ret.reserve(ret.size() + str.size()+str.size()/4);
+            for(char c:str)
             {
-                boost::hash_combine(seed, std::toupper(c, locale));
+                switch(c)
+                {
+                    case '"': ret += "\\\""; break;
+                    case '\\': ret += "\\\\"; break;
+                    case '\n': ret += "\\n"; break;
+                    case '\b': ret += "\\b"; break;
+                    case '\f': ret += "\\f"; break;
+                    case '\r': ret += "\\r"; break;
+                    case '\t': ret += "\\t"; break;
+                    default:
+                        if (0 <= c && c < 0x20)
+                        {
+                            ret += "\\u00";
+                            auto to_hex = [](char c)
+                            {
+                                c = c&0xf;
+                                if (c < 10)
+                                    return '0' + c;
+                                return 'a'+c-10;
+                            };
+                            ret += to_hex(c/16);
+                            ret += to_hex(c%16);
+                        }
+                        else
+                            ret += c;
+                        break;
+                }
+            }
+        }
+        inline std::string escape(const std::string& str)
+        {
+            std::string ret;
+            escape(str, ret);
+            return ret;
+        }
+
+        enum class type : char
+        {
+            Null,
+            False,
+            True,
+            Number,
+            String,
+            List,
+            Object,
+        };
+
+        class rvalue;
+        rvalue load(const char* data, size_t size);
+
+        namespace detail
+        {
+
+            struct r_string
+                : boost::less_than_comparable<r_string>,
+                boost::less_than_comparable<r_string, std::string>,
+                boost::equality_comparable<r_string>,
+                boost::equality_comparable<r_string, std::string>
+            {
+                r_string() {};
+                r_string(char* s, char* e)
+                    : s_(s), e_(e)
+                {};
+                ~r_string()
+                {
+                    if (owned_)
+                        delete[] s_;
+                }
+
+                r_string(const r_string& r)
+                {
+                    *this = r;
+                }
+
+                r_string(r_string&& r)
+                {
+                    *this = r;
+                }
+
+                r_string& operator = (r_string&& r)
+                {
+                    s_ = r.s_;
+                    e_ = r.e_;
+                    owned_ = r.owned_;
+                    return *this;
+                }
+
+                r_string& operator = (const r_string& r)
+                {
+                    s_ = r.s_;
+                    e_ = r.e_;
+                    owned_ = 0;
+                    return *this;
+                }
+
+                operator std::string () const
+                {
+                    return std::string(s_, e_);
+                }
+
+
+                const char* begin() const { return s_; }
+                const char* end() const { return e_; }
+                size_t size() const { return end() - begin(); }
+
+                using iterator = const char*;
+                using const_iterator = const char*;
+
+                char* s_;
+                mutable char* e_;
+                uint8_t owned_{0};
+                friend std::ostream& operator << (std::ostream& os, const r_string& s)
+                {
+                    os << (std::string)s;
+                    return os;
+                }
+            private:
+                void force(char* s, uint32_t length)
+                {
+                    s_ = s;
+                    owned_ = 1;
+                }
+                friend rvalue crow::json::load(const char* data, size_t size);
+            };
+
+            inline bool operator < (const r_string& l, const r_string& r)
+            {
+                return boost::lexicographical_compare(l,r);
             }
 
-            return seed;
-        }
-    };
+            inline bool operator < (const r_string& l, const std::string& r)
+            {
+                return boost::lexicographical_compare(l,r);
+            }
 
-    struct ci_key_eq
-    {
-        bool operator()(const std::string& l, const std::string& r) const
+            inline bool operator > (const r_string& l, const std::string& r)
+            {
+                return boost::lexicographical_compare(r,l);
+            }
+
+            inline bool operator == (const r_string& l, const r_string& r)
+            {
+                return boost::equals(l,r);
+            }
+
+            inline bool operator == (const r_string& l, const std::string& r)
+            {
+                return boost::equals(l,r);
+            }
+        }
+
+        class rvalue
         {
-            return boost::iequals(l, r);
-        }
-    };
+            static const int cached_bit = 2;
+            static const int error_bit = 4;
+        public:
+            rvalue() noexcept : option_{error_bit}
+            {}
+            rvalue(type t) noexcept
+                : lsize_{}, lremain_{}, t_{t}
+            {}
+            rvalue(type t, char* s, char* e)  noexcept
+                : start_{s},
+                end_{e},
+                t_{t}
+            {}
 
-    using ci_map = std::unordered_multimap<std::string, std::string, ci_hash, ci_key_eq>;
+            rvalue(const rvalue& r)
+            : start_(r.start_),
+                end_(r.end_),
+                key_(r.key_),
+                t_(r.t_),
+                option_(r.option_)
+            {
+                copy_l(r);
+            }
+
+            rvalue(rvalue&& r) noexcept
+            {
+                *this = std::move(r);
+            }
+
+            rvalue& operator = (const rvalue& r)
+            {
+                start_ = r.start_;
+                end_ = r.end_;
+                key_ = r.key_;
+                copy_l(r);
+                t_ = r.t_;
+                option_ = r.option_;
+                return *this;
+            }
+            rvalue& operator = (rvalue&& r) noexcept
+            {
+                start_ = r.start_;
+                end_ = r.end_;
+                key_ = std::move(r.key_);
+                l_ = std::move(r.l_);
+                lsize_ = r.lsize_;
+                lremain_ = r.lremain_;
+                t_ = r.t_;
+                option_ = r.option_;
+                return *this;
+            }
+
+            explicit operator bool() const noexcept
+            {
+                return (option_ & error_bit) == 0;
+            }
+
+            explicit operator int64_t() const
+            {
+                return i();
+            }
+
+            explicit operator int() const
+            {
+                return i();
+            }
+
+            type t() const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                if (option_ & error_bit)
+                {
+                    throw std::runtime_error("invalid json object");
+                }
+#endif
+                return t_;
+            }
+
+            int64_t i() const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                if (t() != type::Number)
+                    throw std::runtime_error("value is not number");
+#endif
+                return boost::lexical_cast<int64_t>(start_, end_-start_);
+            }
+
+            double d() const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                if (t() != type::Number)
+                    throw std::runtime_error("value is not number");
+#endif
+                return boost::lexical_cast<double>(start_, end_-start_);
+            }
+
+            bool b() const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                if (t() != type::True && t() != type::False)
+                    throw std::runtime_error("value is not boolean");
+#endif
+                return t() == type::True;
+            }
+
+            void unescape() const
+            {
+                if (*(start_-1))
+                {
+                    char* head = start_;
+                    char* tail = start_;
+                    while(head != end_)
+                    {
+                        if (*head == '\\')
+                        {
+                            switch(*++head)
+                            {
+                                case '"':  *tail++ = '"'; break;
+                                case '\\': *tail++ = '\\'; break;
+                                case '/':  *tail++ = '/'; break;
+                                case 'b':  *tail++ = '\b'; break;
+                                case 'f':  *tail++ = '\f'; break;
+                                case 'n':  *tail++ = '\n'; break;
+                                case 'r':  *tail++ = '\r'; break;
+                                case 't':  *tail++ = '\t'; break;
+                                case 'u':
+                                    {
+                                        auto from_hex = [](char c)
+                                        {
+                                            if (c >= 'a')
+                                                return c - 'a' + 10;
+                                            if (c >= 'A')
+                                                return c - 'A' + 10;
+                                            return c - '0';
+                                        };
+                                        unsigned int code =
+                                            (from_hex(head[1])<<12) +
+                                            (from_hex(head[2])<< 8) +
+                                            (from_hex(head[3])<< 4) +
+                                            from_hex(head[4]);
+                                        if (code >= 0x800)
+                                        {
+                                            *tail++ = 0b11100000 | (code >> 12);
+                                            *tail++ = 0b10000000 | ((code >> 6) & 0b111111);
+                                            *tail++ = 0b10000000 | (code & 0b111111);
+                                        }
+                                        else if (code >= 0x80)
+                                        {
+                                            *tail++ = 0b11000000 | (code >> 6);
+                                            *tail++ = 0b10000000 | (code & 0b111111);
+                                        }
+                                        else
+                                        {
+                                            *tail++ = code;
+                                        }
+                                        head += 4;
+                                    }
+                                    break;
+                            }
+                        }
+                        else
+                            *tail++ = *head;
+                        head++;
+                    }
+                    end_ = tail;
+                    *end_ = 0;
+                    *(start_-1) = 0;
+                }
+            }
+
+            detail::r_string s() const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                if (t() != type::String)
+                    throw std::runtime_error("value is not string");
+#endif
+                unescape();
+                return detail::r_string{start_, end_};
+            }
+
+            bool has(const char* str) const
+            {
+                return has(std::string(str));
+            }
+
+            bool has(const std::string& str) const
+            {
+                struct Pred
+                {
+                    bool operator()(const rvalue& l, const rvalue& r) const
+                    {
+                        return l.key_ < r.key_;
+                    };
+                    bool operator()(const rvalue& l, const std::string& r) const
+                    {
+                        return l.key_ < r;
+                    };
+                    bool operator()(const std::string& l, const rvalue& r) const
+                    {
+                        return l < r.key_;
+                    };
+                };
+                if (!is_cached())
+                {
+                    std::sort(begin(), end(), Pred());
+                    set_cached();
+                }
+                auto it = lower_bound(begin(), end(), str, Pred());
+                return it != end() && it->key_ == str;
+            }
+
+            int count(const std::string& str)
+            {
+                return has(str) ? 1 : 0;
+            }
+
+            rvalue* begin() const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                if (t() != type::Object && t() != type::List)
+                    throw std::runtime_error("value is not a container");
+#endif
+                return l_.get();
+            }
+            rvalue* end() const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                if (t() != type::Object && t() != type::List)
+                    throw std::runtime_error("value is not a container");
+#endif
+                return l_.get()+lsize_;
+            }
+
+            const detail::r_string& key() const
+            {
+                return key_;
+            }
+
+            size_t size() const
+            {
+                if (t() == type::String)
+                    return s().size();
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                if (t() != type::Object && t() != type::List)
+                    throw std::runtime_error("value is not a container");
+#endif
+                return lsize_;
+            }
+
+            const rvalue& operator[](int index) const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                if (t() != type::List)
+                    throw std::runtime_error("value is not a list");
+                if (index >= (int)lsize_ || index < 0)
+                    throw std::runtime_error("list out of bound");
+#endif
+                return l_[index];
+            }
+
+            const rvalue& operator[](size_t index) const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                if (t() != type::List)
+                    throw std::runtime_error("value is not a list");
+                if (index >= lsize_)
+                    throw std::runtime_error("list out of bound");
+#endif
+                return l_[index];
+            }
+
+            const rvalue& operator[](const char* str) const
+            {
+                return this->operator[](std::string(str));
+            }
+
+            const rvalue& operator[](const std::string& str) const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                if (t() != type::Object)
+                    throw std::runtime_error("value is not an object");
+#endif
+                struct Pred
+                {
+                    bool operator()(const rvalue& l, const rvalue& r) const
+                    {
+                        return l.key_ < r.key_;
+                    };
+                    bool operator()(const rvalue& l, const std::string& r) const
+                    {
+                        return l.key_ < r;
+                    };
+                    bool operator()(const std::string& l, const rvalue& r) const
+                    {
+                        return l < r.key_;
+                    };
+                };
+                if (!is_cached())
+                {
+                    std::sort(begin(), end(), Pred());
+                    set_cached();
+                }
+                auto it = lower_bound(begin(), end(), str, Pred());
+                if (it != end() && it->key_ == str)
+                    return *it;
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                throw std::runtime_error("cannot find key");
+#else
+                static rvalue nullValue;
+                return nullValue;
+#endif
+            }
+
+            void set_error()
+            {
+                option_|=error_bit;
+            }
+
+            bool error() const
+            {
+                return (option_&error_bit)!=0;
+            }
+        private:
+            bool is_cached() const
+            {
+                return (option_&cached_bit)!=0;
+            }
+            void set_cached() const
+            {
+                option_ |= cached_bit;
+            }
+            void copy_l(const rvalue& r)
+            {
+                if (r.t() != type::Object && r.t() != type::List)
+                    return;
+                lsize_ = r.lsize_;
+                lremain_ = 0;
+                l_.reset(new rvalue[lsize_]);
+                std::copy(r.begin(), r.end(), begin());
+            }
+
+            void emplace_back(rvalue&& v)
+            {
+                if (!lremain_)
+                {
+                    int new_size = lsize_ + lsize_;
+                    if (new_size - lsize_ > 60000)
+                        new_size = lsize_ + 60000;
+                    if (new_size < 4)
+                        new_size = 4;
+                    rvalue* p = new rvalue[new_size];
+                    rvalue* p2 = p;
+                    for(auto& x : *this)
+                        *p2++ = std::move(x);
+                    l_.reset(p);
+                    lremain_ = new_size - lsize_;
+                }
+                l_[lsize_++] = std::move(v);
+                lremain_ --;
+            }
+
+            mutable char* start_;
+            mutable char* end_;
+            detail::r_string key_;
+            std::unique_ptr<rvalue[]> l_;
+            uint32_t lsize_;
+            uint16_t lremain_;
+            type t_;
+            mutable uint8_t option_{0};
+
+            friend rvalue load_nocopy_internal(char* data, size_t size);
+            friend rvalue load(const char* data, size_t size);
+            friend std::ostream& operator <<(std::ostream& os, const rvalue& r)
+            {
+                switch(r.t_)
+                {
+
+                case type::Null: os << "null"; break;
+                case type::False: os << "false"; break;
+                case type::True: os << "true"; break;
+                case type::Number: os << r.d(); break;
+                case type::String: os << '"' << r.s() << '"'; break;
+                case type::List:
+                    {
+                        os << '[';
+                        bool first = true;
+                        for(auto& x : r)
+                        {
+                            if (!first)
+                                os << ',';
+                            first = false;
+                            os << x;
+                        }
+                        os << ']';
+                    }
+                    break;
+                case type::Object:
+                    {
+                        os << '{';
+                        bool first = true;
+                        for(auto& x : r)
+                        {
+                            if (!first)
+                                os << ',';
+                            os << '"' << escape(x.key_) << "\":";
+                            first = false;
+                            os << x;
+                        }
+                        os << '}';
+                    }
+                    break;
+                }
+                return os;
+            }
+        };
+        namespace detail {
+        }
+
+        inline bool operator == (const rvalue& l, const std::string& r)
+        {
+            return l.s() == r;
+        }
+
+        inline bool operator == (const std::string& l, const rvalue& r)
+        {
+            return l == r.s();
+        }
+
+        inline bool operator != (const rvalue& l, const std::string& r)
+        {
+            return l.s() != r;
+        }
+
+        inline bool operator != (const std::string& l, const rvalue& r)
+        {
+            return l != r.s();
+        }
+
+        inline bool operator == (const rvalue& l, double r)
+        {
+            return l.d() == r;
+        }
+
+        inline bool operator == (double l, const rvalue& r)
+        {
+            return l == r.d();
+        }
+
+        inline bool operator != (const rvalue& l, double r)
+        {
+            return l.d() != r;
+        }
+
+        inline bool operator != (double l, const rvalue& r)
+        {
+            return l != r.d();
+        }
+
+
+        inline rvalue load_nocopy_internal(char* data, size_t size)
+        {
+            //static const char* escaped = "\"\\/\b\f\n\r\t";
+            struct Parser
+            {
+                Parser(char* data, size_t size)
+                    : data(data)
+                {
+                }
+
+                bool consume(char c)
+                {
+                    if (crow_json_unlikely(*data != c))
+                        return false;
+                    data++;
+                    return true;
+                }
+
+                void ws_skip()
+                {
+                    while(*data == ' ' || *data == '\t' || *data == '\r' || *data == '\n') ++data;
+                };
+
+                rvalue decode_string()
+                {
+                    if (crow_json_unlikely(!consume('"')))
+                        return {};
+                    char* start = data;
+                    uint8_t has_escaping = 0;
+                    while(1)
+                    {
+                        if (crow_json_likely(*data != '"' && *data != '\\' && *data != '\0'))
+                        {
+                            data ++;
+                        }
+                        else if (*data == '"')
+                        {
+                            *data = 0;
+                            *(start-1) = has_escaping;
+                            data++;
+                            return {type::String, start, data-1};
+                        }
+                        else if (*data == '\\')
+                        {
+                            has_escaping = 1;
+                            data++;
+                            switch(*data)
+                            {
+                                case 'u':
+                                    {
+                                        auto check = [](char c)
+                                        {
+                                            return
+                                                ('0' <= c && c <= '9') ||
+                                                ('a' <= c && c <= 'f') ||
+                                                ('A' <= c && c <= 'F');
+                                        };
+                                        if (!(check(*(data+1)) &&
+                                            check(*(data+2)) &&
+                                            check(*(data+3)) &&
+                                            check(*(data+4))))
+                                            return {};
+                                    }
+                                    data += 5;
+                                    break;
+                                case '"':
+                                case '\\':
+                                case '/':
+                                case 'b':
+                                case 'f':
+                                case 'n':
+                                case 'r':
+                                case 't':
+                                    data ++;
+                                    break;
+                                default:
+                                    return {};
+                            }
+                        }
+                        else
+                            return {};
+                    }
+                    return {};
+                }
+
+                rvalue decode_list()
+                {
+                    rvalue ret(type::List);
+                    if (crow_json_unlikely(!consume('[')))
+                    {
+                        ret.set_error();
+                        return ret;
+                    }
+                    ws_skip();
+                    if (crow_json_unlikely(*data == ']'))
+                    {
+                        data++;
+                        return ret;
+                    }
+
+                    while(1)
+                    {
+                        auto v = decode_value();
+                        if (crow_json_unlikely(!v))
+                        {
+                            ret.set_error();
+                            break;
+                        }
+                        ws_skip();
+                        ret.emplace_back(std::move(v));
+                        if (*data == ']')
+                        {
+                            data++;
+                            break;
+                        }
+                        if (crow_json_unlikely(!consume(',')))
+                        {
+                            ret.set_error();
+                            break;
+                        }
+                        ws_skip();
+                    }
+                    return ret;
+                }
+
+                rvalue decode_number()
+                {
+                    char* start = data;
+
+                    enum NumberParsingState
+                    {
+                        Minus,
+                        AfterMinus,
+                        ZeroFirst,
+                        Digits,
+                        DigitsAfterPoints,
+                        E,
+                        DigitsAfterE,
+                        Invalid,
+                    } state{Minus};
+                    while(crow_json_likely(state != Invalid))
+                    {
+                        switch(*data)
+                        {
+                            case '0':
+                                state = (NumberParsingState)"\2\2\7\3\4\6\6"[state];
+                                /*if (state == NumberParsingState::Minus || state == NumberParsingState::AfterMinus)
+                                {
+                                    state = NumberParsingState::ZeroFirst;
+                                }
+                                else if (state == NumberParsingState::Digits ||
+                                    state == NumberParsingState::DigitsAfterE ||
+                                    state == NumberParsingState::DigitsAfterPoints)
+                                {
+                                    // ok; pass
+                                }
+                                else if (state == NumberParsingState::E)
+                                {
+                                    state = NumberParsingState::DigitsAfterE;
+                                }
+                                else
+                                    return {};*/
+                                break;
+                            case '1': case '2': case '3':
+                            case '4': case '5': case '6':
+                            case '7': case '8': case '9':
+                                state = (NumberParsingState)"\3\3\7\3\4\6\6"[state];
+                                while(*(data+1) >= '0' && *(data+1) <= '9') data++;
+                                /*if (state == NumberParsingState::Minus || state == NumberParsingState::AfterMinus)
+                                {
+                                    state = NumberParsingState::Digits;
+                                }
+                                else if (state == NumberParsingState::Digits ||
+                                    state == NumberParsingState::DigitsAfterE ||
+                                    state == NumberParsingState::DigitsAfterPoints)
+                                {
+                                    // ok; pass
+                                }
+                                else if (state == NumberParsingState::E)
+                                {
+                                    state = NumberParsingState::DigitsAfterE;
+                                }
+                                else
+                                    return {};*/
+                                break;
+                            case '.':
+                                state = (NumberParsingState)"\7\7\4\4\7\7\7"[state];
+                                /*
+                                if (state == NumberParsingState::Digits || state == NumberParsingState::ZeroFirst)
+                                {
+                                    state = NumberParsingState::DigitsAfterPoints;
+                                }
+                                else
+                                    return {};
+                                */
+                                break;
+                            case '-':
+                                state = (NumberParsingState)"\1\7\7\7\7\6\7"[state];
+                                /*if (state == NumberParsingState::Minus)
+                                {
+                                    state = NumberParsingState::AfterMinus;
+                                }
+                                else if (state == NumberParsingState::E)
+                                {
+                                    state = NumberParsingState::DigitsAfterE;
+                                }
+                                else
+                                    return {};*/
+                                break;
+                            case '+':
+                                state = (NumberParsingState)"\7\7\7\7\7\6\7"[state];
+                                /*if (state == NumberParsingState::E)
+                                {
+                                    state = NumberParsingState::DigitsAfterE;
+                                }
+                                else
+                                    return {};*/
+                                break;
+                            case 'e': case 'E':
+                                state = (NumberParsingState)"\7\7\7\5\5\7\7"[state];
+                                /*if (state == NumberParsingState::Digits ||
+                                    state == NumberParsingState::DigitsAfterPoints)
+                                {
+                                    state = NumberParsingState::E;
+                                }
+                                else
+                                    return {};*/
+                                break;
+                            default:
+                                if (crow_json_likely(state == NumberParsingState::ZeroFirst ||
+                                        state == NumberParsingState::Digits ||
+                                        state == NumberParsingState::DigitsAfterPoints ||
+                                        state == NumberParsingState::DigitsAfterE))
+                                    return {type::Number, start, data};
+                                else
+                                    return {};
+                        }
+                        data++;
+                    }
+
+                    return {};
+                }
+
+                rvalue decode_value()
+                {
+                    switch(*data)
+                    {
+                        case '[':
+                            return decode_list();
+                        case '{':
+                            return decode_object();
+                        case '"':
+                            return decode_string();
+                        case 't':
+                            if (//e-data >= 4 &&
+                                    data[1] == 'r' &&
+                                    data[2] == 'u' &&
+                                    data[3] == 'e')
+                            {
+                                data += 4;
+                                return {type::True};
+                            }
+                            else
+                                return {};
+                        case 'f':
+                            if (//e-data >= 5 &&
+                                    data[1] == 'a' &&
+                                    data[2] == 'l' &&
+                                    data[3] == 's' &&
+                                    data[4] == 'e')
+                            {
+                                data += 5;
+                                return {type::False};
+                            }
+                            else
+                                return {};
+                        case 'n':
+                            if (//e-data >= 4 &&
+                                    data[1] == 'u' &&
+                                    data[2] == 'l' &&
+                                    data[3] == 'l')
+                            {
+                                data += 4;
+                                return {type::Null};
+                            }
+                            else
+                                return {};
+                        //case '1': case '2': case '3':
+                        //case '4': case '5': case '6':
+                        //case '7': case '8': case '9':
+                        //case '0': case '-':
+                        default:
+                            return decode_number();
+                    }
+                    return {};
+                }
+
+                rvalue decode_object()
+                {
+                    rvalue ret(type::Object);
+                    if (crow_json_unlikely(!consume('{')))
+                    {
+                        ret.set_error();
+                        return ret;
+                    }
+
+                    ws_skip();
+
+                    if (crow_json_unlikely(*data == '}'))
+                    {
+                        data++;
+                        return ret;
+                    }
+
+                    while(1)
+                    {
+                        auto t = decode_string();
+                        if (crow_json_unlikely(!t))
+                        {
+                            ret.set_error();
+                            break;
+                        }
+
+                        ws_skip();
+                        if (crow_json_unlikely(!consume(':')))
+                        {
+                            ret.set_error();
+                            break;
+                        }
+
+                        // TODO caching key to speed up (flyweight?)
+                        auto key = t.s();
+
+                        ws_skip();
+                        auto v = decode_value();
+                        if (crow_json_unlikely(!v))
+                        {
+                            ret.set_error();
+                            break;
+                        }
+                        ws_skip();
+
+                        v.key_ = std::move(key);
+                        ret.emplace_back(std::move(v));
+                        if (crow_json_unlikely(*data == '}'))
+                        {
+                            data++;
+                            break;
+                        }
+                        if (crow_json_unlikely(!consume(',')))
+                        {
+                            ret.set_error();
+                            break;
+                        }
+                        ws_skip();
+                    }
+                    return ret;
+                }
+
+                rvalue parse()
+                {
+                    ws_skip();
+                    auto ret = decode_value(); // or decode object?
+                    ws_skip();
+                    if (ret && *data != '\0')
+                        ret.set_error();
+                    return ret;
+                }
+
+                char* data;
+            };
+            return Parser(data, size).parse();
+        }
+        inline rvalue load(const char* data, size_t size)
+        {
+            char* s = new char[size+1];
+            memcpy(s, data, size);
+            s[size] = 0;
+            auto ret = load_nocopy_internal(s, size);
+            if (ret)
+                ret.key_.force(s, size);
+            else
+                delete[] s;
+            return ret;
+        }
+
+        inline rvalue load(const char* data)
+        {
+            return load(data, strlen(data));
+        }
+
+        inline rvalue load(const std::string& str)
+        {
+            return load(str.data(), str.size());
+        }
+
+        class wvalue
+        {
+            friend class crow::mustache::template_t;
+        public:
+            type t() const { return t_; }
+        private:
+            type t_{type::Null};
+            double d {};
+            std::string s;
+            std::unique_ptr<std::vector<wvalue>> l;
+            std::unique_ptr<std::unordered_map<std::string, wvalue>> o;
+        public:
+
+            wvalue() {}
+
+            wvalue(const rvalue& r)
+            {
+                t_ = r.t();
+                switch(r.t())
+                {
+                    case type::Null:
+                    case type::False:
+                    case type::True:
+                        return;
+                    case type::Number:
+                        d = r.d();
+                        return;
+                    case type::String:
+                        s = r.s();
+                        return;
+                    case type::List:
+                        l = std::move(std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{}));
+                        l->reserve(r.size());
+                        for(auto it = r.begin(); it != r.end(); ++it)
+                            l->emplace_back(*it);
+                        return;
+                    case type::Object:
+                        o = std::move(
+                            std::unique_ptr<
+                                    std::unordered_map<std::string, wvalue>
+                                >(
+                                new std::unordered_map<std::string, wvalue>{}));
+                        for(auto it = r.begin(); it != r.end(); ++it)
+                            o->emplace(it->key(), *it);
+                        return;
+                }
+            }
+
+            wvalue(wvalue&& r)
+            {
+                *this = std::move(r);
+            }
+
+            wvalue& operator = (wvalue&& r)
+            {
+                t_ = r.t_;
+                d = r.d;
+                s = std::move(r.s);
+                l = std::move(r.l);
+                o = std::move(r.o);
+                return *this;
+            }
+
+            void clear()
+            {
+                t_ = type::Null;
+                l.reset();
+                o.reset();
+            }
+
+            void reset()
+            {
+                t_ = type::Null;
+                l.reset();
+                o.reset();
+            }
+
+            wvalue& operator = (std::nullptr_t)
+            {
+                reset();
+                return *this;
+            }
+            wvalue& operator = (bool value)
+            {
+                reset();
+                if (value)
+                    t_ = type::True;
+                else
+                    t_ = type::False;
+                return *this;
+            }
+
+            wvalue& operator = (double value)
+            {
+                reset();
+                t_ = type::Number;
+                d = value;
+                return *this;
+            }
+
+            wvalue& operator = (unsigned short value)
+            {
+                reset();
+                t_ = type::Number;
+                d = (double)value;
+                return *this;
+            }
+
+            wvalue& operator = (short value)
+            {
+                reset();
+                t_ = type::Number;
+                d = (double)value;
+                return *this;
+            }
+
+            wvalue& operator = (long long value)
+            {
+                reset();
+                t_ = type::Number;
+                d = (double)value;
+                return *this;
+            }
+
+            wvalue& operator = (long value)
+            {
+                reset();
+                t_ = type::Number;
+                d = (double)value;
+                return *this;
+            }
+
+            wvalue& operator = (int value)
+            {
+                reset();
+                t_ = type::Number;
+                d = (double)value;
+                return *this;
+            }
+
+            wvalue& operator = (unsigned long long value)
+            {
+                reset();
+                t_ = type::Number;
+                d = (double)value;
+                return *this;
+            }
+
+            wvalue& operator = (unsigned long value)
+            {
+                reset();
+                t_ = type::Number;
+                d = (double)value;
+                return *this;
+            }
+
+            wvalue& operator = (unsigned int value)
+            {
+                reset();
+                t_ = type::Number;
+                d = (double)value;
+                return *this;
+            }
+
+            wvalue& operator=(const char* str)
+            {
+                reset();
+                t_ = type::String;
+                s = str;
+                return *this;
+            }
+
+            wvalue& operator=(const std::string& str)
+            {
+                reset();
+                t_ = type::String;
+                s = str;
+                return *this;
+            }
+
+            template <typename T>
+            wvalue& operator[](const std::vector<T>& v)
+            {
+                if (t_ != type::List)
+                    reset();
+                t_ = type::List;
+                if (!l)
+                    l = std::move(std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{}));
+                l->clear();
+                l->resize(v.size());
+                size_t idx = 0;
+                for(auto& x:v)
+                {
+                    (*l)[idx++] = x;
+                }
+                return *this;
+            }
+
+            wvalue& operator[](unsigned index)
+            {
+                if (t_ != type::List)
+                    reset();
+                t_ = type::List;
+                if (!l)
+                    l = std::move(std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{}));
+                if (l->size() < index+1)
+                    l->resize(index+1);
+                return (*l)[index];
+            }
+
+            int count(const std::string& str)
+            {
+                if (t_ != type::Object)
+                    return 0;
+                if (!o)
+                    return 0;
+                return o->count(str);
+            }
+
+            wvalue& operator[](const std::string& str)
+            {
+                if (t_ != type::Object)
+                    reset();
+                t_ = type::Object;
+                if (!o)
+                    o = std::move(
+                        std::unique_ptr<
+                                std::unordered_map<std::string, wvalue>
+                            >(
+                            new std::unordered_map<std::string, wvalue>{}));
+                return (*o)[str];
+            }
+
+            size_t estimate_length() const
+            {
+                switch(t_)
+                {
+                    case type::Null: return 4;
+                    case type::False: return 5;
+                    case type::True: return 4;
+                    case type::Number: return 30;
+                    case type::String: return 2+s.size()+s.size()/2;
+                    case type::List:
+                        {
+                            size_t sum{};
+                            if (l)
+                            {
+                                for(auto& x:*l)
+                                {
+                                    sum += 1;
+                                    sum += x.estimate_length();
+                                }
+                            }
+                            return sum+2;
+                        }
+                    case type::Object:
+                        {
+                            size_t sum{};
+                            if (o)
+                            {
+                                for(auto& kv:*o)
+                                {
+                                    sum += 2;
+                                    sum += 2+kv.first.size()+kv.first.size()/2;
+                                    sum += kv.second.estimate_length();
+                                }
+                            }
+                            return sum+2;
+                        }
+                }
+                return 1;
+            }
+
+
+            friend void dump_internal(const wvalue& v, std::string& out);
+            friend std::string dump(const wvalue& v);
+        };
+
+        inline void dump_string(const std::string& str, std::string& out)
+        {
+            out.push_back('"');
+            escape(str, out);
+            out.push_back('"');
+        }
+        inline void dump_internal(const wvalue& v, std::string& out)
+        {
+            switch(v.t_)
+            {
+                case type::Null: out += "null"; break;
+                case type::False: out += "false"; break;
+                case type::True: out += "true"; break;
+                case type::Number:
+                    {
+                        char outbuf[128];
+                        sprintf(outbuf, "%g", v.d);
+                        out += outbuf;
+                    }
+                    break;
+                case type::String: dump_string(v.s, out); break;
+                case type::List:
+                     {
+                         out.push_back('[');
+                         if (v.l)
+                         {
+                             bool first = true;
+                             for(auto& x:*v.l)
+                             {
+                                 if (!first)
+                                 {
+                                     out.push_back(',');
+                                 }
+                                 first = false;
+                                 dump_internal(x, out);
+                             }
+                         }
+                         out.push_back(']');
+                     }
+                     break;
+                case type::Object:
+                     {
+                         out.push_back('{');
+                         if (v.o)
+                         {
+                             bool first = true;
+                             for(auto& kv:*v.o)
+                             {
+                                 if (!first)
+                                 {
+                                     out.push_back(',');
+                                 }
+                                 first = false;
+                                 dump_string(kv.first, out);
+                                 out.push_back(':');
+                                 dump_internal(kv.second, out);
+                             }
+                         }
+                         out.push_back('}');
+                     }
+                     break;
+            }
+        }
+
+        inline std::string dump(const wvalue& v)
+        {
+            std::string ret;
+            ret.reserve(v.estimate_length());
+            dump_internal(v, ret);
+            return ret;
+        }
+
+        //std::vector<boost::asio::const_buffer> dump_ref(wvalue& v)
+        //{
+        //}
+    }
+}
+
+#undef crow_json_likely
+#undef crow_json_unlikely
+
+
+
+#pragma once
+#include <string>
+#include <vector>
+#include <fstream>
+#include <iterator>
+#include <functional>
+
+
+namespace crow
+{
+    namespace mustache
+    {
+        using context = json::wvalue;
+
+        template_t load(const std::string& filename);
+
+        class invalid_template_exception : public std::exception
+        {
+            public:
+            invalid_template_exception(const std::string& msg)
+                : msg("crow::mustache error: " + msg)
+            {
+            }
+            virtual const char* what() const throw()
+            {
+                return msg.c_str();
+            }
+            std::string msg;
+        };
+
+        enum class ActionType
+        {
+            Ignore,
+            Tag,
+            UnescapeTag,
+            OpenBlock,
+            CloseBlock,
+            ElseBlock,
+            Partial,
+        };
+
+        struct Action
+        {
+            int start;
+            int end;
+            int pos;
+            ActionType t;
+            Action(ActionType t, int start, int end, int pos = 0)
+                : start(start), end(end), pos(pos), t(t)
+            {}
+        };
+
+        class template_t
+        {
+        public:
+            template_t(std::string body)
+                : body_(std::move(body))
+            {
+                // {{ {{# {{/ {{^ {{! {{> {{=
+                parse();
+            }
+
+        private:
+            std::string tag_name(const Action& action)
+            {
+                return body_.substr(action.start, action.end - action.start);
+            }
+            auto find_context(const std::string& name, const std::vector<context*>& stack)->std::pair<bool, context&>
+            {
+                if (name == ".")
+                {
+                    return {true, *stack.back()};
+                }
+                int dotPosition = name.find(".");
+                if (dotPosition == (int)name.npos)
+                {
+                    for(auto it = stack.rbegin(); it != stack.rend(); ++it)
+                    {
+                        if ((*it)->t() == json::type::Object)
+                        {
+                            if ((*it)->count(name))
+                                return {true, (**it)[name]};
+                        }
+                    }
+                }
+                else
+                {
+                    std::vector<int> dotPositions;
+                    dotPositions.push_back(-1);
+                    while(dotPosition != (int)name.npos)
+                    {
+                        dotPositions.push_back(dotPosition);
+                        dotPosition = name.find(".", dotPosition+1);
+                    }
+                    dotPositions.push_back(name.size());
+                    std::vector<std::string> names;
+                    names.reserve(dotPositions.size()-1);
+                    for(int i = 1; i < (int)dotPositions.size(); i ++)
+                        names.emplace_back(name.substr(dotPositions[i-1]+1, dotPositions[i]-dotPositions[i-1]-1));
+
+                    for(auto it = stack.rbegin(); it != stack.rend(); ++it)
+                    {
+                        context* view = *it;
+                        bool found = true;
+                        for(auto jt = names.begin(); jt != names.end(); ++jt)
+                        {
+                            if (view->t() == json::type::Object &&
+                                view->count(*jt))
+                            {
+                                view = &(*view)[*jt];
+                            }
+                            else
+                            {
+                                found = false;
+                                break;
+                            }
+                        }
+                        if (found)
+                            return {true, *view};
+                    }
+
+                }
+
+                static json::wvalue empty_str;
+                empty_str = "";
+                return {false, empty_str};
+            }
+
+            void escape(const std::string& in, std::string& out)
+            {
+                out.reserve(out.size() + in.size());
+                for(auto it = in.begin(); it != in.end(); ++it)
+                {
+                    switch(*it)
+                    {
+                        case '&': out += "&amp;"; break;
+                        case '<': out += "&lt;"; break;
+                        case '>': out += "&gt;"; break;
+                        case '"': out += "&quot;"; break;
+                        case '\'': out += "&#39;"; break;
+                        case '/': out += "&#x2F;"; break;
+                        default: out += *it; break;
+                    }
+                }
+            }
+
+            void render_internal(int actionBegin, int actionEnd, std::vector<context*>& stack, std::string& out, int indent)
+            {
+                int current = actionBegin;
+
+                if (indent)
+                    out.insert(out.size(), indent, ' ');
+
+                while(current < actionEnd)
+                {
+                    auto& fragment = fragments_[current];
+                    auto& action = actions_[current];
+                    render_fragment(fragment, indent, out);
+                    switch(action.t)
+                    {
+                        case ActionType::Ignore:
+                            // do nothing
+                            break;
+                        case ActionType::Partial:
+                            {
+                                std::string partial_name = tag_name(action);
+                                auto partial_templ = load(partial_name);
+                                int partial_indent = action.pos;
+                                partial_templ.render_internal(0, partial_templ.fragments_.size()-1, stack, out, partial_indent?indent+partial_indent:0);
+                            }
+                            break;
+                        case ActionType::UnescapeTag:
+                        case ActionType::Tag:
+                            {
+                                auto optional_ctx = find_context(tag_name(action), stack);
+                                auto& ctx = optional_ctx.second;
+                                switch(ctx.t())
+                                {
+                                    case json::type::Number:
+                                        out += json::dump(ctx);
+                                        break;
+                                    case json::type::String:
+                                        if (action.t == ActionType::Tag)
+                                            escape(ctx.s, out);
+                                        else
+                                            out += ctx.s;
+                                        break;
+                                    default:
+                                        throw std::runtime_error("not implemented tag type" + boost::lexical_cast<std::string>((int)ctx.t()));
+                                }
+                            }
+                            break;
+                        case ActionType::ElseBlock:
+                            {
+                                static context nullContext;
+                                auto optional_ctx = find_context(tag_name(action), stack);
+                                if (!optional_ctx.first)
+                                {
+                                    stack.emplace_back(&nullContext);
+                                    break;
+                                }
+
+                                auto& ctx = optional_ctx.second;
+                                switch(ctx.t())
+                                {
+                                    case json::type::List:
+                                        if (ctx.l && !ctx.l->empty())
+                                            current = action.pos;
+                                        else
+                                            stack.emplace_back(&nullContext);
+                                        break;
+                                    case json::type::False:
+                                    case json::type::Null:
+                                        stack.emplace_back(&nullContext);
+                                        break;
+                                    default:
+                                        current = action.pos;
+                                        break;
+                                }
+                                break;
+                            }
+                        case ActionType::OpenBlock:
+                            {
+                                auto optional_ctx = find_context(tag_name(action), stack);
+                                if (!optional_ctx.first)
+                                {
+                                    current = action.pos;
+                                    break;
+                                }
+
+                                auto& ctx = optional_ctx.second;
+                                switch(ctx.t())
+                                {
+                                    case json::type::List:
+                                        if (ctx.l)
+                                            for(auto it = ctx.l->begin(); it != ctx.l->end(); ++it)
+                                            {
+                                                stack.push_back(&*it);
+                                                render_internal(current+1, action.pos, stack, out, indent);
+                                                stack.pop_back();
+                                            }
+                                        current = action.pos;
+                                        break;
+                                    case json::type::Number:
+                                    case json::type::String:
+                                    case json::type::Object:
+                                    case json::type::True:
+                                        stack.push_back(&ctx);
+                                        break;
+                                    case json::type::False:
+                                    case json::type::Null:
+                                        current = action.pos;
+                                        break;
+                                    default:
+                                        throw std::runtime_error("{{#: not implemented context type: " + boost::lexical_cast<std::string>((int)ctx.t()));
+                                        break;
+                                }
+                                break;
+                            }
+                        case ActionType::CloseBlock:
+                            stack.pop_back();
+                            break;
+                        default:
+                            throw std::runtime_error("not implemented " + boost::lexical_cast<std::string>((int)action.t));
+                    }
+                    current++;
+                }
+                auto& fragment = fragments_[actionEnd];
+                render_fragment(fragment, indent, out);
+            }
+            void render_fragment(const std::pair<int, int> fragment, int indent, std::string& out)
+            {
+                if (indent)
+                {
+                    for(int i = fragment.first; i < fragment.second; i ++)
+                    {
+                        out += body_[i];
+                        if (body_[i] == '\n' && i+1 != (int)body_.size())
+                            out.insert(out.size(), indent, ' ');
+                    }
+                }
+                else
+                    out.insert(out.size(), body_, fragment.first, fragment.second-fragment.first);
+            }
+        public:
+            std::string render()
+            {
+                context empty_ctx;
+                std::vector<context*> stack;
+                stack.emplace_back(&empty_ctx);
+
+                std::string ret;
+                render_internal(0, fragments_.size()-1, stack, ret, 0);
+                return ret;
+            }
+            std::string render(context& ctx)
+            {
+                std::vector<context*> stack;
+                stack.emplace_back(&ctx);
+
+                std::string ret;
+                render_internal(0, fragments_.size()-1, stack, ret, 0);
+                return ret;
+            }
+
+        private:
+
+            void parse()
+            {
+                std::string tag_open = "{{";
+                std::string tag_close = "}}";
+
+                std::vector<int> blockPositions;
+
+                size_t current = 0;
+                while(1)
+                {
+                    size_t idx = body_.find(tag_open, current);
+                    if (idx == body_.npos)
+                    {
+                        fragments_.emplace_back(current, body_.size());
+                        actions_.emplace_back(ActionType::Ignore, 0, 0);
+                        break;
+                    }
+                    fragments_.emplace_back(current, idx);
+
+                    idx += tag_open.size();
+                    size_t endIdx = body_.find(tag_close, idx);
+                    if (endIdx == idx)
+                    {
+                        throw invalid_template_exception("empty tag is not allowed");
+                    }
+                    if (endIdx == body_.npos)
+                    {
+                        // error, no matching tag
+                        throw invalid_template_exception("not matched opening tag");
+                    }
+                    current = endIdx + tag_close.size();
+                    switch(body_[idx])
+                    {
+                        case '#':
+                            idx++;
+                            while(body_[idx] == ' ') idx++;
+                            while(body_[endIdx-1] == ' ') endIdx--;
+                            blockPositions.emplace_back(actions_.size());
+                            actions_.emplace_back(ActionType::OpenBlock, idx, endIdx);
+                            break;
+                        case '/':
+                            idx++;
+                            while(body_[idx] == ' ') idx++;
+                            while(body_[endIdx-1] == ' ') endIdx--;
+                            {
+                                auto& matched = actions_[blockPositions.back()];
+                                if (body_.compare(idx, endIdx-idx,
+                                        body_, matched.start, matched.end - matched.start) != 0)
+                                {
+                                    throw invalid_template_exception("not matched {{# {{/ pair: " +
+                                        body_.substr(matched.start, matched.end - matched.start) + ", " +
+                                        body_.substr(idx, endIdx-idx));
+                                }
+                                matched.pos = actions_.size();
+                            }
+                            actions_.emplace_back(ActionType::CloseBlock, idx, endIdx, blockPositions.back());
+                            blockPositions.pop_back();
+                            break;
+                        case '^':
+                            idx++;
+                            while(body_[idx] == ' ') idx++;
+                            while(body_[endIdx-1] == ' ') endIdx--;
+                            blockPositions.emplace_back(actions_.size());
+                            actions_.emplace_back(ActionType::ElseBlock, idx, endIdx);
+                            break;
+                        case '!':
+                            // do nothing action
+                            actions_.emplace_back(ActionType::Ignore, idx+1, endIdx);
+                            break;
+                        case '>': // partial
+                            idx++;
+                            while(body_[idx] == ' ') idx++;
+                            while(body_[endIdx-1] == ' ') endIdx--;
+                            actions_.emplace_back(ActionType::Partial, idx, endIdx);
+                            break;
+                        case '{':
+                            if (tag_open != "{{" || tag_close != "}}")
+                                throw invalid_template_exception("cannot use triple mustache when delimiter changed");
+
+                            idx ++;
+                            if (body_[endIdx+2] != '}')
+                            {
+                                throw invalid_template_exception("{{{: }}} not matched");
+                            }
+                            while(body_[idx] == ' ') idx++;
+                            while(body_[endIdx-1] == ' ') endIdx--;
+                            actions_.emplace_back(ActionType::UnescapeTag, idx, endIdx);
+                            current++;
+                            break;
+                        case '&':
+                            idx ++;
+                            while(body_[idx] == ' ') idx++;
+                            while(body_[endIdx-1] == ' ') endIdx--;
+                            actions_.emplace_back(ActionType::UnescapeTag, idx, endIdx);
+                            break;
+                        case '=':
+                            // tag itself is no-op
+                            idx ++;
+                            actions_.emplace_back(ActionType::Ignore, idx, endIdx);
+                            endIdx --;
+                            if (body_[endIdx] != '=')
+                                throw invalid_template_exception("{{=: not matching = tag: "+body_.substr(idx, endIdx-idx));
+                            endIdx --;
+                            while(body_[idx] == ' ') idx++;
+                            while(body_[endIdx] == ' ') endIdx--;
+                            endIdx++;
+                            {
+                                bool succeeded = false;
+                                for(size_t i = idx; i < endIdx; i++)
+                                {
+                                    if (body_[i] == ' ')
+                                    {
+                                        tag_open = body_.substr(idx, i-idx);
+                                        while(body_[i] == ' ') i++;
+                                        tag_close = body_.substr(i, endIdx-i);
+                                        if (tag_open.empty())
+                                            throw invalid_template_exception("{{=: empty open tag");
+                                        if (tag_close.empty())
+                                            throw invalid_template_exception("{{=: empty close tag");
+
+                                        if (tag_close.find(" ") != tag_close.npos)
+                                            throw invalid_template_exception("{{=: invalid open/close tag: "+tag_open+" " + tag_close);
+                                        succeeded = true;
+                                        break;
+                                    }
+                                }
+                                if (!succeeded)
+                                    throw invalid_template_exception("{{=: cannot find space between new open/close tags");
+                            }
+                            break;
+                        default:
+                            // normal tag case;
+                            while(body_[idx] == ' ') idx++;
+                            while(body_[endIdx-1] == ' ') endIdx--;
+                            actions_.emplace_back(ActionType::Tag, idx, endIdx);
+                            break;
+                    }
+                }
+
+                // removing standalones
+                for(int i = actions_.size()-2; i >= 0; i --)
+                {
+                    if (actions_[i].t == ActionType::Tag || actions_[i].t == ActionType::UnescapeTag)
+                        continue;
+                    auto& fragment_before = fragments_[i];
+                    auto& fragment_after = fragments_[i+1];
+                    bool is_last_action = i == (int)actions_.size()-2;
+                    bool all_space_before = true;
+                    int j, k;
+                    for(j = fragment_before.second-1;j >= fragment_before.first;j--)
+                    {
+                        if (body_[j] != ' ')
+                        {
+                            all_space_before = false;
+                            break;
+                        }
+                    }
+                    if (all_space_before && i > 0)
+                        continue;
+                    if (!all_space_before && body_[j] != '\n')
+                        continue;
+                    bool all_space_after = true;
+                    for(k = fragment_after.first; k < (int)body_.size() && k < fragment_after.second; k ++)
+                    {
+                        if (body_[k] != ' ')
+                        {
+                            all_space_after = false;
+                            break;
+                        }
+                    }
+                    if (all_space_after && !is_last_action)
+                        continue;
+                    if (!all_space_after &&
+                            !(
+                                body_[k] == '\n'
+                            ||
+                                (body_[k] == '\r' &&
+                                k + 1 < (int)body_.size() &&
+                                body_[k+1] == '\n')))
+                        continue;
+                    if (actions_[i].t == ActionType::Partial)
+                    {
+                        actions_[i].pos = fragment_before.second - j - 1;
+                    }
+                    fragment_before.second = j+1;
+                    if (!all_space_after)
+                    {
+                        if (body_[k] == '\n')
+                            k++;
+                        else
+                            k += 2;
+                        fragment_after.first = k;
+                    }
+                }
+            }
+
+            std::vector<std::pair<int,int>> fragments_;
+            std::vector<Action> actions_;
+            std::string body_;
+        };
+
+        inline template_t compile(const std::string& body)
+        {
+            return template_t(body);
+        }
+        namespace detail
+        {
+            inline std::string& get_template_base_directory_ref()
+            {
+                static std::string template_base_directory = "templates";
+                return template_base_directory;
+            }
+        }
+
+        inline std::string default_loader(const std::string& filename)
+        {
+            std::ifstream inf(detail::get_template_base_directory_ref() + filename);
+            if (!inf)
+                return {};
+            return {std::istreambuf_iterator<char>(inf), std::istreambuf_iterator<char>()};
+        }
+
+        namespace detail
+        {
+            inline std::function<std::string (std::string)>& get_loader_ref()
+            {
+                static std::function<std::string (std::string)> loader = default_loader;
+                return loader;
+            }
+        }
+
+        inline void set_base(const std::string& path)
+        {
+            auto& base = detail::get_template_base_directory_ref();
+            base = path;
+            if (base.back() != '\\' &&
+                base.back() != '/')
+            {
+                base += '/';
+            }
+        }
+
+        inline void set_loader(std::function<std::string(std::string)> loader)
+        {
+            detail::get_loader_ref() = std::move(loader);
+        }
+
+        inline template_t load(const std::string& filename)
+        {
+            return compile(detail::get_loader_ref()(filename));
+        }
+    }
 }
 
 
 
 #pragma once
 
+#include <vector>
 #include <string>
-#include <boost/date_time/local_time/local_time.hpp>
-#include <boost/filesystem.hpp>
+#include <stdexcept>
+#include <iostream>
+
+
 
 namespace crow
 {
-    // code from http://stackoverflow.com/questions/2838524/use-boost-date-time-to-parse-and-create-http-dates
-    class DateTime
+    enum class HTTPMethod
     {
-        public:
-            DateTime()
-                : m_dt(boost::local_time::local_sec_clock::local_time(boost::local_time::time_zone_ptr()))
-            {
-            }
-            DateTime(const std::string& path)
-                : DateTime()
-            {
-                from_file(path);
-            }
-
-            // return datetime string
-            std::string str()
-            {
-                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
-                std::string result;
-                try
-                {
-                    std::stringstream ss;
-                    ss.imbue(locale_);
-                    ss << m_dt;
-                    result = ss.str();
-                }
-                catch (std::exception& e)
-                {
-                    std::cerr << "Exception: " << e.what() << std::endl;
-                }
-                return result;
-            }
-
-            // update datetime from file mod date
-            std::string from_file(const std::string& path)
-            {
-                try
-                {
-                    boost::filesystem::path p(path);
-                    boost::posix_time::ptime pt = boost::posix_time::from_time_t(
-                            boost::filesystem::last_write_time(p));
-                    m_dt = boost::local_time::local_date_time(pt, boost::local_time::time_zone_ptr());
-                }
-                catch (std::exception& e)
-                {
-                    std::cout << "Exception: " << e.what() << std::endl;
-                }
-                return str();
-            }
-
-            // parse datetime string
-            void parse(const std::string& dt)
-            {
-                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
-                std::stringstream ss(dt);
-                ss.imbue(locale_);
-                ss >> m_dt;
-            }
-
-            // boolean equal operator
-            friend bool operator==(const DateTime& left, const DateTime& right)
-            {
-                return (left.m_dt == right.m_dt);
-            }
-
-        private:
-            boost::local_time::local_date_time m_dt;
+        DELETE,
+        GET,
+        HEAD,
+        POST,
+        PUT,
+        CONNECT,
+        OPTIONS,
+        TRACE,
     };
+
+    inline std::string method_name(HTTPMethod method)
+    {
+        switch(method)
+        {
+            case HTTPMethod::DELETE:
+                return "DELETE";
+            case HTTPMethod::GET:
+                return "GET";
+            case HTTPMethod::HEAD:
+                return "HEAD";
+            case HTTPMethod::POST:
+                return "POST";
+            case HTTPMethod::PUT:
+                return "PUT";
+            case HTTPMethod::CONNECT:
+                return "CONNECT";
+            case HTTPMethod::OPTIONS:
+                return "OPTIONS";
+            case HTTPMethod::TRACE:
+                return "TRACE";
+        }
+        return "invalid";
+    }
+
+    enum class ParamType
+    {
+        INT,
+        UINT,
+        DOUBLE,
+        STRING,
+        PATH,
+
+        MAX
+    };
+
+    struct routing_params
+    {
+        std::vector<int64_t> int_params;
+        std::vector<uint64_t> uint_params;
+        std::vector<double> double_params;
+        std::vector<std::string> string_params;
+
+        void debug_print() const
+        {
+            std::cerr << "routing_params" << std::endl;
+            for(auto i:int_params)
+                std::cerr<<i <<", " ;
+            std::cerr<<std::endl;
+            for(auto i:uint_params)
+                std::cerr<<i <<", " ;
+            std::cerr<<std::endl;
+            for(auto i:double_params)
+                std::cerr<<i <<", " ;
+            std::cerr<<std::endl;
+            for(auto& i:string_params)
+                std::cerr<<i <<", " ;
+            std::cerr<<std::endl;
+        }
+
+        template <typename T>
+        T get(unsigned) const;
+
+    };
+
+    template<>
+    inline int64_t routing_params::get<int64_t>(unsigned index) const
+    {
+        return int_params[index];
+    }
+
+    template<>
+    inline uint64_t routing_params::get<uint64_t>(unsigned index) const
+    {
+        return uint_params[index];
+    }
+
+    template<>
+    inline double routing_params::get<double>(unsigned index) const
+    {
+        return double_params[index];
+    }
+
+    template<>
+    inline std::string routing_params::get<std::string>(unsigned index) const
+    {
+        return string_params[index];
+    }
 }
+
+constexpr crow::HTTPMethod operator "" _method(const char* str, size_t len)
+{
+    return
+        crow::black_magic::is_equ_p(str, "GET", 3) ? crow::HTTPMethod::GET :
+        crow::black_magic::is_equ_p(str, "DELETE", 6) ? crow::HTTPMethod::DELETE :
+        crow::black_magic::is_equ_p(str, "HEAD", 4) ? crow::HTTPMethod::HEAD :
+        crow::black_magic::is_equ_p(str, "POST", 4) ? crow::HTTPMethod::POST :
+        crow::black_magic::is_equ_p(str, "PUT", 3) ? crow::HTTPMethod::PUT :
+        crow::black_magic::is_equ_p(str, "OPTIONS", 7) ? crow::HTTPMethod::OPTIONS :
+        crow::black_magic::is_equ_p(str, "CONNECT", 7) ? crow::HTTPMethod::CONNECT :
+        crow::black_magic::is_equ_p(str, "TRACE", 5) ? crow::HTTPMethod::TRACE :
+        throw std::runtime_error("invalid http method");
+};
+
 
 
 
@@ -5083,11 +5088,11 @@ namespace crow
 
 /* #define - specifies log level */
 /*
-	DEBUG 		= 0
-	INFO 		= 1
-	WARNING		= 2
-	ERROR		= 3
-	CRITICAL 	= 4
+    DEBUG        = 0
+    INFO         = 1
+    WARNING      = 2
+    ERROR        = 3
+    CRITICAL     = 4
 
     default to INFO
 */
@@ -5237,7 +5242,7 @@ namespace crow
 
 namespace crow
 {
-    namespace detail 
+    namespace detail
     {
         // fast timer queue for fixed tick value.
         class dumb_timer_queue
@@ -5317,430 +5322,425 @@ namespace crow
 
 #pragma once
 
-#include <cstdint>
-#include <stdexcept>
-#include <tuple>
-#include <type_traits>
+#include <string>
+#include <boost/date_time/local_time/local_time.hpp>
+#include <boost/filesystem.hpp>
 
 namespace crow
 {
-	namespace black_magic
-	{
-		struct OutOfRange
-		{
-			OutOfRange(unsigned pos, unsigned length) {}
-		};
-		constexpr unsigned requires_in_range( unsigned i, unsigned len )
-		{
-			return i >= len ? throw OutOfRange(i, len) : i;
-		}
+    // code from http://stackoverflow.com/questions/2838524/use-boost-date-time-to-parse-and-create-http-dates
+    class DateTime
+    {
+        public:
+            DateTime()
+                : m_dt(boost::local_time::local_sec_clock::local_time(boost::local_time::time_zone_ptr()))
+            {
+            }
+            DateTime(const std::string& path)
+                : DateTime()
+            {
+                from_file(path);
+            }
 
-		class const_str
-		{
-			const char * const begin_;
-			unsigned size_;
+            // return datetime string
+            std::string str()
+            {
+                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
+                std::string result;
+                try
+                {
+                    std::stringstream ss;
+                    ss.imbue(locale_);
+                    ss << m_dt;
+                    result = ss.str();
+                }
+                catch (std::exception& e)
+                {
+                    std::cerr << "Exception: " << e.what() << std::endl;
+                }
+                return result;
+            }
 
-			public:
-			template< unsigned N >
-				constexpr const_str( const char(&arr)[N] ) : begin_(arr), size_(N - 1) {
-					static_assert( N >= 1, "not a string literal");
-				}
-			constexpr char operator[]( unsigned i ) const { 
-				return requires_in_range(i, size_), begin_[i]; 
-			}
+            // update datetime from file mod date
+            std::string from_file(const std::string& path)
+            {
+                try
+                {
+                    boost::filesystem::path p(path);
+                    boost::posix_time::ptime pt = boost::posix_time::from_time_t(
+                            boost::filesystem::last_write_time(p));
+                    m_dt = boost::local_time::local_date_time(pt, boost::local_time::time_zone_ptr());
+                }
+                catch (std::exception& e)
+                {
+                    std::cout << "Exception: " << e.what() << std::endl;
+                }
+                return str();
+            }
 
-			constexpr operator const char *() const { 
-				return begin_; 
-			}
+            // parse datetime string
+            void parse(const std::string& dt)
+            {
+                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
+                std::stringstream ss(dt);
+                ss.imbue(locale_);
+                ss >> m_dt;
+            }
 
-			constexpr const char* begin() const { return begin_; }
-			constexpr const char* end() const { return begin_ + size_; }
+            // boolean equal operator
+            friend bool operator==(const DateTime& left, const DateTime& right)
+            {
+                return (left.m_dt == right.m_dt);
+            }
 
-			constexpr unsigned size() const { 
-				return size_; 
-			}
-		};
-
-
-		constexpr unsigned find_closing_tag(const_str s, unsigned p)
-		{
-			return s[p] == '>' ? p : find_closing_tag(s, p+1);
-		}
-
-        constexpr bool is_valid(const_str s, unsigned i = 0, int f = 0)
-        {
-            return 
-                i == s.size()
-                    ? f == 0 :
-                f < 0 || f >= 2
-                    ? false :
-                s[i] == '<'
-                    ? is_valid(s, i+1, f+1) :
-                s[i] == '>'
-                    ? is_valid(s, i+1, f-1) :
-                is_valid(s, i+1, f);
-        }
-
-        constexpr bool is_equ_p(const char* a, const char* b, unsigned n)
-        {
-            return
-                *a == 0 && *b == 0 && n == 0 
-                    ? true :
-                (*a == 0 || *b == 0)
-                    ? false :
-                n == 0
-                    ? true :
-                *a != *b
-                    ? false :
-                is_equ_p(a+1, b+1, n-1);
-        }
-
-        constexpr bool is_equ_n(const_str a, unsigned ai, const_str b, unsigned bi, unsigned n)
-        {
-            return 
-                ai + n > a.size() || bi + n > b.size() 
-                    ? false :
-                n == 0 
-                    ? true : 
-                a[ai] != b[bi] 
-                    ? false : 
-                is_equ_n(a,ai+1,b,bi+1,n-1);
-        }
-
-        constexpr bool is_int(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<int>", 0, 5);
-        }
-
-        constexpr bool is_uint(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<uint>", 0, 6);
-        }
-
-        constexpr bool is_float(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<float>", 0, 7) ||
-                is_equ_n(s, i, "<double>", 0, 8);
-        }
-
-        constexpr bool is_str(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<str>", 0, 5) ||
-                is_equ_n(s, i, "<string>", 0, 8);
-        }
-
-        constexpr bool is_path(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<path>", 0, 6);
-        }
-
-        constexpr uint64_t get_parameter_tag(const_str s, unsigned p = 0)
-        {
-            return
-                p == s.size() 
-                    ?  0 :
-                s[p] == '<' ? ( 
-                    is_int(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 1 :
-                    is_uint(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 2 :
-                    is_float(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 3 :
-                    is_str(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 4 :
-                    is_path(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 5 :
-                    throw std::runtime_error("invalid parameter type")
-                    ) : 
-                get_parameter_tag(s, p+1);
-        }
-
-        template <typename ... T>
-        struct S
-        {
-            template <typename U>
-            using push = S<U, T...>;
-            template <typename U>
-            using push_back = S<T..., U>;
-            template <template<typename ... Args> class U>
-            using rebind = U<T...>;
-        };
-template <typename F, typename Set>
-        struct CallHelper;
-        template <typename F, typename ...Args>
-        struct CallHelper<F, S<Args...>>
-        {
-            template <typename F1, typename ...Args1, typename = 
-                decltype(std::declval<F1>()(std::declval<Args1>()...))
-                >
-            static char __test(int);
-
-            template <typename ...>
-            static int __test(...);
-
-            static constexpr bool value = sizeof(__test<F, Args...>(0)) == sizeof(char);
-        };
-
-
-        template <int N>
-        struct single_tag_to_type
-        {
-        };
-
-        template <>
-        struct single_tag_to_type<1>
-        {
-            using type = int64_t;
-        };
-
-        template <>
-        struct single_tag_to_type<2>
-        {
-            using type = uint64_t;
-        };
-
-        template <>
-        struct single_tag_to_type<3>
-        {
-            using type = double;
-        };
-
-        template <>
-        struct single_tag_to_type<4>
-        {
-            using type = std::string;
-        };
-
-        template <>
-        struct single_tag_to_type<5>
-        {
-            using type = std::string;
-        };
-
-
-        template <uint64_t Tag> 
-        struct arguments
-        {
-            using subarguments = typename arguments<Tag/6>::type;
-            using type = 
-                typename subarguments::template push<typename single_tag_to_type<Tag%6>::type>;
-        };
-
-        template <> 
-        struct arguments<0>
-        {
-            using type = S<>;
-        };
-
-        template <typename ... T>
-        struct last_element_type
-        {
-            using type = typename std::tuple_element<sizeof...(T)-1, std::tuple<T...>>::type;
-        };
-
-
-        template <>
-        struct last_element_type<>
-        {
-        };
-
-
-        // from http://stackoverflow.com/questions/13072359/c11-compile-time-array-with-logarithmic-evaluation-depth
-        template<class T> using Invoke = typename T::type;
-
-        template<unsigned...> struct seq{ using type = seq; };
-
-        template<class S1, class S2> struct concat;
-
-        template<unsigned... I1, unsigned... I2>
-        struct concat<seq<I1...>, seq<I2...>>
-          : seq<I1..., (sizeof...(I1)+I2)...>{};
-
-        template<class S1, class S2>
-        using Concat = Invoke<concat<S1, S2>>;
-
-        template<unsigned N> struct gen_seq;
-        template<unsigned N> using GenSeq = Invoke<gen_seq<N>>;
-
-        template<unsigned N>
-        struct gen_seq : Concat<GenSeq<N/2>, GenSeq<N - N/2>>{};
-
-        template<> struct gen_seq<0> : seq<>{};
-        template<> struct gen_seq<1> : seq<0>{};
-
-        template <typename Seq, typename Tuple> 
-        struct pop_back_helper;
-
-        template <unsigned ... N, typename Tuple>
-        struct pop_back_helper<seq<N...>, Tuple>
-        {
-            template <template <typename ... Args> class U>
-            using rebind = U<typename std::tuple_element<N, Tuple>::type...>;
-        };
-
-        template <typename ... T>
-        struct pop_back //: public pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>
-        {
-            template <template <typename ... Args> class U>
-            using rebind = typename pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>::template rebind<U>;
-        };
-
-        template <>
-        struct pop_back<>
-        {
-            template <template <typename ... Args> class U>
-            using rebind = U<>;
-        };
-
-        // from http://stackoverflow.com/questions/2118541/check-if-c0x-parameter-pack-contains-a-type
-        template < typename Tp, typename... List >
-        struct contains : std::true_type {};
-
-        template < typename Tp, typename Head, typename... Rest >
-        struct contains<Tp, Head, Rest...>
-        : std::conditional< std::is_same<Tp, Head>::value,
-            std::true_type,
-            contains<Tp, Rest...>
-        >::type {};
-
-        template < typename Tp >
-        struct contains<Tp> : std::false_type {};
-
-        template <typename T>
-        struct empty_context
-        {
-        };
-	}
+        private:
+            boost::local_time::local_date_time m_dt;
+    };
 }
 
 
 
 #pragma once
 
-#include <vector>
+#include <stdio.h>
+#include <string.h>
 #include <string>
-#include <stdexcept>
+#include <vector>
 #include <iostream>
 
+// ----------------------------------------------------------------------------
+// qs_parse (modified)
+// https://github.com/bartgrantham/qs_parse
+// ----------------------------------------------------------------------------
+/*  Similar to strncmp, but handles URL-encoding for either string  */
+int qs_strncmp(const char * s, const char * qs, size_t n);
+
+
+/*  Finds the beginning of each key/value pair and stores a pointer in qs_kv.
+ *  Also decodes the value portion of the k/v pair *in-place*.  In a future
+ *  enhancement it will also have a compile-time option of sorting qs_kv
+ *  alphabetically by key.  */
+int qs_parse(char * qs, char * qs_kv[], int qs_kv_size);
+
+
+/*  Used by qs_parse to decode the value portion of a k/v pair  */
+int qs_decode(char * qs);
+
+
+/*  Looks up the value according to the key on a pre-processed query string
+ *  A future enhancement will be a compile-time option to look up the key
+ *  in a pre-sorted qs_kv array via a binary search.  */
+//char * qs_k2v(const char * key, char * qs_kv[], int qs_kv_size);
+ char * qs_k2v(const char * key, char * const * qs_kv, int qs_kv_size, int nth);
+
+
+/*  Non-destructive lookup of value, based on key.  User provides the
+ *  destinaton string and length.  */
+char * qs_scanvalue(const char * key, const char * qs, char * val, size_t val_len);
+
+// TODO: implement sorting of the qs_kv array; for now ensure it's not compiled
+#undef _qsSORTING
+
+// isxdigit _is_ available in <ctype.h>, but let's avoid another header instead
+#define CROW_QS_ISHEX(x)    ((((x)>='0'&&(x)<='9') || ((x)>='A'&&(x)<='F') || ((x)>='a'&&(x)<='f')) ? 1 : 0)
+#define CROW_QS_HEX2DEC(x)  (((x)>='0'&&(x)<='9') ? (x)-48 : ((x)>='A'&&(x)<='F') ? (x)-55 : ((x)>='a'&&(x)<='f') ? (x)-87 : 0)
+#define CROW_QS_ISQSCHR(x) ((((x)=='=')||((x)=='#')||((x)=='&')||((x)=='\0')) ? 0 : 1)
+
+inline int qs_strncmp(const char * s, const char * qs, size_t n)
+{
+    int i=0;
+    unsigned char u1, u2, unyb, lnyb;
+
+    while(n-- > 0)
+    {
+        u1 = (unsigned char) *s++;
+        u2 = (unsigned char) *qs++;
+
+        if ( ! CROW_QS_ISQSCHR(u1) ) {  u1 = '\0';  }
+        if ( ! CROW_QS_ISQSCHR(u2) ) {  u2 = '\0';  }
+
+        if ( u1 == '+' ) {  u1 = ' ';  }
+        if ( u1 == '%' ) // easier/safer than scanf
+        {
+            unyb = (unsigned char) *s++;
+            lnyb = (unsigned char) *s++;
+            if ( CROW_QS_ISHEX(unyb) && CROW_QS_ISHEX(lnyb) )
+                u1 = (CROW_QS_HEX2DEC(unyb) * 16) + CROW_QS_HEX2DEC(lnyb);
+            else
+                u1 = '\0';
+        }
+
+        if ( u2 == '+' ) {  u2 = ' ';  }
+        if ( u2 == '%' ) // easier/safer than scanf
+        {
+            unyb = (unsigned char) *qs++;
+            lnyb = (unsigned char) *qs++;
+            if ( CROW_QS_ISHEX(unyb) && CROW_QS_ISHEX(lnyb) )
+                u2 = (CROW_QS_HEX2DEC(unyb) * 16) + CROW_QS_HEX2DEC(lnyb);
+            else
+                u2 = '\0';
+        }
+
+        if ( u1 != u2 )
+            return u1 - u2;
+        if ( u1 == '\0' )
+            return 0;
+        i++;
+    }
+    if ( CROW_QS_ISQSCHR(*qs) )
+        return -1;
+    else
+        return 0;
+}
+
+
+inline int qs_parse(char * qs, char * qs_kv[], int qs_kv_size)
+{
+    int i, j;
+    char * substr_ptr;
+
+    for(i=0; i<qs_kv_size; i++)  qs_kv[i] = NULL;
+
+    // find the beginning of the k/v substrings
+    if ( (substr_ptr = strchr(qs, '?')) != NULL )
+        substr_ptr++;
+    else
+        substr_ptr = qs;
+
+    i=0;
+    while(i<qs_kv_size)
+    {
+        qs_kv[i] = substr_ptr;
+        j = strcspn(substr_ptr, "&");
+        if ( substr_ptr[j] == '\0' ) {  break;  }
+        substr_ptr += j + 1;
+        i++;
+    }
+    i++;  // x &'s -> means x iterations of this loop -> means *x+1* k/v pairs
+
+    // we only decode the values in place, the keys could have '='s in them
+    // which will hose our ability to distinguish keys from values later
+    for(j=0; j<i; j++)
+    {
+        substr_ptr = qs_kv[j] + strcspn(qs_kv[j], "=&#");
+        if ( substr_ptr[0] == '&' )  // blank value: skip decoding
+            substr_ptr[0] = '\0';
+        else
+            qs_decode(++substr_ptr);
+    }
+
+#ifdef _qsSORTING
+// TODO: qsort qs_kv, using qs_strncmp() for the comparison
+#endif
+
+    return i;
+}
+
+
+inline int qs_decode(char * qs)
+{
+    int i=0, j=0;
+
+    while( CROW_QS_ISQSCHR(qs[j]) )
+    {
+        if ( qs[j] == '+' ) {  qs[i] = ' ';  }
+        else if ( qs[j] == '%' ) // easier/safer than scanf
+        {
+            if ( ! CROW_QS_ISHEX(qs[j+1]) || ! CROW_QS_ISHEX(qs[j+2]) )
+            {
+                qs[i] = '\0';
+                return i;
+            }
+            qs[i] = (CROW_QS_HEX2DEC(qs[j+1]) * 16) + CROW_QS_HEX2DEC(qs[j+2]);
+            j+=2;
+        }
+        else
+        {
+            qs[i] = qs[j];
+        }
+        i++;  j++;
+    }
+    qs[i] = '\0';
+
+    return i;
+}
+
+
+inline char * qs_k2v(const char * key, char * const * qs_kv, int qs_kv_size, int nth = 0)
+{
+    int i;
+    size_t key_len, skip;
+
+    key_len = strlen(key);
+
+#ifdef _qsSORTING
+// TODO: binary search for key in the sorted qs_kv
+#else  // _qsSORTING
+    for(i=0; i<qs_kv_size; i++)
+    {
+        // we rely on the unambiguous '=' to find the value in our k/v pair
+        if ( qs_strncmp(key, qs_kv[i], key_len) == 0 )
+        {
+            skip = strcspn(qs_kv[i], "=");
+            if ( qs_kv[i][skip] == '=' )
+                skip++;
+            // return (zero-char value) ? ptr to trailing '\0' : ptr to value
+            if(nth == 0)
+                return qs_kv[i] + skip;
+            else
+                --nth;
+        }
+    }
+#endif  // _qsSORTING
+
+    return NULL;
+}
+
+
+inline char * qs_scanvalue(const char * key, const char * qs, char * val, size_t val_len)
+{
+    size_t i, key_len;
+    const char * tmp;
+
+    // find the beginning of the k/v substrings
+    if ( (tmp = strchr(qs, '?')) != NULL )
+        qs = tmp + 1;
+
+    key_len = strlen(key);
+    while(qs[0] != '#' && qs[0] != '\0')
+    {
+        if ( qs_strncmp(key, qs, key_len) == 0 )
+            break;
+        qs += strcspn(qs, "&") + 1;
+    }
+
+    if ( qs[0] == '\0' ) return NULL;
+
+    qs += strcspn(qs, "=&#");
+    if ( qs[0] == '=' )
+    {
+        qs++;
+        i = strcspn(qs, "&=#");
+        strncpy(val, qs, (val_len-1)<(i+1) ? (val_len-1) : (i+1));
+        qs_decode(val);
+    }
+    else
+    {
+        if ( val_len > 0 )
+            val[0] = '\0';
+    }
+
+    return val;
+}
+// ----------------------------------------------------------------------------
 
 
 namespace crow
 {
-    enum class HTTPMethod
+    class query_string
     {
-        DELETE,
-        GET,
-        HEAD,
-        POST,
-        PUT,
-        CONNECT,
-        OPTIONS,
-        TRACE,
-    };
+    public:
+        static const int MAX_KEY_VALUE_PAIRS_COUNT = 256;
 
-    inline std::string method_name(HTTPMethod method)
-    {
-        switch(method)
+        query_string()
         {
-            case HTTPMethod::DELETE:
-                return "DELETE";
-            case HTTPMethod::GET:
-                return "GET";
-            case HTTPMethod::HEAD:
-                return "HEAD";
-            case HTTPMethod::POST:
-                return "POST";
-            case HTTPMethod::PUT:
-                return "PUT";
-            case HTTPMethod::CONNECT:
-                return "CONNECT";
-            case HTTPMethod::OPTIONS:
-                return "OPTIONS";
-            case HTTPMethod::TRACE:
-                return "TRACE";
-        }
-        return "invalid";
-    }
 
-    enum class ParamType
-    {
-        INT,
-        UINT,
-        DOUBLE,
-        STRING,
-        PATH,
-
-        MAX
-    };
-
-    struct routing_params
-    {
-        std::vector<int64_t> int_params;
-        std::vector<uint64_t> uint_params;
-        std::vector<double> double_params;
-        std::vector<std::string> string_params;
-
-        void debug_print() const
-        {
-            std::cerr << "routing_params" << std::endl;
-            for(auto i:int_params)
-                std::cerr<<i <<", " ;
-            std::cerr<<std::endl;
-            for(auto i:uint_params)
-                std::cerr<<i <<", " ;
-            std::cerr<<std::endl;
-            for(auto i:double_params)
-                std::cerr<<i <<", " ;
-            std::cerr<<std::endl;
-            for(auto& i:string_params)
-                std::cerr<<i <<", " ;
-            std::cerr<<std::endl;
         }
 
-        template <typename T>
-        T get(unsigned) const;
+        query_string(const query_string& qs)
+            : url_(qs.url_)
+        {
+            for(auto p:qs.key_value_pairs_)
+            {
+                key_value_pairs_.push_back((char*)(p-qs.url_.c_str()+url_.c_str()));
+            }
+        }
 
+        query_string& operator = (const query_string& qs)
+        {
+            url_ = qs.url_;
+            key_value_pairs_.clear();
+            for(auto p:qs.key_value_pairs_)
+            {
+                key_value_pairs_.push_back((char*)(p-qs.url_.c_str()+url_.c_str()));
+            }
+            return *this;
+        }
+
+        query_string& operator = (query_string&& qs)
+        {
+            key_value_pairs_ = std::move(qs.key_value_pairs_);
+            char* old_data = (char*)qs.url_.c_str();
+            url_ = std::move(qs.url_);
+            for(auto& p:key_value_pairs_)
+            {
+                p += (char*)url_.c_str() - old_data;
+            }
+            return *this;
+        }
+
+
+        query_string(std::string url)
+            : url_(std::move(url))
+        {
+            if (url_.empty())
+                return;
+
+            key_value_pairs_.resize(MAX_KEY_VALUE_PAIRS_COUNT);
+
+            int count = qs_parse(&url_[0], &key_value_pairs_[0], MAX_KEY_VALUE_PAIRS_COUNT);
+            key_value_pairs_.resize(count);
+        }
+
+        void clear()
+        {
+            key_value_pairs_.clear();
+            url_.clear();
+        }
+
+        friend std::ostream& operator<<(std::ostream& os, const query_string& qs)
+        {
+            os << "[ ";
+            for(size_t i = 0; i < qs.key_value_pairs_.size(); ++i) {
+                if (i)
+                    os << ", ";
+                os << qs.key_value_pairs_[i];
+            }
+            os << " ]";
+            return os;
+
+        }
+
+        char* get (const std::string& name) const
+        {
+            char* ret = qs_k2v(name.c_str(), key_value_pairs_.data(), key_value_pairs_.size());
+            return ret;
+        }
+
+        std::vector<char*> get_list (const std::string& name) const
+        {
+            std::vector<char*> ret;
+            std::string plus = name + "[]";
+            char* element = nullptr;
+
+            int count = 0;
+            while(1)
+            {
+                element = qs_k2v(plus.c_str(), key_value_pairs_.data(), key_value_pairs_.size(), count++);
+                if (!element)
+                    break;
+                ret.push_back(element);
+            }
+            return ret;
+        }
+
+
+    private:
+        std::string url_;
+        std::vector<char*> key_value_pairs_;
     };
 
-    template<>
-    inline int64_t routing_params::get<int64_t>(unsigned index) const
-    {
-        return int_params[index];
-    }
-
-    template<>
-    inline uint64_t routing_params::get<uint64_t>(unsigned index) const
-    {
-        return uint_params[index];
-    }
-
-    template<>
-    inline double routing_params::get<double>(unsigned index) const
-    {
-        return double_params[index];
-    }
-
-    template<>
-    inline std::string routing_params::get<std::string>(unsigned index) const
-    {
-        return string_params[index];
-    }
-}
-
-constexpr crow::HTTPMethod operator "" _method(const char* str, size_t len)
-{
-    return
-        crow::black_magic::is_equ_p(str, "GET", 3) ? crow::HTTPMethod::GET :
-        crow::black_magic::is_equ_p(str, "DELETE", 6) ? crow::HTTPMethod::DELETE :
-        crow::black_magic::is_equ_p(str, "HEAD", 4) ? crow::HTTPMethod::HEAD :
-        crow::black_magic::is_equ_p(str, "POST", 4) ? crow::HTTPMethod::POST :
-        crow::black_magic::is_equ_p(str, "PUT", 3) ? crow::HTTPMethod::PUT :
-        crow::black_magic::is_equ_p(str, "OPTIONS", 7) ? crow::HTTPMethod::OPTIONS :
-        crow::black_magic::is_equ_p(str, "CONNECT", 7) ? crow::HTTPMethod::CONNECT :
-        crow::black_magic::is_equ_p(str, "TRACE", 5) ? crow::HTTPMethod::TRACE :
-        throw std::runtime_error("invalid http method");
-};
-
+} // end namespace
 
 
 
@@ -5803,174 +5803,6 @@ namespace crow
 
 
 #pragma once
-
-#include <string>
-#include <unordered_map>
-#include <boost/algorithm/string.hpp>
-#include <boost/tokenizer.hpp>
-#include <algorithm>
-
-
-
-
-
-
-namespace crow
-{
-    template <typename Handler>
-    struct HTTPParser : public http_parser
-    {
-        static int on_message_begin(http_parser* self_)
-        {
-            HTTPParser* self = static_cast<HTTPParser*>(self_);
-            self->clear();
-            return 0;
-        }
-        static int on_url(http_parser* self_, const char* at, size_t length)
-        {
-            HTTPParser* self = static_cast<HTTPParser*>(self_);
-            self->raw_url.insert(self->raw_url.end(), at, at+length);
-            return 0;
-        }
-        static int on_header_field(http_parser* self_, const char* at, size_t length)
-        {
-            HTTPParser* self = static_cast<HTTPParser*>(self_);
-            switch (self->header_building_state)
-            {
-                case 0:
-                    if (!self->header_value.empty())
-                    {
-                        self->headers.emplace(std::move(self->header_field), std::move(self->header_value));
-                    }
-                    self->header_field.assign(at, at+length);
-                    self->header_building_state = 1;
-                    break;
-                case 1:
-                    self->header_field.insert(self->header_field.end(), at, at+length);
-                    break;
-            }
-            return 0;
-        }
-        static int on_header_value(http_parser* self_, const char* at, size_t length)
-        {
-            HTTPParser* self = static_cast<HTTPParser*>(self_);
-            switch (self->header_building_state)
-            {
-                case 0:
-                    self->header_value.insert(self->header_value.end(), at, at+length);
-                    break;
-                case 1:
-                    self->header_building_state = 0;
-                    self->header_value.assign(at, at+length);
-                    break;
-            }
-            return 0;
-        }
-        static int on_headers_complete(http_parser* self_)
-        {
-            HTTPParser* self = static_cast<HTTPParser*>(self_);
-            if (!self->header_field.empty())
-            {
-                self->headers.emplace(std::move(self->header_field), std::move(self->header_value));
-            }
-            self->process_header();
-            return 0;
-        }
-        static int on_body(http_parser* self_, const char* at, size_t length)
-        {
-            HTTPParser* self = static_cast<HTTPParser*>(self_);
-            self->body.insert(self->body.end(), at, at+length);
-            return 0;
-        }
-        static int on_message_complete(http_parser* self_)
-        {
-            HTTPParser* self = static_cast<HTTPParser*>(self_);
-
-            // url params
-            self->url = self->raw_url.substr(0, self->raw_url.find("?"));
-            self->url_params = query_string(self->raw_url);
-
-            self->process_message();
-            return 0;
-        }
-        HTTPParser(Handler* handler) :
-            handler_(handler)
-        {
-            http_parser_init(this, HTTP_REQUEST);
-        }
-
-        // return false on error
-        bool feed(const char* buffer, int length)
-        {
-            const static http_parser_settings settings_{
-                on_message_begin,
-                on_url,
-                nullptr,
-                on_header_field,
-                on_header_value,
-                on_headers_complete,
-                on_body,
-                on_message_complete,
-            };
-
-            int nparsed = http_parser_execute(this, &settings_, buffer, length);
-            return nparsed == length;
-        }
-
-        bool done()
-        {
-            return feed(nullptr, 0);
-        }
-
-        void clear()
-        {
-            url.clear();
-            raw_url.clear();
-            header_building_state = 0;
-            header_field.clear();
-            header_value.clear();
-            headers.clear();
-            url_params.clear();
-            body.clear();
-        }
-
-        void process_header()
-        {
-            handler_->handle_header();
-        }
-
-        void process_message()
-        {
-            handler_->handle();
-        }
-
-        request to_request() const
-        {
-            return request{(HTTPMethod)method, std::move(raw_url), std::move(url), std::move(url_params), std::move(headers), std::move(body)};
-        }
-
-        bool check_version(int major, int minor) const
-        {
-            return http_major == major && http_minor == minor;
-        }
-
-        std::string raw_url;
-        std::string url;
-
-        int header_building_state = 0;
-        std::string header_field;
-        std::string header_value;
-        ci_map headers;
-        query_string url_params;
-        std::string body;
-
-        Handler* handler_;
-    };
-}
-
-
-
-#pragma once
 #include <string>
 #include <unordered_map>
 
@@ -6017,7 +5849,7 @@ namespace crow
         response(std::string body) : body(std::move(body)) {}
         response(json::wvalue&& json_value) : json_value(std::move(json_value)) {}
         response(int code, std::string body) : body(std::move(body)), code(code) {}
-        response(const json::wvalue& json_value) : body(json::dump(json_value)) 
+        response(const json::wvalue& json_value) : body(json::dump(json_value))
         {
             set_header("Content-Type", "application/json");
         }
@@ -6035,7 +5867,7 @@ namespace crow
             json_value = std::move(r.json_value);
             code = r.code;
             headers = std::move(r.headers);
-			completed_ = r.completed_;
+            completed_ = r.completed_;
             return *this;
         }
 
@@ -6063,7 +5895,7 @@ namespace crow
             if (!completed_)
             {
                 completed_ = true;
-                
+
                 if (complete_request_handler_)
                 {
                     complete_request_handler_();
@@ -6087,185 +5919,6 @@ namespace crow
             std::function<void()> complete_request_handler_;
             std::function<bool()> is_alive_helper_;
     };
-}
-
-
-
-#pragma once
-#include <boost/algorithm/string/trim.hpp>
-
-
-
-
-
-namespace crow
-{
-    // Any middleware requires following 3 members:
-
-    // struct context;
-    //      storing data for the middleware; can be read from another middleware or handlers
-
-    // before_handle
-    //      called before handling the request.
-    //      if res.end() is called, the operation is halted. 
-    //      (still call after_handle of this middleware)
-    //      2 signatures:
-    //      void before_handle(request& req, response& res, context& ctx)
-    //          if you only need to access this middlewares context.
-    //      template <typename AllContext>
-    //      void before_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
-    //          you can access another middlewares' context by calling `all_ctx.template get<MW>()'
-    //          ctx == all_ctx.template get<CurrentMiddleware>()
-
-    // after_handle
-    //      called after handling the request.
-    //      void after_handle(request& req, response& res, context& ctx)
-    //      template <typename AllContext>
-    //      void after_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
-
-    struct CookieParser
-    {
-        struct context
-        {
-            std::unordered_map<std::string, std::string> jar;
-            std::unordered_map<std::string, std::string> cookies_to_add;
-
-            std::string get_cookie(const std::string& key)
-            {
-                if (jar.count(key))
-                    return jar[key];
-                return {};
-            }
-
-            void set_cookie(const std::string& key, const std::string& value)
-            {
-                cookies_to_add.emplace(key, value);
-            }
-        };
-
-        void before_handle(request& req, response& res, context& ctx)
-        {
-            int count = req.headers.count("Cookie");
-            if (!count)
-                return;
-            if (count > 1)
-            {
-                res.code = 400;
-                res.end();
-                return;
-            }
-            std::string cookies = req.get_header_value("Cookie");
-            size_t pos = 0;
-            while(pos < cookies.size())
-            {
-                size_t pos_equal = cookies.find('=', pos);
-                if (pos_equal == cookies.npos)
-                    break;
-                std::string name = cookies.substr(pos, pos_equal-pos);
-                boost::trim(name);
-                pos = pos_equal+1;
-                while(pos < cookies.size() && cookies[pos] == ' ') pos++;
-                if (pos == cookies.size())
-                    break;
-
-                std::string value;
-
-                if (cookies[pos] == '"')
-                {
-                    int dquote_meet_count = 0;
-                    pos ++;
-                    size_t pos_dquote = pos-1;
-                    do
-                    {
-                        pos_dquote = cookies.find('"', pos_dquote+1);
-                        dquote_meet_count ++;
-                    } while(pos_dquote < cookies.size() && cookies[pos_dquote-1] == '\\');
-                    if (pos_dquote == cookies.npos)
-                        break;
-
-                    if (dquote_meet_count == 1)
-                        value = cookies.substr(pos, pos_dquote - pos);
-                    else
-                    {
-                        value.clear();
-                        value.reserve(pos_dquote-pos);
-                        for(size_t p = pos; p < pos_dquote; p++)
-                        {
-                            // FIXME minimal escaping
-                            if (cookies[p] == '\\' && p + 1 < pos_dquote)
-                            {
-                                p++;
-                                if (cookies[p] == '\\' || cookies[p] == '"')
-                                    value += cookies[p];
-                                else
-                                {
-                                    value += '\\';
-                                    value += cookies[p];
-                                }
-                            }
-                            else
-                                value += cookies[p];
-                        }
-                    }
-
-                    ctx.jar.emplace(std::move(name), std::move(value));
-                    pos = cookies.find(";", pos_dquote+1);
-                    if (pos == cookies.npos)
-                        break;
-                    pos++;
-                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
-                    if (pos == cookies.size())
-                        break;
-                }
-                else
-                {
-                    size_t pos_semicolon = cookies.find(';', pos);
-                    value = cookies.substr(pos, pos_semicolon - pos);
-                    boost::trim(value);
-                    ctx.jar.emplace(std::move(name), std::move(value));
-                    pos = pos_semicolon;
-                    if (pos == cookies.npos)
-                        break;
-                    pos ++;
-                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
-                    if (pos == cookies.size())
-                        break;
-                }
-            }
-        }
-
-        void after_handle(request& req, response& res, context& ctx)
-        {
-            for(auto& cookie:ctx.cookies_to_add)
-            {
-                res.add_header("Set-Cookie", cookie.first + "=" + cookie.second);
-            }
-        }
-    };
-
-    /*
-    App<CookieParser, AnotherJarMW> app;
-    A B C
-    A::context
-        int aa;
-
-    ctx1 : public A::context
-    ctx2 : public ctx1, public B::context
-    ctx3 : public ctx2, public C::context
-
-    C depends on A
-
-    C::handle
-        context.aaa
-
-    App::context : private CookieParser::contetx, ... 
-    {
-        jar
-
-    }
-
-    SimpleApp
-    */
 }
 
 
@@ -6299,7 +5952,7 @@ namespace crow
         virtual ~BaseRule()
         {
         }
-        
+
         virtual void validate() = 0;
 
         virtual void handle(const request&, response&, const routing_params&) = 0;
@@ -6328,12 +5981,12 @@ namespace crow
             response& res;
         };
 
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2> 
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2>
         struct call
         {
         };
 
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2>
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<int64_t, Args1...>, black_magic::S<Args2...>>
         {
             void operator()(F cparams)
@@ -6344,7 +5997,7 @@ namespace crow
             }
         };
 
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2>
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<uint64_t, Args1...>, black_magic::S<Args2...>>
         {
             void operator()(F cparams)
@@ -6355,7 +6008,7 @@ namespace crow
             }
         };
 
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2>
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<double, Args1...>, black_magic::S<Args2...>>
         {
             void operator()(F cparams)
@@ -6366,7 +6019,7 @@ namespace crow
             }
         };
 
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2>
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<std::string, Args1...>, black_magic::S<Args2...>>
         {
             void operator()(F cparams)
@@ -6377,15 +6030,15 @@ namespace crow
             }
         };
 
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1> 
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1>
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<>, black_magic::S<Args1...>>
         {
             void operator()(F cparams)
             {
-                if (cparams.handler) 
+                if (cparams.handler)
                 {
                     cparams.res = cparams.handler(
-                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
+                        cparams.params.template get<typename Args1::type>(Args1::pos)...
                     );
                     cparams.res.end();
                     return;
@@ -6394,7 +6047,7 @@ namespace crow
                 {
                     cparams.res = cparams.handler_with_req(
                         cparams.req,
-                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
+                        cparams.params.template get<typename Args1::type>(Args1::pos)...
                     );
                     cparams.res.end();
                     return;
@@ -6404,7 +6057,7 @@ namespace crow
                     cparams.handler_with_req_res(
                         cparams.req,
                         cparams.res,
-                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
+                        cparams.params.template get<typename Args1::type>(Args1::pos)...
                     );
                     return;
                 }
@@ -6420,7 +6073,7 @@ namespace crow
             : rule_(std::move(rule))
         {
         }
-        
+
         self_t& name(std::string name) noexcept
         {
             name_ = std::move(name);
@@ -6454,9 +6107,9 @@ namespace crow
         operator()(Func&& f)
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
-                black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value , 
+                black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value ,
                 "Handler type is mismatched with URL paramters");
-            static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value, 
+            static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value,
                 "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
 
                 handler_ = [f = std::move(f)](Args ... args){
@@ -6469,14 +6122,14 @@ namespace crow
         template <typename Func>
         typename std::enable_if<
             !black_magic::CallHelper<Func, black_magic::S<Args...>>::value &&
-            black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value, 
+            black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value,
             void>::type
         operator()(Func&& f)
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
-                black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value, 
+                black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value,
                 "Handler type is mismatched with URL paramters");
-            static_assert(!std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<Args>()...))>::value, 
+            static_assert(!std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<Args>()...))>::value,
                 "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
 
                 handler_with_req_ = [f = std::move(f)](const crow::request& req, Args ... args){
@@ -6489,16 +6142,16 @@ namespace crow
         template <typename Func>
         typename std::enable_if<
             !black_magic::CallHelper<Func, black_magic::S<Args...>>::value &&
-            !black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value, 
+            !black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value,
             void>::type
         operator()(Func&& f)
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
                 black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value ||
                 black_magic::CallHelper<Func, black_magic::S<crow::request, crow::response&, Args...>>::value
-                , 
+                ,
                 "Handler type is mismatched with URL paramters");
-            static_assert(std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<crow::response&>(), std::declval<Args>()...))>::value, 
+            static_assert(std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<crow::response&>(), std::declval<Args>()...))>::value,
                 "Handler function with response argument should have void return type");
 
                 handler_with_req_res_ = std::move(f);
@@ -6520,15 +6173,15 @@ namespace crow
         {
             call<
                 call_params<
-                    decltype(handler_), 
+                    decltype(handler_),
                     decltype(handler_with_req_),
-                    decltype(handler_with_req_res_)>, 
-                0, 0, 0, 0, 
-                black_magic::S<Args...>, 
+                    decltype(handler_with_req_res_)>,
+                0, 0, 0, 0,
+                black_magic::S<Args...>,
                 black_magic::S<>
             >()(
                 call_params<
-                    decltype(handler_), 
+                    decltype(handler_),
                     decltype(handler_with_req_),
                     decltype(handler_with_req_res_)>
                 {handler_, handler_with_req_, handler_with_req_res_, params, req, res}
@@ -6564,11 +6217,11 @@ namespace crow
 
             bool IsSimpleNode() const
             {
-                return 
+                return
                     !rule_index &&
                     std::all_of(
-                        std::begin(param_childrens), 
-                        std::end(param_childrens), 
+                        std::begin(param_childrens),
+                        std::end(param_childrens),
                         [](unsigned x){ return !x; });
             }
         };
@@ -6913,9 +6566,9 @@ public:
 
             if (!rule_index)
             {
-				CROW_LOG_DEBUG << "Cannot match rules " << req.url;
+                CROW_LOG_DEBUG << "Cannot match rules " << req.url;
                 res = response(404);
-				res.end();
+                res.end();
                 return;
             }
 
@@ -6924,9 +6577,9 @@ public:
 
             if ((rules_[rule_index]->methods() & (1<<(uint32_t)req.method)) == 0)
             {
-				CROW_LOG_DEBUG << "Rule found but method mismatch: " << req.url << " with " << method_name(req.method) << "(" << (uint32_t)req.method << ") / " << rules_[rule_index]->methods();
+                CROW_LOG_DEBUG << "Rule found but method mismatch: " << req.url << " with " << method_name(req.method) << "(" << (uint32_t)req.method << ") / " << rules_[rule_index]->methods();
                 res = response(404);
-				res.end();
+                res.end();
                 return;
             }
 
@@ -6943,6 +6596,174 @@ public:
     private:
         std::vector<std::unique_ptr<BaseRule>> rules_;
         Trie trie_;
+    };
+}
+
+
+
+#pragma once
+
+#include <string>
+#include <unordered_map>
+#include <boost/algorithm/string.hpp>
+#include <boost/tokenizer.hpp>
+#include <algorithm>
+
+
+
+
+
+
+namespace crow
+{
+    template <typename Handler>
+    struct HTTPParser : public http_parser
+    {
+        static int on_message_begin(http_parser* self_)
+        {
+            HTTPParser* self = static_cast<HTTPParser*>(self_);
+            self->clear();
+            return 0;
+        }
+        static int on_url(http_parser* self_, const char* at, size_t length)
+        {
+            HTTPParser* self = static_cast<HTTPParser*>(self_);
+            self->raw_url.insert(self->raw_url.end(), at, at+length);
+            return 0;
+        }
+        static int on_header_field(http_parser* self_, const char* at, size_t length)
+        {
+            HTTPParser* self = static_cast<HTTPParser*>(self_);
+            switch (self->header_building_state)
+            {
+                case 0:
+                    if (!self->header_value.empty())
+                    {
+                        self->headers.emplace(std::move(self->header_field), std::move(self->header_value));
+                    }
+                    self->header_field.assign(at, at+length);
+                    self->header_building_state = 1;
+                    break;
+                case 1:
+                    self->header_field.insert(self->header_field.end(), at, at+length);
+                    break;
+            }
+            return 0;
+        }
+        static int on_header_value(http_parser* self_, const char* at, size_t length)
+        {
+            HTTPParser* self = static_cast<HTTPParser*>(self_);
+            switch (self->header_building_state)
+            {
+                case 0:
+                    self->header_value.insert(self->header_value.end(), at, at+length);
+                    break;
+                case 1:
+                    self->header_building_state = 0;
+                    self->header_value.assign(at, at+length);
+                    break;
+            }
+            return 0;
+        }
+        static int on_headers_complete(http_parser* self_)
+        {
+            HTTPParser* self = static_cast<HTTPParser*>(self_);
+            if (!self->header_field.empty())
+            {
+                self->headers.emplace(std::move(self->header_field), std::move(self->header_value));
+            }
+            self->process_header();
+            return 0;
+        }
+        static int on_body(http_parser* self_, const char* at, size_t length)
+        {
+            HTTPParser* self = static_cast<HTTPParser*>(self_);
+            self->body.insert(self->body.end(), at, at+length);
+            return 0;
+        }
+        static int on_message_complete(http_parser* self_)
+        {
+            HTTPParser* self = static_cast<HTTPParser*>(self_);
+
+            // url params
+            self->url = self->raw_url.substr(0, self->raw_url.find("?"));
+            self->url_params = query_string(self->raw_url);
+
+            self->process_message();
+            return 0;
+        }
+        HTTPParser(Handler* handler) :
+            handler_(handler)
+        {
+            http_parser_init(this, HTTP_REQUEST);
+        }
+
+        // return false on error
+        bool feed(const char* buffer, int length)
+        {
+            const static http_parser_settings settings_{
+                on_message_begin,
+                on_url,
+                nullptr,
+                on_header_field,
+                on_header_value,
+                on_headers_complete,
+                on_body,
+                on_message_complete,
+            };
+
+            int nparsed = http_parser_execute(this, &settings_, buffer, length);
+            return nparsed == length;
+        }
+
+        bool done()
+        {
+            return feed(nullptr, 0);
+        }
+
+        void clear()
+        {
+            url.clear();
+            raw_url.clear();
+            header_building_state = 0;
+            header_field.clear();
+            header_value.clear();
+            headers.clear();
+            url_params.clear();
+            body.clear();
+        }
+
+        void process_header()
+        {
+            handler_->handle_header();
+        }
+
+        void process_message()
+        {
+            handler_->handle();
+        }
+
+        request to_request() const
+        {
+            return request{(HTTPMethod)method, std::move(raw_url), std::move(url), std::move(url_params), std::move(headers), std::move(body)};
+        }
+
+        bool check_version(int major, int minor) const
+        {
+            return http_major == major && http_minor == minor;
+        }
+
+        std::string raw_url;
+        std::string url;
+
+        int header_building_state = 0;
+        std::string header_field;
+        std::string header_value;
+        ci_map headers;
+        query_string url_params;
+        std::string body;
+
+        Handler* handler_;
     };
 }
 
@@ -6970,7 +6791,7 @@ namespace crow
             template <int N>
             using partial = typename std::conditional<N == sizeof...(Middlewares)-1, partial_context, typename parent_context::template partial<N>>::type;
 
-            template <typename T> 
+            template <typename T>
             typename T::context& get()
             {
                 return static_cast<typename T::context&>(*this);
@@ -6999,7 +6820,7 @@ namespace crow
             template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares2>
             friend bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx);
 
-            template <typename T> 
+            template <typename T>
             typename T::context& get()
             {
                 return static_cast<typename T::context&>(*this);
@@ -7045,7 +6866,7 @@ namespace crow
     namespace detail
     {
         template <typename MW, typename Context, typename ParentContext>
-        void before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx, 
+        void before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx,
             decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>()))* dummy = 0)
         {
             mw.before_handle(req, res, ctx.template get<MW>());
@@ -7059,14 +6880,14 @@ namespace crow
         }
 
         template <typename MW, typename Context, typename ParentContext>
-        void after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx, 
+        void after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx,
             decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>()))* dummy = 0)
         {
             mw.after_handle(req, res, ctx.template get<MW>());
         }
 
         template <typename MW, typename Context, typename ParentContext>
-        void after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx, 
+        void after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx,
             decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>(), std::declval<Context&>))* dummy = 0)
         {
             mw.after_handle(req, res, ctx.template get<MW>(), parent_ctx);
@@ -7100,7 +6921,7 @@ namespace crow
         }
 
         template <int N, typename Context, typename Container>
-        typename std::enable_if<(N<0)>::type 
+        typename std::enable_if<(N<0)>::type
         after_handlers_call_helper(Container& middlewares, Context& context, request& req, response& res)
         {
         }
@@ -7133,14 +6954,14 @@ namespace crow
     {
     public:
         Connection(
-            boost::asio::io_service& io_service, 
-            Handler* handler, 
+            boost::asio::io_service& io_service,
+            Handler* handler,
             const std::string& server_name,
             std::tuple<Middlewares...>& middlewares
-            ) 
-            : socket_(io_service), 
-            handler_(handler), 
-            parser_(this), 
+            )
+            : socket_(io_service),
+            handler_(handler),
+            parser_(this),
             server_name_(server_name),
             middlewares_(middlewares)
         {
@@ -7149,7 +6970,7 @@ namespace crow
             CROW_LOG_DEBUG << "Connection open, total " << connectionCount << ", " << this;
 #endif
         }
-        
+
         ~Connection()
         {
             res.complete_request_handler_ = nullptr;
@@ -7266,13 +7087,13 @@ namespace crow
                 detail::after_handlers_call_helper<
                     ((int)sizeof...(Middlewares)-1),
                     decltype(ctx_),
-                    decltype(middlewares_)> 
+                    decltype(middlewares_)>
                 (middlewares_, ctx_, req_, res);
             }
 
             //auto self = this->shared_from_this();
             res.complete_request_handler_ = nullptr;
-            
+
             if (!socket_.is_open())
             {
                 //CROW_LOG_DEBUG << this << " delete (socket is closed) " << is_reading << ' ' << is_writing;
@@ -7395,7 +7216,7 @@ namespace crow
         {
             //auto self = this->shared_from_this();
             is_reading = true;
-            socket_.async_read_some(boost::asio::buffer(buffer_), 
+            socket_.async_read_some(boost::asio::buffer(buffer_),
                 [this](const boost::system::error_code& ec, std::size_t bytes_transferred)
                 {
                     bool error_while_reading = true;
@@ -7434,7 +7255,7 @@ namespace crow
         {
             //auto self = this->shared_from_this();
             is_writing = true;
-            boost::asio::async_write(socket_, buffers_, 
+            boost::asio::async_write(socket_, buffers_,
                 [&](const boost::system::error_code& ec, std::size_t bytes_transferred)
                 {
                     is_writing = false;
@@ -7475,7 +7296,7 @@ namespace crow
         {
             auto& timer_queue = detail::dumb_timer_queue::get_current_dumb_timer_queue();
             cancel_deadline_timer();
-            
+
             timer_cancel_key_ = timer_queue.add([this]
             {
                 if (!socket_.is_open())
@@ -7546,15 +7367,15 @@ namespace crow
 {
     using namespace boost;
     using tcp = asio::ip::tcp;
-    
+
     template <typename Handler, typename ... Middlewares>
     class Server
     {
     public:
         Server(Handler* handler, uint16_t port, uint16_t concurrency = 1)
-            : acceptor_(io_service_, tcp::endpoint(asio::ip::address(), port)), 
+            : acceptor_(io_service_, tcp::endpoint(asio::ip::address(), port)),
             signals_(io_service_, SIGINT, SIGTERM),
-            handler_(handler), 
+            handler_(handler),
             concurrency_(concurrency),
             port_(port)
         {
@@ -7626,7 +7447,7 @@ namespace crow
         void do_accept()
         {
             auto p = new Connection<Handler, Middlewares...>(pick_io_service(), handler_, server_name_, middlewares_);
-            acceptor_.async_accept(p->socket(), 
+            acceptor_.async_accept(p->socket(),
                 [this, p](boost::system::error_code ec)
                 {
                     if (!ec)
@@ -7669,7 +7490,7 @@ namespace crow
 
 
 
- 
+
 
 
 
@@ -7765,5 +7586,184 @@ namespace crow
     using SimpleApp = Crow<>;
 };
 
+
+
+
+#pragma once
+#include <boost/algorithm/string/trim.hpp>
+
+
+
+
+
+namespace crow
+{
+    // Any middleware requires following 3 members:
+
+    // struct context;
+    //      storing data for the middleware; can be read from another middleware or handlers
+
+    // before_handle
+    //      called before handling the request.
+    //      if res.end() is called, the operation is halted.
+    //      (still call after_handle of this middleware)
+    //      2 signatures:
+    //      void before_handle(request& req, response& res, context& ctx)
+    //          if you only need to access this middlewares context.
+    //      template <typename AllContext>
+    //      void before_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    //          you can access another middlewares' context by calling `all_ctx.template get<MW>()'
+    //          ctx == all_ctx.template get<CurrentMiddleware>()
+
+    // after_handle
+    //      called after handling the request.
+    //      void after_handle(request& req, response& res, context& ctx)
+    //      template <typename AllContext>
+    //      void after_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+
+    struct CookieParser
+    {
+        struct context
+        {
+            std::unordered_map<std::string, std::string> jar;
+            std::unordered_map<std::string, std::string> cookies_to_add;
+
+            std::string get_cookie(const std::string& key)
+            {
+                if (jar.count(key))
+                    return jar[key];
+                return {};
+            }
+
+            void set_cookie(const std::string& key, const std::string& value)
+            {
+                cookies_to_add.emplace(key, value);
+            }
+        };
+
+        void before_handle(request& req, response& res, context& ctx)
+        {
+            int count = req.headers.count("Cookie");
+            if (!count)
+                return;
+            if (count > 1)
+            {
+                res.code = 400;
+                res.end();
+                return;
+            }
+            std::string cookies = req.get_header_value("Cookie");
+            size_t pos = 0;
+            while(pos < cookies.size())
+            {
+                size_t pos_equal = cookies.find('=', pos);
+                if (pos_equal == cookies.npos)
+                    break;
+                std::string name = cookies.substr(pos, pos_equal-pos);
+                boost::trim(name);
+                pos = pos_equal+1;
+                while(pos < cookies.size() && cookies[pos] == ' ') pos++;
+                if (pos == cookies.size())
+                    break;
+
+                std::string value;
+
+                if (cookies[pos] == '"')
+                {
+                    int dquote_meet_count = 0;
+                    pos ++;
+                    size_t pos_dquote = pos-1;
+                    do
+                    {
+                        pos_dquote = cookies.find('"', pos_dquote+1);
+                        dquote_meet_count ++;
+                    } while(pos_dquote < cookies.size() && cookies[pos_dquote-1] == '\\');
+                    if (pos_dquote == cookies.npos)
+                        break;
+
+                    if (dquote_meet_count == 1)
+                        value = cookies.substr(pos, pos_dquote - pos);
+                    else
+                    {
+                        value.clear();
+                        value.reserve(pos_dquote-pos);
+                        for(size_t p = pos; p < pos_dquote; p++)
+                        {
+                            // FIXME minimal escaping
+                            if (cookies[p] == '\\' && p + 1 < pos_dquote)
+                            {
+                                p++;
+                                if (cookies[p] == '\\' || cookies[p] == '"')
+                                    value += cookies[p];
+                                else
+                                {
+                                    value += '\\';
+                                    value += cookies[p];
+                                }
+                            }
+                            else
+                                value += cookies[p];
+                        }
+                    }
+
+                    ctx.jar.emplace(std::move(name), std::move(value));
+                    pos = cookies.find(";", pos_dquote+1);
+                    if (pos == cookies.npos)
+                        break;
+                    pos++;
+                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
+                    if (pos == cookies.size())
+                        break;
+                }
+                else
+                {
+                    size_t pos_semicolon = cookies.find(';', pos);
+                    value = cookies.substr(pos, pos_semicolon - pos);
+                    boost::trim(value);
+                    ctx.jar.emplace(std::move(name), std::move(value));
+                    pos = pos_semicolon;
+                    if (pos == cookies.npos)
+                        break;
+                    pos ++;
+                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
+                    if (pos == cookies.size())
+                        break;
+                }
+            }
+        }
+
+        void after_handle(request& req, response& res, context& ctx)
+        {
+            for(auto& cookie:ctx.cookies_to_add)
+            {
+                res.add_header("Set-Cookie", cookie.first + "=" + cookie.second);
+            }
+        }
+    };
+
+    /*
+    App<CookieParser, AnotherJarMW> app;
+    A B C
+    A::context
+        int aa;
+
+    ctx1 : public A::context
+    ctx2 : public ctx1, public B::context
+    ctx3 : public ctx2, public C::context
+
+    C depends on A
+
+    C::handle
+        context.aaa
+
+    App::context : private CookieParser::contetx, ...
+    {
+        jar
+
+    }
+
+    SimpleApp
+    */
+}
 
 
