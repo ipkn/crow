@@ -12,7 +12,7 @@ namespace crow
 
     // before_handle
     //      called before handling the request.
-    //      if res.end() is called, the operation is halted. 
+    //      if res.end() is called, the operation is halted.
     //      (still call after_handle of this middleware)
     //      2 signatures:
     //      void before_handle(request& req, response& res, context& ctx)
@@ -163,7 +163,7 @@ namespace crow
     C::handle
         context.aaa
 
-    App::context : private CookieParser::contetx, ... 
+    App::context : private CookieParser::contetx, ...
     {
         jar
 

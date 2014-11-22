@@ -22,7 +22,7 @@ namespace crow
     namespace detail
     {
         template <typename MW, typename Context, typename ParentContext>
-        void before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx, 
+        void before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx,
             decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>()))* dummy = 0)
         {
             mw.before_handle(req, res, ctx.template get<MW>());
@@ -36,14 +36,14 @@ namespace crow
         }
 
         template <typename MW, typename Context, typename ParentContext>
-        void after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx, 
+        void after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx,
             decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>()))* dummy = 0)
         {
             mw.after_handle(req, res, ctx.template get<MW>());
         }
 
         template <typename MW, typename Context, typename ParentContext>
-        void after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx, 
+        void after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx,
             decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>(), std::declval<Context&>))* dummy = 0)
         {
             mw.after_handle(req, res, ctx.template get<MW>(), parent_ctx);
@@ -77,7 +77,7 @@ namespace crow
         }
 
         template <int N, typename Context, typename Container>
-        typename std::enable_if<(N<0)>::type 
+        typename std::enable_if<(N<0)>::type
         after_handlers_call_helper(Container& middlewares, Context& context, request& req, response& res)
         {
         }
@@ -110,14 +110,14 @@ namespace crow
     {
     public:
         Connection(
-            boost::asio::io_service& io_service, 
-            Handler* handler, 
+            boost::asio::io_service& io_service,
+            Handler* handler,
             const std::string& server_name,
             std::tuple<Middlewares...>& middlewares
-            ) 
-            : socket_(io_service), 
-            handler_(handler), 
-            parser_(this), 
+            )
+            : socket_(io_service),
+            handler_(handler),
+            parser_(this),
             server_name_(server_name),
             middlewares_(middlewares)
         {
@@ -126,7 +126,7 @@ namespace crow
             CROW_LOG_DEBUG << "Connection open, total " << connectionCount << ", " << this;
 #endif
         }
-        
+
         ~Connection()
         {
             res.complete_request_handler_ = nullptr;
@@ -243,13 +243,13 @@ namespace crow
                 detail::after_handlers_call_helper<
                     ((int)sizeof...(Middlewares)-1),
                     decltype(ctx_),
-                    decltype(middlewares_)> 
+                    decltype(middlewares_)>
                 (middlewares_, ctx_, req_, res);
             }
 
             //auto self = this->shared_from_this();
             res.complete_request_handler_ = nullptr;
-            
+
             if (!socket_.is_open())
             {
                 //CROW_LOG_DEBUG << this << " delete (socket is closed) " << is_reading << ' ' << is_writing;
@@ -372,7 +372,7 @@ namespace crow
         {
             //auto self = this->shared_from_this();
             is_reading = true;
-            socket_.async_read_some(boost::asio::buffer(buffer_), 
+            socket_.async_read_some(boost::asio::buffer(buffer_),
                 [this](const boost::system::error_code& ec, std::size_t bytes_transferred)
                 {
                     bool error_while_reading = true;
@@ -411,7 +411,7 @@ namespace crow
         {
             //auto self = this->shared_from_this();
             is_writing = true;
-            boost::asio::async_write(socket_, buffers_, 
+            boost::asio::async_write(socket_, buffers_,
                 [&](const boost::system::error_code& ec, std::size_t bytes_transferred)
                 {
                     is_writing = false;
@@ -452,7 +452,7 @@ namespace crow
         {
             auto& timer_queue = detail::dumb_timer_queue::get_current_dumb_timer_queue();
             cancel_deadline_timer();
-            
+
             timer_cancel_key_ = timer_queue.add([this]
             {
                 if (!socket_.is_open())

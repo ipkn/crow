@@ -18,15 +18,15 @@ namespace crow
 {
     using namespace boost;
     using tcp = asio::ip::tcp;
-    
+
     template <typename Handler, typename ... Middlewares>
     class Server
     {
     public:
         Server(Handler* handler, uint16_t port, uint16_t concurrency = 1)
-            : acceptor_(io_service_, tcp::endpoint(asio::ip::address(), port)), 
+            : acceptor_(io_service_, tcp::endpoint(asio::ip::address(), port)),
             signals_(io_service_, SIGINT, SIGTERM),
-            handler_(handler), 
+            handler_(handler),
             concurrency_(concurrency),
             port_(port)
         {
@@ -98,7 +98,7 @@ namespace crow
         void do_accept()
         {
             auto p = new Connection<Handler, Middlewares...>(pick_io_service(), handler_, server_name_, middlewares_);
-            acceptor_.async_accept(p->socket(), 
+            acceptor_.async_accept(p->socket(),
                 [this, p](boost::system::error_code ec)
                 {
                     if (!ec)

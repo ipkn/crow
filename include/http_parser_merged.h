@@ -144,7 +144,7 @@ enum flags
 
 
 /* Map for errno-related constants
- * 
+ *
  * The provided argument should be a macro that takes 2 arguments.
  */
 #define HTTP_ERRNO_MAP(XX)                                           \
@@ -423,7 +423,7 @@ do {                                                                 \
     FOR##_mark = NULL;                                               \
   }                                                                  \
 } while (0)
-  
+
 /* Run the data callback FOR and consume the current byte */
 #define CALLBACK_DATA(FOR)                                           \
     CALLBACK_DATA_(FOR, p - FOR##_mark, p - data + 1)
@@ -2218,7 +2218,7 @@ static const int8_t unhex[256] =
 
   assert(((header_field_mark ? 1 : 0) +
           (header_value_mark ? 1 : 0) +
-          (url_mark ? 1 : 0)  +
+          (url_mark ? 1 : 0) +
           (body_mark ? 1 : 0) +
           (status_mark ? 1 : 0)) <= 1);
 

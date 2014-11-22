@@ -47,7 +47,7 @@ void fail(Args...args) { error_print(args...);failed__ = true; }
     } \
     catch(std::exception&) \
     { \
-    } 
+    }
 
 
 
@@ -62,7 +62,7 @@ TEST(Rule)
     r.name("abc");
 
     // empty handler - fail to validate
-    try 
+    try
     {
         r.validate();
         fail("empty handler should fail to validate");
@@ -151,7 +151,7 @@ TEST(RoutingTest)
 
     app.validate();
     //app.debug_print();
-	{
+    {
         request req;
         response res;
 
@@ -160,7 +160,7 @@ TEST(RoutingTest)
         app.handle(req, res);
 
         ASSERT_EQUAL(404, res.code);
-	}
+    }
 
     {
         request req;
@@ -256,22 +256,22 @@ TEST(http_method)
 
     CROW_ROUTE(app, "/")
         .methods("POST"_method, "GET"_method)
-    ([](const request& req){ 
-        if (req.method == "GET"_method) 
-            return "2"; 
-        else 
-            return "1"; 
+    ([](const request& req){
+        if (req.method == "GET"_method)
+            return "2";
+        else
+            return "1";
     });
 
     CROW_ROUTE(app, "/get_only")
         .methods("GET"_method)
-    ([](const request& req){ 
-        return "get"; 
+    ([](const request& req){
+        return "get";
     });
     CROW_ROUTE(app, "/post_only")
         .methods("POST"_method)
-    ([](const request& req){ 
-        return "post"; 
+    ([](const request& req){
+        return "post";
     });
 
 
@@ -397,8 +397,8 @@ TEST(multi_server)
 
 TEST(json_read)
 {
-	{
-        const char* json_error_tests[] = 
+    {
+        const char* json_error_tests[] =
         {
             "{} 3", "{{}", "{3}",
             "3.4.5", "+3", "3-2", "00", "03", "1e3e3", "1e+.3",
@@ -421,7 +421,7 @@ TEST(json_read)
                 return;
             }
         }
-	}
+    }
 
     auto x = json::load(R"({"message":"hello, world"})");
     if (!x)
@@ -439,19 +439,19 @@ TEST(json_read)
     ASSERT_EQUAL(3, y["int"]);
     ASSERT_EQUAL(3.0, y["int"]);
     ASSERT_NOTEQUAL(3.01, y["int"]);
-	ASSERT_EQUAL(5, y["ints"].size());
-	ASSERT_EQUAL(1, y["ints"][0]);
-	ASSERT_EQUAL(2, y["ints"][1]);
-	ASSERT_EQUAL(3, y["ints"][2]);
-	ASSERT_EQUAL(4, y["ints"][3]);
-	ASSERT_EQUAL(5, y["ints"][4]);
-	ASSERT_EQUAL(1u, y["ints"][0]);
-	ASSERT_EQUAL(1.f, y["ints"][0]);
+    ASSERT_EQUAL(5, y["ints"].size());
+    ASSERT_EQUAL(1, y["ints"][0]);
+    ASSERT_EQUAL(2, y["ints"][1]);
+    ASSERT_EQUAL(3, y["ints"][2]);
+    ASSERT_EQUAL(4, y["ints"][3]);
+    ASSERT_EQUAL(5, y["ints"][4]);
+    ASSERT_EQUAL(1u, y["ints"][0]);
+    ASSERT_EQUAL(1.f, y["ints"][0]);
 
-	int q = (int)y["ints"][1];
-	ASSERT_EQUAL(2, q);
-	q = y["ints"][2].i();
-	ASSERT_EQUAL(3, q);
+    int q = (int)y["ints"][1];
+    ASSERT_EQUAL(2, q);
+    q = y["ints"][2].i();
+    ASSERT_EQUAL(3, q);
 
     std::string s2 = R"({"bools":[true, false], "doubles":[1.2, -3.4]})";
     auto z = json::load(s2);
@@ -656,9 +656,9 @@ std::vector<std::string> test_middleware_context_vector;
 
 struct FirstMW
 {
-    struct context 
-    { 
-        std::vector<string> v; 
+    struct context
+    {
+        std::vector<string> v;
     };
 
     void before_handle(request& req, response& res, context& ctx)
@@ -845,7 +845,7 @@ TEST(bug_quick_repeated_request)
         std::vector<std::future<void>> v;
         for(int i = 0; i < 5; i++)
         {
-            v.push_back(async(launch::async, 
+            v.push_back(async(launch::async,
                 [&]
                 {
                     asio::ip::tcp::socket c(is);
@@ -920,7 +920,7 @@ TEST(simple_url_params)
         c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
         c.send(asio::buffer(sendmsg));
         c.receive(asio::buffer(buf, 2048));
-        c.close();        
+        c.close();
 
         ASSERT_EQUAL(string(last_url_params.get("hello")), "world");
     }
@@ -943,8 +943,8 @@ TEST(simple_url_params)
         asio::ip::tcp::socket c(is);
         c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
         c.send(asio::buffer(sendmsg));
-        c.receive(asio::buffer(buf, 2048));        
-        c.close();    
+        c.receive(asio::buffer(buf, 2048));
+        c.close();
 
         ASSERT_EQUAL(boost::lexical_cast<int>(last_url_params.get("int")), 100);
         ASSERT_EQUAL(boost::lexical_cast<double>(last_url_params.get("double")), 123.45);
@@ -958,8 +958,8 @@ TEST(simple_url_params)
         c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
         c.send(asio::buffer(sendmsg));
         c.receive(asio::buffer(buf, 2048));
-        c.close();        
-        
+        c.close();
+
         ASSERT_TRUE(last_url_params.get("tmnt") == nullptr);
         ASSERT_EQUAL(last_url_params.get_list("tmnt").size(), 1);
         ASSERT_EQUAL(string(last_url_params.get_list("tmnt")[0]), "leonardo");
@@ -972,8 +972,8 @@ TEST(simple_url_params)
         c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
         c.send(asio::buffer(sendmsg));
         c.receive(asio::buffer(buf, 2048));
-        c.close();        
-        
+        c.close();
+
         ASSERT_EQUAL(last_url_params.get_list("tmnt").size(), 3);
         ASSERT_EQUAL(string(last_url_params.get_list("tmnt")[0]), "leonardo");
         ASSERT_EQUAL(string(last_url_params.get_list("tmnt")[1]), "donatello");

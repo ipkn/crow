@@ -10,7 +10,7 @@
 
 namespace crow
 {
-    namespace detail 
+    namespace detail
     {
         // fast timer queue for fixed tick value.
         class dumb_timer_queue

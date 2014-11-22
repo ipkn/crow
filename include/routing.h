@@ -22,7 +22,7 @@ namespace crow
         virtual ~BaseRule()
         {
         }
-        
+
         virtual void validate() = 0;
 
         virtual void handle(const request&, response&, const routing_params&) = 0;
@@ -51,12 +51,12 @@ namespace crow
             response& res;
         };
 
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2> 
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2>
         struct call
         {
         };
 
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2>
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<int64_t, Args1...>, black_magic::S<Args2...>>
         {
             void operator()(F cparams)
@@ -67,7 +67,7 @@ namespace crow
             }
         };
 
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2>
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<uint64_t, Args1...>, black_magic::S<Args2...>>
         {
             void operator()(F cparams)
@@ -78,7 +78,7 @@ namespace crow
             }
         };
 
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2>
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<double, Args1...>, black_magic::S<Args2...>>
         {
             void operator()(F cparams)
@@ -89,7 +89,7 @@ namespace crow
             }
         };
 
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2>
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<std::string, Args1...>, black_magic::S<Args2...>>
         {
             void operator()(F cparams)
@@ -100,15 +100,15 @@ namespace crow
             }
         };
 
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1> 
+        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1>
         struct call<F, NInt, NUint, NDouble, NString, black_magic::S<>, black_magic::S<Args1...>>
         {
             void operator()(F cparams)
             {
-                if (cparams.handler) 
+                if (cparams.handler)
                 {
                     cparams.res = cparams.handler(
-                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
+                        cparams.params.template get<typename Args1::type>(Args1::pos)...
                     );
                     cparams.res.end();
                     return;
@@ -117,7 +117,7 @@ namespace crow
                 {
                     cparams.res = cparams.handler_with_req(
                         cparams.req,
-                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
+                        cparams.params.template get<typename Args1::type>(Args1::pos)...
                     );
                     cparams.res.end();
                     return;
@@ -127,7 +127,7 @@ namespace crow
                     cparams.handler_with_req_res(
                         cparams.req,
                         cparams.res,
-                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
+                        cparams.params.template get<typename Args1::type>(Args1::pos)...
                     );
                     return;
                 }
@@ -143,7 +143,7 @@ namespace crow
             : rule_(std::move(rule))
         {
         }
-        
+
         self_t& name(std::string name) noexcept
         {
             name_ = std::move(name);
@@ -177,9 +177,9 @@ namespace crow
         operator()(Func&& f)
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
-                black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value , 
+                black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value ,
                 "Handler type is mismatched with URL paramters");
-            static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value, 
+            static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value,
                 "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
 
                 handler_ = [f = std::move(f)](Args ... args){
@@ -192,14 +192,14 @@ namespace crow
         template <typename Func>
         typename std::enable_if<
             !black_magic::CallHelper<Func, black_magic::S<Args...>>::value &&
-            black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value, 
+            black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value,
             void>::type
         operator()(Func&& f)
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
-                black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value, 
+                black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value,
                 "Handler type is mismatched with URL paramters");
-            static_assert(!std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<Args>()...))>::value, 
+            static_assert(!std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<Args>()...))>::value,
                 "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
 
                 handler_with_req_ = [f = std::move(f)](const crow::request& req, Args ... args){
@@ -212,16 +212,16 @@ namespace crow
         template <typename Func>
         typename std::enable_if<
             !black_magic::CallHelper<Func, black_magic::S<Args...>>::value &&
-            !black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value, 
+            !black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value,
             void>::type
         operator()(Func&& f)
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
                 black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value ||
                 black_magic::CallHelper<Func, black_magic::S<crow::request, crow::response&, Args...>>::value
-                , 
+                ,
                 "Handler type is mismatched with URL paramters");
-            static_assert(std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<crow::response&>(), std::declval<Args>()...))>::value, 
+            static_assert(std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<crow::response&>(), std::declval<Args>()...))>::value,
                 "Handler function with response argument should have void return type");
 
                 handler_with_req_res_ = std::move(f);
@@ -243,15 +243,15 @@ namespace crow
         {
             call<
                 call_params<
-                    decltype(handler_), 
+                    decltype(handler_),
                     decltype(handler_with_req_),
-                    decltype(handler_with_req_res_)>, 
-                0, 0, 0, 0, 
-                black_magic::S<Args...>, 
+                    decltype(handler_with_req_res_)>,
+                0, 0, 0, 0,
+                black_magic::S<Args...>,
                 black_magic::S<>
             >()(
                 call_params<
-                    decltype(handler_), 
+                    decltype(handler_),
                     decltype(handler_with_req_),
                     decltype(handler_with_req_res_)>
                 {handler_, handler_with_req_, handler_with_req_res_, params, req, res}
@@ -287,11 +287,11 @@ namespace crow
 
             bool IsSimpleNode() const
             {
-                return 
+                return
                     !rule_index &&
                     std::all_of(
-                        std::begin(param_childrens), 
-                        std::end(param_childrens), 
+                        std::begin(param_childrens),
+                        std::end(param_childrens),
                         [](unsigned x){ return !x; });
             }
         };
@@ -636,9 +636,9 @@ public:
 
             if (!rule_index)
             {
-				CROW_LOG_DEBUG << "Cannot match rules " << req.url;
+                CROW_LOG_DEBUG << "Cannot match rules " << req.url;
                 res = response(404);
-				res.end();
+                res.end();
                 return;
             }
 
@@ -647,9 +647,9 @@ public:
 
             if ((rules_[rule_index]->methods() & (1<<(uint32_t)req.method)) == 0)
             {
-				CROW_LOG_DEBUG << "Rule found but method mismatch: " << req.url << " with " << method_name(req.method) << "(" << (uint32_t)req.method << ") / " << rules_[rule_index]->methods();
+                CROW_LOG_DEBUG << "Rule found but method mismatch: " << req.url << " with " << method_name(req.method) << "(" << (uint32_t)req.method << ") / " << rules_[rule_index]->methods();
                 res = response(404);
-				res.end();
+                res.end();
                 return;
             }
 

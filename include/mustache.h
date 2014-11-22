@@ -44,12 +44,12 @@ namespace crow
             int end;
             int pos;
             ActionType t;
-            Action(ActionType t, int start, int end, int pos = 0) 
+            Action(ActionType t, int start, int end, int pos = 0)
                 : start(start), end(end), pos(pos), t(t)
             {}
         };
 
-        class template_t 
+        class template_t
         {
         public:
             template_t(std::string body)
@@ -284,9 +284,9 @@ namespace crow
         public:
             std::string render()
             {
-				context empty_ctx;
-				std::vector<context*> stack;
-				stack.emplace_back(&empty_ctx);
+                context empty_ctx;
+                std::vector<context*> stack;
+                stack.emplace_back(&empty_ctx);
 
                 std::string ret;
                 render_internal(0, fragments_.size()-1, stack, ret, 0);
@@ -294,8 +294,8 @@ namespace crow
             }
             std::string render(context& ctx)
             {
-				std::vector<context*> stack;
-				stack.emplace_back(&ctx);
+                std::vector<context*> stack;
+                stack.emplace_back(&ctx);
 
                 std::string ret;
                 render_internal(0, fragments_.size()-1, stack, ret, 0);
@@ -310,7 +310,7 @@ namespace crow
                 std::string tag_close = "}}";
 
                 std::vector<int> blockPositions;
-                
+
                 size_t current = 0;
                 while(1)
                 {
@@ -350,14 +350,14 @@ namespace crow
                             while(body_[endIdx-1] == ' ') endIdx--;
                             {
                                 auto& matched = actions_[blockPositions.back()];
-                                if (body_.compare(idx, endIdx-idx, 
+                                if (body_.compare(idx, endIdx-idx,
                                         body_, matched.start, matched.end - matched.start) != 0)
                                 {
-                                    throw invalid_template_exception("not matched {{# {{/ pair: " + 
-                                        body_.substr(matched.start, matched.end - matched.start) + ", " + 
+                                    throw invalid_template_exception("not matched {{# {{/ pair: " +
+                                        body_.substr(matched.start, matched.end - matched.start) + ", " +
                                         body_.substr(idx, endIdx-idx));
                                 }
-								matched.pos = actions_.size();
+                                matched.pos = actions_.size();
                             }
                             actions_.emplace_back(ActionType::CloseBlock, idx, endIdx, blockPositions.back());
                             blockPositions.pop_back();
@@ -476,12 +476,12 @@ namespace crow
                     }
                     if (all_space_after && !is_last_action)
                         continue;
-                    if (!all_space_after && 
+                    if (!all_space_after &&
                             !(
-                                body_[k] == '\n' 
-                            || 
-                                (body_[k] == '\r' && 
-                                k + 1 < (int)body_.size() && 
+                                body_[k] == '\n'
+                            ||
+                                (body_[k] == '\r' &&
+                                k + 1 < (int)body_.size() &&
                                 body_[k+1] == '\n')))
                         continue;
                     if (actions_[i].t == ActionType::Partial)
@@ -493,13 +493,13 @@ namespace crow
                     {
                         if (body_[k] == '\n')
                             k++;
-                        else 
+                        else
                             k += 2;
                         fragment_after.first = k;
                     }
                 }
             }
-            
+
             std::vector<std::pair<int,int>> fragments_;
             std::vector<Action> actions_;
             std::string body_;
@@ -539,7 +539,7 @@ namespace crow
         {
             auto& base = detail::get_template_base_directory_ref();
             base = path;
-            if (base.back() != '\\' && 
+            if (base.back() != '\\' &&
                 base.back() != '/')
             {
                 base += '/';
