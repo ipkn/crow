@@ -284,6 +284,15 @@ namespace crow
                 return boost::lexical_cast<double>(start_, end_-start_);
             }
 
+            bool b() const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                if (t() != type::True && t() != type::False)
+                    throw std::runtime_error("value is not boolean");
+#endif
+                return t() == type::True;
+            }
+
             void unescape() const
             {
                 if (*(start_-1))
@@ -824,9 +833,9 @@ namespace crow
                                     return {};*/
                                 break;
                             case '.':
-                                state = (NumberParsingState)"\7\7\7\4\7\7\7"[state];
+                                state = (NumberParsingState)"\7\7\4\4\7\7\7"[state];
                                 /*
-                                if (state == NumberParsingState::Digits)
+                                if (state == NumberParsingState::Digits || state == NumberParsingState::ZeroFirst)
                                 {
                                     state = NumberParsingState::DigitsAfterPoints;
                                 }
@@ -1134,7 +1143,7 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (uint16_t value)
+            wvalue& operator = (unsigned short value)
             {
                 reset();
                 t_ = type::Number;
@@ -1142,7 +1151,7 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (int16_t value)
+            wvalue& operator = (short value)
             {
                 reset();
                 t_ = type::Number;
@@ -1150,7 +1159,7 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (uint32_t value)
+            wvalue& operator = (long long value)
             {
                 reset();
                 t_ = type::Number;
@@ -1158,7 +1167,7 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (int32_t value)
+            wvalue& operator = (long value)
             {
                 reset();
                 t_ = type::Number;
@@ -1166,7 +1175,7 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (uint64_t value)
+            wvalue& operator = (int value)
             {
                 reset();
                 t_ = type::Number;
@@ -1174,7 +1183,23 @@ namespace crow
                 return *this;
             }
 
-            wvalue& operator = (int64_t value)
+            wvalue& operator = (unsigned long long value)
+            {
+                reset();
+                t_ = type::Number;
+                d = (double)value;
+                return *this;
+            }
+
+            wvalue& operator = (unsigned long value)
+            {
+                reset();
+                t_ = type::Number;
+                d = (double)value;
+                return *this;
+            }
+
+            wvalue& operator = (unsigned int value)
             {
                 reset();
                 t_ = type::Number;

@@ -9,6 +9,9 @@ Crow is C++ microframework for web. (inspired by Python Flask)
  - Easy routing
    - Similiar to Flask
    - Type-safe Handlers (see Example)
+ - Very Fast 
+   - ![Benchmark Result in one chart](https://docs.google.com/spreadsheets/d/1KidO9XpuwCRZ2p_JRDJj2aep61H8Sh_KDOhApizv4LE/pubchart?oid=2041467789&format=image)
+   - More data on [crow-benchmark](https://github.com/ipkn/crow-benchmark)
  - Fast built-in JSON parser (crow::json)
  - [Mustache](http://mustache.github.io/) based templating library (crow::mustache)
  - Header only
