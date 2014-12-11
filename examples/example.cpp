@@ -43,7 +43,7 @@ int main()
 {
     crow::App<ExampleMiddelware> app;
 
-    app.get_middleware<ExampleMiddelware>()->setMessage("hello");
+    app.get_middleware<ExampleMiddelware>().setMessage("hello");
 
     CROW_ROUTE(app, "/")
         .name("hello")

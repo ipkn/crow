@@ -284,9 +284,9 @@ namespace crow
         public:
             std::string render()
             {
-				context empty_ctx;
-				std::vector<context*> stack;
-				stack.emplace_back(&empty_ctx);
+                context empty_ctx;
+                std::vector<context*> stack;
+                stack.emplace_back(&empty_ctx);
 
                 std::string ret;
                 render_internal(0, fragments_.size()-1, stack, ret, 0);
@@ -294,8 +294,8 @@ namespace crow
             }
             std::string render(context& ctx)
             {
-				std::vector<context*> stack;
-				stack.emplace_back(&ctx);
+                std::vector<context*> stack;
+                stack.emplace_back(&ctx);
 
                 std::string ret;
                 render_internal(0, fragments_.size()-1, stack, ret, 0);
@@ -357,7 +357,7 @@ namespace crow
                                         body_.substr(matched.start, matched.end - matched.start) + ", " + 
                                         body_.substr(idx, endIdx-idx));
                                 }
-								matched.pos = actions_.size();
+                                matched.pos = actions_.size();
                             }
                             actions_.emplace_back(ActionType::CloseBlock, idx, endIdx, blockPositions.back());
                             blockPositions.pop_back();

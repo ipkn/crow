@@ -5610,7 +5610,41 @@ template <typename F, typename Set>
         struct empty_context
         {
         };
-    }
+
+    } // namespace black_magic
+
+    namespace detail
+    {
+
+        template <class T, std::size_t N, class... Args>
+        struct get_index_of_element_from_tuple_by_type_impl
+        {
+            static constexpr auto value = N;
+        };
+
+        template <class T, std::size_t N, class... Args>
+        struct get_index_of_element_from_tuple_by_type_impl<T, N, T, Args...>
+        {
+            static constexpr auto value = N;
+        };
+
+        template <class T, std::size_t N, class U, class... Args>
+        struct get_index_of_element_from_tuple_by_type_impl<T, N, U, Args...>
+        {
+            static constexpr auto value = get_index_of_element_from_tuple_by_type_impl<T, N + 1, Args...>::value;
+        };
+
+    } // namespace detail
+
+    namespace utility
+    {
+        template <class T, class... Args>
+        T& get_element_by_type(std::tuple<Args...>& t)
+        {
+            return std::get<detail::get_index_of_element_from_tuple_by_type_impl<T, 0, Args...>::value>(t);
+        }
+
+    } // namespace utility
 }
 
 
@@ -6035,7 +6069,7 @@ namespace crow
             json_value = std::move(r.json_value);
             code = r.code;
             headers = std::move(r.headers);
-            completed_ = r.completed_;
+			completed_ = r.completed_;
             return *this;
         }
 
@@ -7136,7 +7170,7 @@ namespace crow
             boost::asio::io_service& io_service, 
             Handler* handler, 
             const std::string& server_name,
-            std::tuple<Middlewares...>& middlewares
+            std::tuple<Middlewares...>* middlewares
             ) 
             : socket_(io_service), 
             handler_(handler), 
@@ -7233,7 +7267,7 @@ namespace crow
 
                 ctx_ = detail::context<Middlewares...>();
                 req.middleware_context = (void*)&ctx_;
-                detail::middleware_call_helper<0, decltype(ctx_), decltype(middlewares_), Middlewares...>(middlewares_, req, res, ctx_);
+                detail::middleware_call_helper<0, decltype(ctx_), decltype(*middlewares_), Middlewares...>(*middlewares_, req, res, ctx_);
 
                 if (!res.completed_)
                 {
@@ -7266,8 +7300,8 @@ namespace crow
                 detail::after_handlers_call_helper<
                     ((int)sizeof...(Middlewares)-1),
                     decltype(ctx_),
-                    decltype(middlewares_)> 
-                (middlewares_, ctx_, req_, res);
+                    decltype(*middlewares_)> 
+                (*middlewares_, ctx_, req_, res);
             }
 
             //auto self = this->shared_from_this();
@@ -7514,7 +7548,7 @@ namespace crow
         bool need_to_start_read_after_complete_{};
         bool add_keep_alive_{};
 
-        std::tuple<Middlewares...>& middlewares_;
+        std::tuple<Middlewares...>* middlewares_;
         detail::context<Middlewares...> ctx_;
     };
 
@@ -7551,12 +7585,13 @@ namespace crow
     class Server
     {
     public:
-        Server(Handler* handler, uint16_t port, uint16_t concurrency = 1)
+        Server(Handler* handler, uint16_t port, std::tuple<Middlewares...>* middlewares = nullptr, uint16_t concurrency = 1)
             : acceptor_(io_service_, tcp::endpoint(asio::ip::address(), port)), 
             signals_(io_service_, SIGINT, SIGTERM),
             handler_(handler), 
             concurrency_(concurrency),
-            port_(port)
+            port_(port),
+            middlewares_(middlewares)
         {
         }
 
@@ -7649,8 +7684,7 @@ namespace crow
         uint16_t port_;
         unsigned int roundrobin_index_{};
 
-        std::tuple<Middlewares...> middlewares_;
-
+        std::tuple<Middlewares...>* middlewares_;
     };
 }
 
@@ -7734,7 +7768,7 @@ namespace crow
         void run()
         {
             validate();
-            server_t server(this, port_, concurrency_);
+            server_t server(this, port_, &middlewares_, concurrency_);
             server.run();
         }
 
@@ -7754,11 +7788,19 @@ namespace crow
             return ctx.template get<T>();
         }
 
+        template <typename T>
+        T& get_middleware()
+        {
+            return utility::get_element_by_type<T, Middlewares...>(middlewares_);
+        }
+
     private:
         uint16_t port_ = 80;
         uint16_t concurrency_ = 1;
 
         Router router_;
+
+        std::tuple<Middlewares...> middlewares_;
     };
     template <typename ... Middlewares>
     using App = Crow<Middlewares...>;

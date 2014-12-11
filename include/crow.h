@@ -90,9 +90,9 @@ namespace crow
         }
 
         template <typename T>
-        T* get_middleware()
+        T& get_middleware()
         {
-            return utility::get_element_by_type_ptr<T, Middlewares...>(middlewares_);
+            return utility::get_element_by_type<T, Middlewares...>(middlewares_);
         }
 
     private:
