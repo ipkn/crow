@@ -367,10 +367,10 @@ namespace crow
 
 namespace crow
 {
-	namespace mustache
-	{
-		class template_t;
-	}
+    namespace mustache
+    {
+        class template_t;
+    }
 
     namespace json
     {
@@ -535,8 +535,8 @@ namespace crow
             static const int cached_bit = 2;
             static const int error_bit = 4;
         public:
-		    rvalue() noexcept : option_{error_bit} 
-			{}
+            rvalue() noexcept : option_{error_bit} 
+            {}
             rvalue(type t) noexcept
                 : lsize_{}, lremain_{}, t_{t}
             {}
@@ -743,32 +743,32 @@ namespace crow
                 return it != end() && it->key_ == str;
             }
 
-			int count(const std::string& str)
-			{
-				return has(str) ? 1 : 0;
-			}
+            int count(const std::string& str)
+            {
+                return has(str) ? 1 : 0;
+            }
 
             rvalue* begin() const 
-			{ 
+            { 
 #ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::Object && t() != type::List)
                     throw std::runtime_error("value is not a container");
 #endif
-				return l_.get(); 
-			}
+                return l_.get(); 
+            }
             rvalue* end() const 
-			{ 
+            { 
 #ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::Object && t() != type::List)
                     throw std::runtime_error("value is not a container");
 #endif
-				return l_.get()+lsize_; 
-			}
+                return l_.get()+lsize_; 
+            }
 
-			const detail::r_string& key() const
-			{
-				return key_;
-			}
+            const detail::r_string& key() const
+            {
+                return key_;
+            }
 
             size_t size() const
             {
@@ -781,27 +781,27 @@ namespace crow
                 return lsize_;
             }
 
-			const rvalue& operator[](int index) const
-			{
+            const rvalue& operator[](int index) const
+            {
 #ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::List)
                     throw std::runtime_error("value is not a list");
-				if (index >= (int)lsize_ || index < 0)
+                if (index >= (int)lsize_ || index < 0)
                     throw std::runtime_error("list out of bound");
 #endif
-				return l_[index];
-			}
+                return l_[index];
+            }
 
-			const rvalue& operator[](size_t index) const
-			{
+            const rvalue& operator[](size_t index) const
+            {
 #ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::List)
                     throw std::runtime_error("value is not a list");
-				if (index >= lsize_)
+                if (index >= lsize_)
                     throw std::runtime_error("list out of bound");
 #endif
-				return l_[index];
-			}
+                return l_[index];
+            }
 
             const rvalue& operator[](const char* str) const
             {
@@ -994,14 +994,14 @@ namespace crow
         inline rvalue load_nocopy_internal(char* data, size_t size)
         {
             //static const char* escaped = "\"\\/\b\f\n\r\t";
-			struct Parser
-			{
-				Parser(char* data, size_t size)
-					: data(data)
-				{
-				}
+            struct Parser
+            {
+                Parser(char* data, size_t size)
+                    : data(data)
+                {
+                }
 
-            	bool consume(char c)
+                bool consume(char c)
                 {
                     if (crow_json_unlikely(*data != c))
                         return false;
@@ -1009,12 +1009,12 @@ namespace crow
                     return true;
                 }
 
-				void ws_skip()
+                void ws_skip()
                 {
-					while(*data == ' ' || *data == '\t' || *data == '\r' || *data == '\n') ++data;
+                    while(*data == ' ' || *data == '\t' || *data == '\r' || *data == '\n') ++data;
                 };
 
-            	rvalue decode_string()
+                rvalue decode_string()
                 {
                     if (crow_json_unlikely(!consume('"')))
                         return {};
@@ -1076,30 +1076,30 @@ namespace crow
                     return {};
                 }
 
-            	rvalue decode_list()
+                rvalue decode_list()
                 {
-					rvalue ret(type::List);
-					if (crow_json_unlikely(!consume('[')))
+                    rvalue ret(type::List);
+                    if (crow_json_unlikely(!consume('[')))
                     {
                         ret.set_error();
-						return ret;
+                        return ret;
                     }
-					ws_skip();
-					if (crow_json_unlikely(*data == ']'))
-					{
-						data++;
-						return ret;
-					}
+                    ws_skip();
+                    if (crow_json_unlikely(*data == ']'))
+                    {
+                        data++;
+                        return ret;
+                    }
 
-					while(1)
-					{
+                    while(1)
+                    {
                         auto v = decode_value();
-						if (crow_json_unlikely(!v))
+                        if (crow_json_unlikely(!v))
                         {
                             ret.set_error();
                             break;
                         }
-						ws_skip();
+                        ws_skip();
                         ret.emplace_back(std::move(v));
                         if (*data == ']')
                         {
@@ -1111,12 +1111,12 @@ namespace crow
                             ret.set_error();
                             break;
                         }
-						ws_skip();
-					}
+                        ws_skip();
+                    }
                     return ret;
                 }
 
-				rvalue decode_number()
+                rvalue decode_number()
                 {
                     char* start = data;
 
@@ -1153,7 +1153,7 @@ namespace crow
                                 }
                                 else
                                     return {};*/
-								break;
+                                break;
                             case '1': case '2': case '3': 
                             case '4': case '5': case '6': 
                             case '7': case '8': case '9':
@@ -1234,14 +1234,14 @@ namespace crow
                     return {};
                 }
 
-				rvalue decode_value()
+                rvalue decode_value()
                 {
                     switch(*data)
                     {
                         case '[':
-							return decode_list();
+                            return decode_list();
                         case '{':
-							return decode_object();
+                            return decode_object();
                         case '"':
                             return decode_string();
                         case 't':
@@ -1288,7 +1288,7 @@ namespace crow
                     return {};
                 }
 
-				rvalue decode_object()
+                rvalue decode_object()
                 {
                     rvalue ret(type::Object);
                     if (crow_json_unlikely(!consume('{')))
@@ -1297,7 +1297,7 @@ namespace crow
                         return ret;
                     }
 
-					ws_skip();
+                    ws_skip();
 
                     if (crow_json_unlikely(*data == '}'))
                     {
@@ -1314,24 +1314,24 @@ namespace crow
                             break;
                         }
 
-						ws_skip();
+                        ws_skip();
                         if (crow_json_unlikely(!consume(':')))
                         {
                             ret.set_error();
                             break;
                         }
 
-						// TODO caching key to speed up (flyweight?)
+                        // TODO caching key to speed up (flyweight?)
                         auto key = t.s();
 
-						ws_skip();
+                        ws_skip();
                         auto v = decode_value();
                         if (crow_json_unlikely(!v))
                         {
                             ret.set_error();
                             break;
                         }
-						ws_skip();
+                        ws_skip();
 
                         v.key_ = std::move(key);
                         ret.emplace_back(std::move(v));
@@ -1345,24 +1345,24 @@ namespace crow
                             ret.set_error();
                             break;
                         }
-						ws_skip();
+                        ws_skip();
                     }
                     return ret;
                 }
 
-				rvalue parse()
-				{
+                rvalue parse()
+                {
                     ws_skip();
-					auto ret = decode_value(); // or decode object?
-					ws_skip();
+                    auto ret = decode_value(); // or decode object?
+                    ws_skip();
                     if (ret && *data != '\0')
                         ret.set_error();
-					return ret;
-				}
+                    return ret;
+                }
 
-				char* data;
-			};
-			return Parser(data, size).parse();
+                char* data;
+            };
+            return Parser(data, size).parse();
         }
         inline rvalue load(const char* data, size_t size)
         {
@@ -1389,7 +1389,7 @@ namespace crow
 
         class wvalue
         {
-			friend class crow::mustache::template_t;
+            friend class crow::mustache::template_t;
         public:
             type t() const { return t_; }
         private:
@@ -1597,14 +1597,14 @@ namespace crow
                 return (*l)[index];
             }
 
-			int count(const std::string& str)
-			{
+            int count(const std::string& str)
+            {
                 if (t_ != type::Object)
                     return 0;
                 if (!o)
                     return 0;
                 return o->count(str);
-			}
+            }
 
             wvalue& operator[](const std::string& str)
             {
@@ -2035,9 +2035,9 @@ namespace crow
         public:
             std::string render()
             {
-				context empty_ctx;
-				std::vector<context*> stack;
-				stack.emplace_back(&empty_ctx);
+                context empty_ctx;
+                std::vector<context*> stack;
+                stack.emplace_back(&empty_ctx);
 
                 std::string ret;
                 render_internal(0, fragments_.size()-1, stack, ret, 0);
@@ -2045,8 +2045,8 @@ namespace crow
             }
             std::string render(context& ctx)
             {
-				std::vector<context*> stack;
-				stack.emplace_back(&ctx);
+                std::vector<context*> stack;
+                stack.emplace_back(&ctx);
 
                 std::string ret;
                 render_internal(0, fragments_.size()-1, stack, ret, 0);
@@ -2108,7 +2108,7 @@ namespace crow
                                         body_.substr(matched.start, matched.end - matched.start) + ", " + 
                                         body_.substr(idx, endIdx-idx));
                                 }
-								matched.pos = actions_.size();
+                                matched.pos = actions_.size();
                             }
                             actions_.emplace_back(ActionType::CloseBlock, idx, endIdx, blockPositions.back());
                             blockPositions.pop_back();
@@ -5083,11 +5083,11 @@ namespace crow
 
 /* #define - specifies log level */
 /*
-	DEBUG 		= 0
-	INFO 		= 1
-	WARNING		= 2
-	ERROR		= 3
-	CRITICAL 	= 4
+    DEBUG       = 0
+    INFO        = 1
+    WARNING     = 2
+    ERROR       = 3
+    CRITICAL    = 4
 
     default to INFO
 */
@@ -5324,48 +5324,48 @@ namespace crow
 
 namespace crow
 {
-	namespace black_magic
-	{
-		struct OutOfRange
-		{
-			OutOfRange(unsigned pos, unsigned length) {}
-		};
-		constexpr unsigned requires_in_range( unsigned i, unsigned len )
-		{
-			return i >= len ? throw OutOfRange(i, len) : i;
-		}
+    namespace black_magic
+    {
+        struct OutOfRange
+        {
+            OutOfRange(unsigned pos, unsigned length) {}
+        };
+        constexpr unsigned requires_in_range( unsigned i, unsigned len )
+        {
+            return i >= len ? throw OutOfRange(i, len) : i;
+        }
 
-		class const_str
-		{
-			const char * const begin_;
-			unsigned size_;
+        class const_str
+        {
+            const char * const begin_;
+            unsigned size_;
 
-			public:
-			template< unsigned N >
-				constexpr const_str( const char(&arr)[N] ) : begin_(arr), size_(N - 1) {
-					static_assert( N >= 1, "not a string literal");
-				}
-			constexpr char operator[]( unsigned i ) const { 
-				return requires_in_range(i, size_), begin_[i]; 
-			}
+            public:
+            template< unsigned N >
+                constexpr const_str( const char(&arr)[N] ) : begin_(arr), size_(N - 1) {
+                    static_assert( N >= 1, "not a string literal");
+                }
+            constexpr char operator[]( unsigned i ) const { 
+                return requires_in_range(i, size_), begin_[i]; 
+            }
 
-			constexpr operator const char *() const { 
-				return begin_; 
-			}
+            constexpr operator const char *() const { 
+                return begin_; 
+            }
 
-			constexpr const char* begin() const { return begin_; }
-			constexpr const char* end() const { return begin_ + size_; }
+            constexpr const char* begin() const { return begin_; }
+            constexpr const char* end() const { return begin_ + size_; }
 
-			constexpr unsigned size() const { 
-				return size_; 
-			}
-		};
+            constexpr unsigned size() const { 
+                return size_; 
+            }
+        };
 
 
-		constexpr unsigned find_closing_tag(const_str s, unsigned p)
-		{
-			return s[p] == '>' ? p : find_closing_tag(s, p+1);
-		}
+        constexpr unsigned find_closing_tag(const_str s, unsigned p)
+        {
+            return s[p] == '>' ? p : find_closing_tag(s, p+1);
+        }
 
         constexpr bool is_valid(const_str s, unsigned i = 0, int f = 0)
         {
@@ -5610,7 +5610,41 @@ template <typename F, typename Set>
         struct empty_context
         {
         };
-	}
+
+    } // namespace black_magic
+
+    namespace detail
+    {
+
+        template <class T, std::size_t N, class... Args>
+        struct get_index_of_element_from_tuple_by_type_impl
+        {
+            static constexpr auto value = N;
+        };
+
+        template <class T, std::size_t N, class... Args>
+        struct get_index_of_element_from_tuple_by_type_impl<T, N, T, Args...>
+        {
+            static constexpr auto value = N;
+        };
+
+        template <class T, std::size_t N, class U, class... Args>
+        struct get_index_of_element_from_tuple_by_type_impl<T, N, U, Args...>
+        {
+            static constexpr auto value = get_index_of_element_from_tuple_by_type_impl<T, N + 1, Args...>::value;
+        };
+
+    } // namespace detail
+
+    namespace utility
+    {
+        template <class T, class... Args>
+        T& get_element_by_type(std::tuple<Args...>& t)
+        {
+            return std::get<detail::get_index_of_element_from_tuple_by_type_impl<T, 0, Args...>::value>(t);
+        }
+
+    } // namespace utility
 }
 
 
@@ -6913,9 +6947,9 @@ public:
 
             if (!rule_index)
             {
-				CROW_LOG_DEBUG << "Cannot match rules " << req.url;
+                CROW_LOG_DEBUG << "Cannot match rules " << req.url;
                 res = response(404);
-				res.end();
+                res.end();
                 return;
             }
 
@@ -6924,9 +6958,9 @@ public:
 
             if ((rules_[rule_index]->methods() & (1<<(uint32_t)req.method)) == 0)
             {
-				CROW_LOG_DEBUG << "Rule found but method mismatch: " << req.url << " with " << method_name(req.method) << "(" << (uint32_t)req.method << ") / " << rules_[rule_index]->methods();
+                CROW_LOG_DEBUG << "Rule found but method mismatch: " << req.url << " with " << method_name(req.method) << "(" << (uint32_t)req.method << ") / " << rules_[rule_index]->methods();
                 res = response(404);
-				res.end();
+                res.end();
                 return;
             }
 
@@ -7136,7 +7170,7 @@ namespace crow
             boost::asio::io_service& io_service, 
             Handler* handler, 
             const std::string& server_name,
-            std::tuple<Middlewares...>& middlewares
+            std::tuple<Middlewares...>* middlewares
             ) 
             : socket_(io_service), 
             handler_(handler), 
@@ -7233,7 +7267,7 @@ namespace crow
 
                 ctx_ = detail::context<Middlewares...>();
                 req.middleware_context = (void*)&ctx_;
-                detail::middleware_call_helper<0, decltype(ctx_), decltype(middlewares_), Middlewares...>(middlewares_, req, res, ctx_);
+                detail::middleware_call_helper<0, decltype(ctx_), decltype(*middlewares_), Middlewares...>(*middlewares_, req, res, ctx_);
 
                 if (!res.completed_)
                 {
@@ -7266,8 +7300,8 @@ namespace crow
                 detail::after_handlers_call_helper<
                     ((int)sizeof...(Middlewares)-1),
                     decltype(ctx_),
-                    decltype(middlewares_)> 
-                (middlewares_, ctx_, req_, res);
+                    decltype(*middlewares_)> 
+                (*middlewares_, ctx_, req_, res);
             }
 
             //auto self = this->shared_from_this();
@@ -7514,7 +7548,7 @@ namespace crow
         bool need_to_start_read_after_complete_{};
         bool add_keep_alive_{};
 
-        std::tuple<Middlewares...>& middlewares_;
+        std::tuple<Middlewares...>* middlewares_;
         detail::context<Middlewares...> ctx_;
     };
 
@@ -7551,12 +7585,13 @@ namespace crow
     class Server
     {
     public:
-        Server(Handler* handler, uint16_t port, uint16_t concurrency = 1)
+        Server(Handler* handler, uint16_t port, std::tuple<Middlewares...>* middlewares = nullptr, uint16_t concurrency = 1)
             : acceptor_(io_service_, tcp::endpoint(asio::ip::address(), port)), 
             signals_(io_service_, SIGINT, SIGTERM),
             handler_(handler), 
             concurrency_(concurrency),
-            port_(port)
+            port_(port),
+            middlewares_(middlewares)
         {
         }
 
@@ -7649,8 +7684,7 @@ namespace crow
         uint16_t port_;
         unsigned int roundrobin_index_{};
 
-        std::tuple<Middlewares...> middlewares_;
-
+        std::tuple<Middlewares...>* middlewares_;
     };
 }
 
@@ -7734,7 +7768,7 @@ namespace crow
         void run()
         {
             validate();
-            server_t server(this, port_, concurrency_);
+            server_t server(this, port_, &middlewares_, concurrency_);
             server.run();
         }
 
@@ -7754,11 +7788,19 @@ namespace crow
             return ctx.template get<T>();
         }
 
+        template <typename T>
+        T& get_middleware()
+        {
+            return utility::get_element_by_type<T, Middlewares...>(middlewares_);
+        }
+
     private:
         uint16_t port_ = 80;
         uint16_t concurrency_ = 1;
 
         Router router_;
+
+        std::tuple<Middlewares...> middlewares_;
     };
     template <typename ... Middlewares>
     using App = Crow<Middlewares...>;

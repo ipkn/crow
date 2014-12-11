@@ -113,7 +113,7 @@ namespace crow
             boost::asio::io_service& io_service, 
             Handler* handler, 
             const std::string& server_name,
-            std::tuple<Middlewares...>& middlewares
+            std::tuple<Middlewares...>* middlewares
             ) 
             : socket_(io_service), 
             handler_(handler), 
@@ -210,7 +210,7 @@ namespace crow
 
                 ctx_ = detail::context<Middlewares...>();
                 req.middleware_context = (void*)&ctx_;
-                detail::middleware_call_helper<0, decltype(ctx_), decltype(middlewares_), Middlewares...>(middlewares_, req, res, ctx_);
+                detail::middleware_call_helper<0, decltype(ctx_), decltype(*middlewares_), Middlewares...>(*middlewares_, req, res, ctx_);
 
                 if (!res.completed_)
                 {
@@ -243,8 +243,8 @@ namespace crow
                 detail::after_handlers_call_helper<
                     ((int)sizeof...(Middlewares)-1),
                     decltype(ctx_),
-                    decltype(middlewares_)> 
-                (middlewares_, ctx_, req_, res);
+                    decltype(*middlewares_)> 
+                (*middlewares_, ctx_, req_, res);
             }
 
             //auto self = this->shared_from_this();
@@ -491,7 +491,7 @@ namespace crow
         bool need_to_start_read_after_complete_{};
         bool add_keep_alive_{};
 
-        std::tuple<Middlewares...>& middlewares_;
+        std::tuple<Middlewares...>* middlewares_;
         detail::context<Middlewares...> ctx_;
     };
 

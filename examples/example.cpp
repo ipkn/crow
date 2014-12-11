@@ -10,9 +10,40 @@ class ExampleLogHandler : public crow::ILogHandler {
         }
 };
 
+struct ExampleMiddelware 
+{
+    std::string message;
+
+    ExampleMiddelware() 
+    {
+        message = "foo";
+    }
+
+    void setMessage(std::string newMsg)
+    {
+        message = newMsg;
+    }
+
+    struct context
+    {
+    };
+
+    void before_handle(crow::request& req, crow::response& res, context& ctx)
+    {
+        CROW_LOG_DEBUG << " - MESSAGE: " << message;
+    }
+
+    void after_handle(crow::request& req, crow::response& res, context& ctx)
+    {
+        // no-op
+    }
+};
+
 int main()
 {
-    crow::SimpleApp app;
+    crow::App<ExampleMiddelware> app;
+
+    app.get_middleware<ExampleMiddelware>().setMessage("hello");
 
     CROW_ROUTE(app, "/")
         .name("hello")

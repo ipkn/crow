@@ -23,10 +23,10 @@
 
 namespace crow
 {
-	namespace mustache
-	{
-		class template_t;
-	}
+    namespace mustache
+    {
+        class template_t;
+    }
 
     namespace json
     {
@@ -191,8 +191,8 @@ namespace crow
             static const int cached_bit = 2;
             static const int error_bit = 4;
         public:
-		    rvalue() noexcept : option_{error_bit} 
-			{}
+            rvalue() noexcept : option_{error_bit} 
+            {}
             rvalue(type t) noexcept
                 : lsize_{}, lremain_{}, t_{t}
             {}
@@ -399,32 +399,32 @@ namespace crow
                 return it != end() && it->key_ == str;
             }
 
-			int count(const std::string& str)
-			{
-				return has(str) ? 1 : 0;
-			}
+            int count(const std::string& str)
+            {
+                return has(str) ? 1 : 0;
+            }
 
             rvalue* begin() const 
-			{ 
+            { 
 #ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::Object && t() != type::List)
                     throw std::runtime_error("value is not a container");
 #endif
-				return l_.get(); 
-			}
+                return l_.get(); 
+            }
             rvalue* end() const 
-			{ 
+            { 
 #ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::Object && t() != type::List)
                     throw std::runtime_error("value is not a container");
 #endif
-				return l_.get()+lsize_; 
-			}
+                return l_.get()+lsize_; 
+            }
 
-			const detail::r_string& key() const
-			{
-				return key_;
-			}
+            const detail::r_string& key() const
+            {
+                return key_;
+            }
 
             size_t size() const
             {
@@ -437,27 +437,27 @@ namespace crow
                 return lsize_;
             }
 
-			const rvalue& operator[](int index) const
-			{
+            const rvalue& operator[](int index) const
+            {
 #ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::List)
                     throw std::runtime_error("value is not a list");
-				if (index >= (int)lsize_ || index < 0)
+                if (index >= (int)lsize_ || index < 0)
                     throw std::runtime_error("list out of bound");
 #endif
-				return l_[index];
-			}
+                return l_[index];
+            }
 
-			const rvalue& operator[](size_t index) const
-			{
+            const rvalue& operator[](size_t index) const
+            {
 #ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::List)
                     throw std::runtime_error("value is not a list");
-				if (index >= lsize_)
+                if (index >= lsize_)
                     throw std::runtime_error("list out of bound");
 #endif
-				return l_[index];
-			}
+                return l_[index];
+            }
 
             const rvalue& operator[](const char* str) const
             {
@@ -650,14 +650,14 @@ namespace crow
         inline rvalue load_nocopy_internal(char* data, size_t size)
         {
             //static const char* escaped = "\"\\/\b\f\n\r\t";
-			struct Parser
-			{
-				Parser(char* data, size_t size)
-					: data(data)
-				{
-				}
+            struct Parser
+            {
+                Parser(char* data, size_t size)
+                    : data(data)
+                {
+                }
 
-            	bool consume(char c)
+                bool consume(char c)
                 {
                     if (crow_json_unlikely(*data != c))
                         return false;
@@ -665,12 +665,12 @@ namespace crow
                     return true;
                 }
 
-				void ws_skip()
+                void ws_skip()
                 {
-					while(*data == ' ' || *data == '\t' || *data == '\r' || *data == '\n') ++data;
+                    while(*data == ' ' || *data == '\t' || *data == '\r' || *data == '\n') ++data;
                 };
 
-            	rvalue decode_string()
+                rvalue decode_string()
                 {
                     if (crow_json_unlikely(!consume('"')))
                         return {};
@@ -732,30 +732,30 @@ namespace crow
                     return {};
                 }
 
-            	rvalue decode_list()
+                rvalue decode_list()
                 {
-					rvalue ret(type::List);
-					if (crow_json_unlikely(!consume('[')))
+                    rvalue ret(type::List);
+                    if (crow_json_unlikely(!consume('[')))
                     {
                         ret.set_error();
-						return ret;
+                        return ret;
                     }
-					ws_skip();
-					if (crow_json_unlikely(*data == ']'))
-					{
-						data++;
-						return ret;
-					}
+                    ws_skip();
+                    if (crow_json_unlikely(*data == ']'))
+                    {
+                        data++;
+                        return ret;
+                    }
 
-					while(1)
-					{
+                    while(1)
+                    {
                         auto v = decode_value();
-						if (crow_json_unlikely(!v))
+                        if (crow_json_unlikely(!v))
                         {
                             ret.set_error();
                             break;
                         }
-						ws_skip();
+                        ws_skip();
                         ret.emplace_back(std::move(v));
                         if (*data == ']')
                         {
@@ -767,12 +767,12 @@ namespace crow
                             ret.set_error();
                             break;
                         }
-						ws_skip();
-					}
+                        ws_skip();
+                    }
                     return ret;
                 }
 
-				rvalue decode_number()
+                rvalue decode_number()
                 {
                     char* start = data;
 
@@ -809,7 +809,7 @@ namespace crow
                                 }
                                 else
                                     return {};*/
-								break;
+                                break;
                             case '1': case '2': case '3': 
                             case '4': case '5': case '6': 
                             case '7': case '8': case '9':
@@ -890,14 +890,14 @@ namespace crow
                     return {};
                 }
 
-				rvalue decode_value()
+                rvalue decode_value()
                 {
                     switch(*data)
                     {
                         case '[':
-							return decode_list();
+                            return decode_list();
                         case '{':
-							return decode_object();
+                            return decode_object();
                         case '"':
                             return decode_string();
                         case 't':
@@ -944,7 +944,7 @@ namespace crow
                     return {};
                 }
 
-				rvalue decode_object()
+                rvalue decode_object()
                 {
                     rvalue ret(type::Object);
                     if (crow_json_unlikely(!consume('{')))
@@ -953,7 +953,7 @@ namespace crow
                         return ret;
                     }
 
-					ws_skip();
+                    ws_skip();
 
                     if (crow_json_unlikely(*data == '}'))
                     {
@@ -970,24 +970,24 @@ namespace crow
                             break;
                         }
 
-						ws_skip();
+                        ws_skip();
                         if (crow_json_unlikely(!consume(':')))
                         {
                             ret.set_error();
                             break;
                         }
 
-						// TODO caching key to speed up (flyweight?)
+                        // TODO caching key to speed up (flyweight?)
                         auto key = t.s();
 
-						ws_skip();
+                        ws_skip();
                         auto v = decode_value();
                         if (crow_json_unlikely(!v))
                         {
                             ret.set_error();
                             break;
                         }
-						ws_skip();
+                        ws_skip();
 
                         v.key_ = std::move(key);
                         ret.emplace_back(std::move(v));
@@ -1001,24 +1001,24 @@ namespace crow
                             ret.set_error();
                             break;
                         }
-						ws_skip();
+                        ws_skip();
                     }
                     return ret;
                 }
 
-				rvalue parse()
-				{
+                rvalue parse()
+                {
                     ws_skip();
-					auto ret = decode_value(); // or decode object?
-					ws_skip();
+                    auto ret = decode_value(); // or decode object?
+                    ws_skip();
                     if (ret && *data != '\0')
                         ret.set_error();
-					return ret;
-				}
+                    return ret;
+                }
 
-				char* data;
-			};
-			return Parser(data, size).parse();
+                char* data;
+            };
+            return Parser(data, size).parse();
         }
         inline rvalue load(const char* data, size_t size)
         {
@@ -1045,7 +1045,7 @@ namespace crow
 
         class wvalue
         {
-			friend class crow::mustache::template_t;
+            friend class crow::mustache::template_t;
         public:
             type t() const { return t_; }
         private:
@@ -1253,14 +1253,14 @@ namespace crow
                 return (*l)[index];
             }
 
-			int count(const std::string& str)
-			{
+            int count(const std::string& str)
+            {
                 if (t_ != type::Object)
                     return 0;
                 if (!o)
                     return 0;
                 return o->count(str);
-			}
+            }
 
             wvalue& operator[](const std::string& str)
             {

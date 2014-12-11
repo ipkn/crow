@@ -7,48 +7,48 @@
 
 namespace crow
 {
-	namespace black_magic
-	{
-		struct OutOfRange
-		{
-			OutOfRange(unsigned pos, unsigned length) {}
-		};
-		constexpr unsigned requires_in_range( unsigned i, unsigned len )
-		{
-			return i >= len ? throw OutOfRange(i, len) : i;
-		}
+    namespace black_magic
+    {
+        struct OutOfRange
+        {
+            OutOfRange(unsigned pos, unsigned length) {}
+        };
+        constexpr unsigned requires_in_range( unsigned i, unsigned len )
+        {
+            return i >= len ? throw OutOfRange(i, len) : i;
+        }
 
-		class const_str
-		{
-			const char * const begin_;
-			unsigned size_;
+        class const_str
+        {
+            const char * const begin_;
+            unsigned size_;
 
-			public:
-			template< unsigned N >
-				constexpr const_str( const char(&arr)[N] ) : begin_(arr), size_(N - 1) {
-					static_assert( N >= 1, "not a string literal");
-				}
-			constexpr char operator[]( unsigned i ) const { 
-				return requires_in_range(i, size_), begin_[i]; 
-			}
+            public:
+            template< unsigned N >
+                constexpr const_str( const char(&arr)[N] ) : begin_(arr), size_(N - 1) {
+                    static_assert( N >= 1, "not a string literal");
+                }
+            constexpr char operator[]( unsigned i ) const { 
+                return requires_in_range(i, size_), begin_[i]; 
+            }
 
-			constexpr operator const char *() const { 
-				return begin_; 
-			}
+            constexpr operator const char *() const { 
+                return begin_; 
+            }
 
-			constexpr const char* begin() const { return begin_; }
-			constexpr const char* end() const { return begin_ + size_; }
+            constexpr const char* begin() const { return begin_; }
+            constexpr const char* end() const { return begin_ + size_; }
 
-			constexpr unsigned size() const { 
-				return size_; 
-			}
-		};
+            constexpr unsigned size() const { 
+                return size_; 
+            }
+        };
 
 
-		constexpr unsigned find_closing_tag(const_str s, unsigned p)
-		{
-			return s[p] == '>' ? p : find_closing_tag(s, p+1);
-		}
+        constexpr unsigned find_closing_tag(const_str s, unsigned p)
+        {
+            return s[p] == '>' ? p : find_closing_tag(s, p+1);
+        }
 
         constexpr bool is_valid(const_str s, unsigned i = 0, int f = 0)
         {
@@ -293,5 +293,39 @@ template <typename F, typename Set>
         struct empty_context
         {
         };
-	}
+
+    } // namespace black_magic
+
+    namespace detail
+    {
+
+        template <class T, std::size_t N, class... Args>
+        struct get_index_of_element_from_tuple_by_type_impl
+        {
+            static constexpr auto value = N;
+        };
+
+        template <class T, std::size_t N, class... Args>
+        struct get_index_of_element_from_tuple_by_type_impl<T, N, T, Args...>
+        {
+            static constexpr auto value = N;
+        };
+
+        template <class T, std::size_t N, class U, class... Args>
+        struct get_index_of_element_from_tuple_by_type_impl<T, N, U, Args...>
+        {
+            static constexpr auto value = get_index_of_element_from_tuple_by_type_impl<T, N + 1, Args...>::value;
+        };
+
+    } // namespace detail
+
+    namespace utility
+    {
+        template <class T, class... Args>
+        T& get_element_by_type(std::tuple<Args...>& t)
+        {
+            return std::get<detail::get_index_of_element_from_tuple_by_type_impl<T, 0, Args...>::value>(t);
+        }
+
+    } // namespace utility
 }

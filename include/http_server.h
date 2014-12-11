@@ -23,12 +23,13 @@ namespace crow
     class Server
     {
     public:
-        Server(Handler* handler, uint16_t port, uint16_t concurrency = 1)
+        Server(Handler* handler, uint16_t port, std::tuple<Middlewares...>* middlewares = nullptr, uint16_t concurrency = 1)
             : acceptor_(io_service_, tcp::endpoint(asio::ip::address(), port)), 
             signals_(io_service_, SIGINT, SIGTERM),
             handler_(handler), 
             concurrency_(concurrency),
-            port_(port)
+            port_(port),
+            middlewares_(middlewares)
         {
         }
 
@@ -121,7 +122,6 @@ namespace crow
         uint16_t port_;
         unsigned int roundrobin_index_{};
 
-        std::tuple<Middlewares...> middlewares_;
-
+        std::tuple<Middlewares...>* middlewares_;
     };
 }
