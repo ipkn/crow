@@ -8,7 +8,8 @@ unittest.cpp
 
 add_executable(unittest ${TEST_SRCS})
 #target_link_libraries(unittest crow)
-target_link_libraries(unittest ${Boost_LIBRARIES} )
+target_link_libraries(unittest ${Boost_LIBRARIES})
+target_link_libraries(unittest ${CMAKE_THREAD_LIBS_INIT})
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 # using Clang
