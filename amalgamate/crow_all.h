@@ -6966,7 +6966,25 @@ public:
 
             CROW_LOG_DEBUG << "Matched rule '" << ((TaggedRule<>*)rules_[rule_index].get())->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->methods();
 
-            rules_[rule_index]->handle(req, res, found.second);
+            // any uncaught exceptions become 500s
+            try
+            {
+                rules_[rule_index]->handle(req, res, found.second);
+            }
+            catch(std::exception& e)
+            {
+                CROW_LOG_ERROR << "An uncaught exception occurred: " << e.what();
+                res = response(500);
+                res.end();
+                return;   
+            }
+            catch(...)
+            {
+                CROW_LOG_ERROR << "An uncaught exception occurred. The type was unknown so no information was available.";
+                res = response(500);
+                res.end();
+                return;   
+            }
         }
 
         void debug_print()
