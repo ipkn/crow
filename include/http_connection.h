@@ -3,6 +3,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/array.hpp>
+#include <boost/thread/tss.hpp>
 #include <atomic>
 #include <chrono>
 #include <vector>
@@ -311,7 +312,7 @@ namespace crow
 
             if (!res.headers.count("content-length"))
             {
-                content_length_ = std::to_string(res.body.size());
+                content_length_ = boost::lexical_cast<std::string>(res.body.size());
                 static std::string content_length_tag = "Content-Length: ";
                 buffers_.emplace_back(content_length_tag.data(), content_length_tag.size());
                 buffers_.emplace_back(content_length_.data(), content_length_.size());
@@ -357,15 +358,23 @@ namespace crow
         static std::string get_cached_date_str()
         {
             using namespace std::chrono;
-            thread_local auto last = steady_clock::now();
-            thread_local std::string date_str = DateTime().str();
-
-            if (steady_clock::now() - last >= seconds(1))
+            static boost::thread_specific_ptr<steady_clock::time_point> last;
+            if ( !last.get() )
             {
-                last = steady_clock::now();
-                date_str = DateTime().str();
+                last.reset(new auto(steady_clock::now()));
             }
-            return date_str;
+            static boost::thread_specific_ptr<std::string> date_str;
+            if ( !date_str.get() )
+            {
+                date_str.reset(new auto(DateTime().str()));
+            }
+
+            if (steady_clock::now() - *last >= seconds(1))
+            {
+                *last = steady_clock::now();
+                *date_str = DateTime().str();
+            }
+            return *date_str;
         }
 
         void do_read()
