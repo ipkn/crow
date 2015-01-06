@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/asio.hpp>
+#include <boost/thread/tss.hpp>
 #include <deque>
 #include <functional>
 #include <chrono>
@@ -19,8 +20,12 @@ namespace crow
             // tls based queue to avoid locking
             static dumb_timer_queue& get_current_dumb_timer_queue()
             {
-                thread_local dumb_timer_queue q;
-                return q;
+                static boost::thread_specific_ptr<dumb_timer_queue> q;
+                if ( !q.get() )
+                {
+                    q.reset(new dumb_timer_queue);
+                }
+                return *q;
             }
 
             using key = std::pair<dumb_timer_queue*, int>;
