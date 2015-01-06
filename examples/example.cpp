@@ -10,11 +10,11 @@ class ExampleLogHandler : public crow::ILogHandler {
         }
 };
 
-struct ExampleMiddelware 
+struct ExampleMiddleware 
 {
     std::string message;
 
-    ExampleMiddelware() 
+    ExampleMiddleware() 
     {
         message = "foo";
     }
@@ -41,9 +41,9 @@ struct ExampleMiddelware
 
 int main()
 {
-    crow::App<ExampleMiddelware> app;
+    crow::App<ExampleMiddleware> app;
 
-    app.get_middleware<ExampleMiddelware>().setMessage("hello");
+    app.get_middleware<ExampleMiddleware>().setMessage("hello");
 
     CROW_ROUTE(app, "/")
         .name("hello")
