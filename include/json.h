@@ -1224,7 +1224,7 @@ namespace crow
             }
 
             template <typename T>
-            wvalue& operator[](const std::vector<T>& v)
+            wvalue& operator=(const std::vector<T>& v)
             {
                 if (t_ != type::List)
                     reset();

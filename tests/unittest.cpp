@@ -539,6 +539,10 @@ TEST(json_write)
 
     y["scores"]["a"]["b"]["c"] = nullptr;
     ASSERT_EQUAL(R"({"scores":{"a":{"b":{"c":null}}}})", json::dump(y));
+
+    y["scores"] = std::vector<int>{1,2,3};
+    ASSERT_EQUAL(R"({"scores":[1,2,3]})", json::dump(y));
+
 }
 
 TEST(template_basic)
