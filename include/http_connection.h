@@ -487,7 +487,7 @@ namespace crow
 
         bool is_reading{};
         bool is_writing{};
-        bool need_to_call_after_handlers_;
+        bool need_to_call_after_handlers_{};
         bool need_to_start_read_after_complete_{};
         bool add_keep_alive_{};
 
