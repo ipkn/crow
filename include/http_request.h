@@ -43,7 +43,7 @@ namespace crow
             headers.emplace(std::move(key), std::move(value));
         }
 
-        const std::string& get_header_value(const std::string& key)
+        const std::string& get_header_value(const std::string& key) const
         {
             return crow::get_header_value(headers, key);
         }
