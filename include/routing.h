@@ -276,6 +276,8 @@ namespace crow
         friend class Router;
     };
 
+    const int RULE_SPECIAL_REDIRECT_SLASH = 1;
+
     class Trie
     {
     public:
@@ -607,14 +609,28 @@ public:
     class Router
     {
     public:
-        Router() : rules_(1) {}
+        Router() : rules_(2) 
+        {
+        }
+
         template <uint64_t N>
         typename black_magic::arguments<N>::type::template rebind<TaggedRule>& new_rule_tagged(const std::string& rule)
         {
             using RuleT = typename black_magic::arguments<N>::type::template rebind<TaggedRule>;
             auto ruleObject = new RuleT(rule);
             rules_.emplace_back(ruleObject);
+
             trie_.add(rule, rules_.size() - 1);
+
+            // directory case: 
+            //   request to `/about' url matches `/about/' rule 
+            if (rule.size() > 1 && rule.back() == '/')
+            {
+                std::string rule_without_trailing_slash = rule;
+                rule_without_trailing_slash.pop_back();
+                trie_.add(rule_without_trailing_slash, RULE_SPECIAL_REDIRECT_SLASH);
+            }
+
             return *ruleObject;
         }
 
@@ -633,6 +649,7 @@ public:
             auto found = trie_.find(req.url);
 
             unsigned rule_index = found.first;
+            CROW_LOG_DEBUG << "???" << rule_index;
 
             if (!rule_index)
             {
@@ -644,6 +661,24 @@ public:
 
             if (rule_index >= rules_.size())
                 throw std::runtime_error("Trie internal structure corrupted!");
+
+            if (rule_index == RULE_SPECIAL_REDIRECT_SLASH)
+            {
+                CROW_LOG_INFO << "Redirecting to a url with trailing slash: " << req.url;
+                res = response(301);
+
+                // TODO absolute url building
+                if (req.get_header_value("Host").empty())
+                {
+                    res.add_header("Location", req.url + "/");
+                }
+                else
+                {
+                    res.add_header("Location", "http://" + req.get_header_value("Host") + req.url + "/");
+                }
+                res.end();
+                return;
+            }
 
             if ((rules_[rule_index]->methods() & (1<<(uint32_t)req.method)) == 0)
             {

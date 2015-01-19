@@ -116,6 +116,59 @@ TEST(ParameterTagging)
     static_assert(std::is_same<black_magic::S<uint64_t, double, int64_t>, black_magic::arguments<6*6+6*3+2>::type>::value, "tag to type container");
 }
 
+TEST(PathRouting)
+{
+    SimpleApp app;
+
+    CROW_ROUTE(app, "/file")
+    ([]{
+        return "file";
+    });
+
+    CROW_ROUTE(app, "/path/")
+    ([]{
+        return "path";
+    });
+
+    {
+        request req;
+        response res;
+
+        req.url = "/file";
+
+        app.handle(req, res);
+
+        ASSERT_EQUAL(200, res.code);
+    }
+    {
+        request req;
+        response res;
+
+        req.url = "/file/";
+
+        app.handle(req, res);
+        ASSERT_EQUAL(404, res.code);
+    }
+    {
+        request req;
+        response res;
+
+        req.url = "/path";
+
+        app.handle(req, res);
+        ASSERT_NOTEQUAL(404, res.code);
+    }
+    {
+        request req;
+        response res;
+
+        req.url = "/path/";
+
+        app.handle(req, res);
+        ASSERT_EQUAL(200, res.code);
+    }
+}
+
 TEST(RoutingTest)
 {
     SimpleApp app;

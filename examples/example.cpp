@@ -56,6 +56,12 @@ int main()
         return "About Crow example.";
     });
 
+    // a request to /path should be forwarded to /path/
+    CROW_ROUTE(app, "/path/")
+    ([](){
+        return "Trailing slash test case..";
+    });
+
     // simple json response
     CROW_ROUTE(app, "/json")
     ([]{
