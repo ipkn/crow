@@ -1039,6 +1039,65 @@ TEST(simple_url_params)
     server.stop();
 }
 
+TEST(route_dynamic)
+{
+    SimpleApp app;
+    int x = 1;
+    app.route_dynamic("/")
+    ([&]{
+        x = 2;
+        return "";
+    });
+
+    app.route_dynamic("/set4")
+    ([&](const request& req){
+        x = 4;
+        return "";
+    });
+    app.route_dynamic("/set5")
+    ([&](const request& req, response& res){
+        x = 5;
+        res.end();
+    });
+
+
+
+    app.route_dynamic("/set_int/<int>")
+    ([&](int y){
+        x = y;
+        return "";
+    });
+
+    {
+        request req;
+        response res;
+        req.url = "/";
+        app.handle(req, res);
+        ASSERT_EQUAL(x, 2);
+    }
+    {
+        request req;
+        response res;
+        req.url = "/set_int/42";
+        app.handle(req, res);
+        ASSERT_EQUAL(x, 42);
+    }
+    {
+        request req;
+        response res;
+        req.url = "/set5";
+        app.handle(req, res);
+        ASSERT_EQUAL(x, 5);
+    }
+    {
+        request req;
+        response res;
+        req.url = "/set4";
+        app.handle(req, res);
+        ASSERT_EQUAL(x, 4);
+    }
+}
+
 int main()
 {
     return testmain();

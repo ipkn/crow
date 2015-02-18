@@ -19,6 +19,11 @@ namespace crow
     class BaseRule
     {
     public:
+        BaseRule(std::string rule)
+            : rule_(std::move(rule))
+        {
+        }
+
         virtual ~BaseRule()
         {
         }
@@ -34,113 +39,256 @@ namespace crow
 
     protected:
         uint32_t methods_{1<<(int)HTTPMethod::GET};
+
+        std::string rule_;
+        std::string name_;
+        friend class Router;
+    };
+
+
+    namespace detail
+    {
+        namespace routing_handler_call_helper
+        {
+            template <typename T, int Pos>
+            struct call_pair
+            {
+                using type = T;
+                static const int pos = Pos;
+            };
+
+            template <typename H1>
+            struct call_params
+            {
+                H1& handler;
+                const routing_params& params;
+                const request& req;
+                response& res;
+            };
+
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2> 
+            struct call
+            {
+            };
+
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+            struct call<F, NInt, NUint, NDouble, NString, black_magic::S<int64_t, Args1...>, black_magic::S<Args2...>>
+            {
+                void operator()(F cparams)
+                {
+                    using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<int64_t, NInt>>;
+                    call<F, NInt+1, NUint, NDouble, NString,
+                        black_magic::S<Args1...>, pushed>()(cparams);
+                }
+            };
+
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+            struct call<F, NInt, NUint, NDouble, NString, black_magic::S<uint64_t, Args1...>, black_magic::S<Args2...>>
+            {
+                void operator()(F cparams)
+                {
+                    using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<uint64_t, NUint>>;
+                    call<F, NInt, NUint+1, NDouble, NString,
+                        black_magic::S<Args1...>, pushed>()(cparams);
+                }
+            };
+
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+            struct call<F, NInt, NUint, NDouble, NString, black_magic::S<double, Args1...>, black_magic::S<Args2...>>
+            {
+                void operator()(F cparams)
+                {
+                    using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<double, NDouble>>;
+                    call<F, NInt, NUint, NDouble+1, NString,
+                        black_magic::S<Args1...>, pushed>()(cparams);
+                }
+            };
+
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+            struct call<F, NInt, NUint, NDouble, NString, black_magic::S<std::string, Args1...>, black_magic::S<Args2...>>
+            {
+                void operator()(F cparams)
+                {
+                    using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<std::string, NString>>;
+                    call<F, NInt, NUint, NDouble, NString+1,
+                        black_magic::S<Args1...>, pushed>()(cparams);
+                }
+            };
+
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1> 
+            struct call<F, NInt, NUint, NDouble, NString, black_magic::S<>, black_magic::S<Args1...>>
+            {
+                void operator()(F cparams)
+                {
+                    cparams.handler(
+                        cparams.req,
+                        cparams.res,
+                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
+                    );
+                }
+            };
+
+            template <typename Func, typename ... ArgsWrapped>
+            struct Wrapped
+            {
+                template <typename ... Args>
+                void set(Func f, typename std::enable_if<
+                    !std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request&>::value
+                , int>::type = 0)
+                {
+                    handler_ = (
+                        [f = std::move(f)]
+                        (const request&, response& res, Args... args){
+                            res = response(f(args...));
+                            res.end();
+                        });
+                }
+
+                template <typename Req, typename ... Args>
+                struct req_handler_wrapper
+                {
+                    req_handler_wrapper(Func f)
+                        : f(std::move(f))
+                    {
+                    }
+
+                    void operator()(const request& req, response& res, Args... args)
+                    {
+                        res = response(f(req, args...));
+                        res.end();
+                    }
+
+                    Func f;
+                };
+
+                template <typename ... Args>
+                void set(Func f, typename std::enable_if<
+                        std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request&>::value &&
+                        !std::is_same<typename std::tuple_element<1, std::tuple<Args..., void, void>>::type, response&>::value
+                        , int>::type = 0)
+                {
+                    handler_ = req_handler_wrapper<Args...>(std::move(f));
+                    /*handler_ = (
+                        [f = std::move(f)]
+                        (const request& req, response& res, Args... args){
+                             res = response(f(req, args...));
+                             res.end();
+                        });*/
+                }
+
+                template <typename ... Args>
+                void set(Func f, typename std::enable_if<
+                        std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request&>::value &&
+                        std::is_same<typename std::tuple_element<1, std::tuple<Args..., void, void>>::type, response&>::value
+                        , int>::type = 0)
+                {
+                    handler_ = std::move(f);
+                }
+
+                template <typename ... Args>
+                struct handler_type_helper
+                {
+                    using type = std::function<void(const crow::request&, crow::response&, Args...)>;
+                    using args_type = black_magic::S<typename black_magic::promote_t<Args>...>; 
+                };
+
+                template <typename ... Args>
+                struct handler_type_helper<const request&, Args...>
+                {
+                    using type = std::function<void(const crow::request&, crow::response&, Args...)>;
+                    using args_type = black_magic::S<typename black_magic::promote_t<Args>...>; 
+                };
+
+                template <typename ... Args>
+                struct handler_type_helper<const request&, response&, Args...>
+                {
+                    using type = std::function<void(const crow::request&, crow::response&, Args...)>;
+                    using args_type = black_magic::S<typename black_magic::promote_t<Args>...>; 
+                };
+
+                typename handler_type_helper<ArgsWrapped...>::type handler_;
+
+                void operator()(const request& req, response& res, const routing_params& params)
+                {
+                    detail::routing_handler_call_helper::call<
+                        detail::routing_handler_call_helper::call_params<
+                            decltype(handler_)>,
+                        0, 0, 0, 0, 
+                        typename handler_type_helper<ArgsWrapped...>::args_type,
+                        black_magic::S<>
+                    >()(
+                        detail::routing_handler_call_helper::call_params<
+                            decltype(handler_)>
+                        {handler_, params, req, res}
+                   );
+                }
+            };
+
+        }
+    }
+
+    class DynamicRule : public BaseRule
+    {
+    public:
+        DynamicRule(std::string rule)
+            : BaseRule(std::move(rule))
+        {
+        }
+
+        void validate() override
+        {
+            if (!erased_handler_)
+            {
+                throw std::runtime_error(name_ + (!name_.empty() ? ": " : "") + "no handler for url " + rule_);
+            }
+        }
+
+        void handle(const request& req, response& res, const routing_params& params) override
+        {
+            erased_handler_(req, res, params);
+        }
+
+        template <typename Func>
+        void operator()(Func f)
+        {
+            using function_t = utility::function_traits<Func>;
+            erased_handler_ = wrap(std::move(f), black_magic::gen_seq<function_t::arity>());
+        }
+
+        // enable_if Arg1 == request && Arg2 == response
+        // enable_if Arg1 == request && Arg2 != resposne
+        // enable_if Arg1 != request
+        template <typename Func, unsigned ... Indices>
+        std::function<void(const request&, response&, const routing_params&)> 
+        wrap(Func f, black_magic::seq<Indices...>)
+        {
+            using function_t = utility::function_traits<Func>;
+            auto ret = detail::routing_handler_call_helper::Wrapped<Func, typename function_t::template arg<Indices>...>();
+            ret.template set<
+                typename function_t::template arg<Indices>...
+            >(std::move(f));
+            return ret;
+        }
+
+        template <typename Func>
+        void operator()(std::string name, Func&& f)
+        {
+            name_ = std::move(name);
+            (*this).template operator()<Func>(std::forward(f));
+        }
+    private:
+        std::function<void(const request&, response&, const routing_params&)> erased_handler_;
+
     };
 
     template <typename ... Args>
     class TaggedRule : public BaseRule
     {
-    private:
-        template <typename H1, typename H2, typename H3>
-        struct call_params
-        {
-            H1& handler;
-            H2& handler_with_req;
-            H3& handler_with_req_res;
-            const routing_params& params;
-            const request& req;
-            response& res;
-        };
-
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2> 
-        struct call
-        {
-        };
-
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
-        struct call<F, NInt, NUint, NDouble, NString, black_magic::S<int64_t, Args1...>, black_magic::S<Args2...>>
-        {
-            void operator()(F cparams)
-            {
-                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<int64_t, NInt>>;
-                call<F, NInt+1, NUint, NDouble, NString,
-                    black_magic::S<Args1...>, pushed>()(cparams);
-            }
-        };
-
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
-        struct call<F, NInt, NUint, NDouble, NString, black_magic::S<uint64_t, Args1...>, black_magic::S<Args2...>>
-        {
-            void operator()(F cparams)
-            {
-                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<uint64_t, NUint>>;
-                call<F, NInt, NUint+1, NDouble, NString,
-                    black_magic::S<Args1...>, pushed>()(cparams);
-            }
-        };
-
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
-        struct call<F, NInt, NUint, NDouble, NString, black_magic::S<double, Args1...>, black_magic::S<Args2...>>
-        {
-            void operator()(F cparams)
-            {
-                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<double, NDouble>>;
-                call<F, NInt, NUint, NDouble+1, NString,
-                    black_magic::S<Args1...>, pushed>()(cparams);
-            }
-        };
-
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
-        struct call<F, NInt, NUint, NDouble, NString, black_magic::S<std::string, Args1...>, black_magic::S<Args2...>>
-        {
-            void operator()(F cparams)
-            {
-                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<std::string, NString>>;
-                call<F, NInt, NUint, NDouble, NString+1,
-                    black_magic::S<Args1...>, pushed>()(cparams);
-            }
-        };
-
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1> 
-        struct call<F, NInt, NUint, NDouble, NString, black_magic::S<>, black_magic::S<Args1...>>
-        {
-            void operator()(F cparams)
-            {
-                if (cparams.handler) 
-                {
-                    cparams.res = cparams.handler(
-                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
-                    );
-                    cparams.res.end();
-                    return;
-                }
-                if (cparams.handler_with_req)
-                {
-                    cparams.res = cparams.handler_with_req(
-                        cparams.req,
-                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
-                    );
-                    cparams.res.end();
-                    return;
-                }
-                if (cparams.handler_with_req_res)
-                {
-                    cparams.handler_with_req_res(
-                        cparams.req,
-                        cparams.res,
-                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
-                    );
-                    return;
-                }
-                CROW_LOG_DEBUG << "ERROR cannot find handler";
-
-                // we already found matched url; this is server error
-                cparams.res = response(500);
-            }
-        };
     public:
         using self_t = TaggedRule<Args...>;
+
         TaggedRule(std::string rule)
-            : rule_(std::move(rule))
+            : BaseRule(std::move(rule))
         {
         }
         
@@ -166,7 +314,7 @@ namespace crow
 
         void validate()
         {
-            if (!handler_ && !handler_with_req_ && !handler_with_req_res_)
+            if (!handler_)
             {
                 throw std::runtime_error(name_ + (!name_.empty() ? ": " : "") + "no handler for url " + rule_);
             }
@@ -182,11 +330,10 @@ namespace crow
             static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value, 
                 "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
 
-                handler_ = [f = std::move(f)](Args ... args){
-                    return response(f(args...));
+                handler_ = [f = std::move(f)](const request&, response& res, Args ... args){
+                    res = response(f(args...));
+                    res.end();
                 };
-                handler_with_req_ = nullptr;
-                handler_with_req_res_ = nullptr;
         }
 
         template <typename Func>
@@ -202,11 +349,10 @@ namespace crow
             static_assert(!std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<Args>()...))>::value, 
                 "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
 
-                handler_with_req_ = [f = std::move(f)](const crow::request& req, Args ... args){
-                    return response(f(req, args...));
+                handler_ = [f = std::move(f)](const crow::request& req, crow::response& res, Args ... args){
+                    res = response(f(req, args...));
+                    res.end();
                 };
-                handler_ = nullptr;
-                handler_with_req_res_ = nullptr;
         }
 
         template <typename Func>
@@ -224,12 +370,7 @@ namespace crow
             static_assert(std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<crow::response&>(), std::declval<Args>()...))>::value, 
                 "Handler function with response argument should have void return type");
 
-                handler_with_req_res_ = std::move(f);
-                //[f = std::move(f)](const crow::request& req, crow::response& res, Args ... args){
-                //    f(req, response, args...);
-                //};
-                handler_ = nullptr;
-                handler_with_req_ = nullptr;
+                handler_ = std::move(f);
         }
 
         template <typename Func>
@@ -241,39 +382,22 @@ namespace crow
 
         void handle(const request& req, response& res, const routing_params& params) override
         {
-            call<
-                call_params<
-                    decltype(handler_), 
-                    decltype(handler_with_req_),
-                    decltype(handler_with_req_res_)>, 
+            detail::routing_handler_call_helper::call<
+                detail::routing_handler_call_helper::call_params<
+                    decltype(handler_)>, 
                 0, 0, 0, 0, 
                 black_magic::S<Args...>, 
                 black_magic::S<>
             >()(
-                call_params<
-                    decltype(handler_), 
-                    decltype(handler_with_req_),
-                    decltype(handler_with_req_res_)>
-                {handler_, handler_with_req_, handler_with_req_res_, params, req, res}
+                detail::routing_handler_call_helper::call_params<
+                    decltype(handler_)>
+                {handler_, params, req, res}
             );
         }
 
     private:
-        std::function<response(Args...)> handler_;
-        std::function<response(const crow::request&, Args...)> handler_with_req_;
-        std::function<void(const crow::request&, crow::response&, Args...)> handler_with_req_res_;
+        std::function<void(const crow::request&, crow::response&, Args...)> handler_;
 
-        std::string rule_;
-        std::string name_;
-
-        template <typename T, int Pos>
-        struct call_pair
-        {
-            using type = T;
-            static const int pos = Pos;
-        };
-
-        friend class Router;
     };
 
     const int RULE_SPECIAL_REDIRECT_SLASH = 1;
@@ -613,13 +737,29 @@ public:
         {
         }
 
+        DynamicRule& new_rule_dynamic(const std::string& rule)
+        {
+            auto ruleObject = new DynamicRule(rule);
+
+            internal_add_rule_object(rule, ruleObject);
+
+            return *ruleObject;
+        }
+
         template <uint64_t N>
         typename black_magic::arguments<N>::type::template rebind<TaggedRule>& new_rule_tagged(const std::string& rule)
         {
             using RuleT = typename black_magic::arguments<N>::type::template rebind<TaggedRule>;
             auto ruleObject = new RuleT(rule);
-            rules_.emplace_back(ruleObject);
 
+            internal_add_rule_object(rule, ruleObject);
+
+            return *ruleObject;
+        }
+
+        void internal_add_rule_object(const std::string& rule, BaseRule* ruleObject)
+        {
+            rules_.emplace_back(ruleObject);
             trie_.add(rule, rules_.size() - 1);
 
             // directory case: 
@@ -630,8 +770,6 @@ public:
                 rule_without_trailing_slash.pop_back();
                 trie_.add(rule_without_trailing_slash, RULE_SPECIAL_REDIRECT_SLASH);
             }
-
-            return *ruleObject;
         }
 
         void validate()
@@ -688,7 +826,7 @@ public:
                 return;
             }
 
-            CROW_LOG_DEBUG << "Matched rule '" << ((TaggedRule<>*)rules_[rule_index].get())->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->methods();
+            CROW_LOG_DEBUG << "Matched rule '" << (rules_[rule_index].get())->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->methods();
 
             // any uncaught exceptions become 500s
             try

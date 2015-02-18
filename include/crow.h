@@ -35,6 +35,11 @@ namespace crow
             router_.handle(req, res);
         }
 
+        DynamicRule& route_dynamic(std::string&& rule)
+        {
+            return router_.new_rule_dynamic(std::move(rule));
+        }
+
         template <uint64_t Tag>
         auto route(std::string&& rule)
             -> typename std::result_of<decltype(&Router::new_rule_tagged<Tag>)(Router, std::string&&)>::type

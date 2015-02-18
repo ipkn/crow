@@ -294,6 +294,35 @@ template <typename F, typename Set>
         {
         };
 
+        template <typename T>
+        struct promote
+        {
+            using type = T;
+        };
+
+#define CROW_INTERNAL_PROMOTE_TYPE(t1, t2) \
+        template<> \
+        struct promote<t1> \
+        {  \
+            using type = t2; \
+        }
+
+        CROW_INTERNAL_PROMOTE_TYPE(char, int64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(short, int64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(int, int64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(long, int64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(long long, int64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(unsigned char, uint64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(unsigned short, uint64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(unsigned int, uint64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(unsigned long, uint64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(unsigned long long, uint64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(float, double);
+#undef CROW_INTERNAL_PROMOTE_TYPE
+
+        template <typename T>
+        using promote_t = typename promote<T>::type;
+
     } // namespace black_magic
 
     namespace detail
@@ -326,6 +355,53 @@ template <typename F, typename Set>
         {
             return std::get<detail::get_index_of_element_from_tuple_by_type_impl<T, 0, Args...>::value>(t);
         }
+
+        template<typename T> 
+        struct function_traits;  
+
+        template<typename T> 
+        struct function_traits : public function_traits<decltype(&T::operator())>
+        {
+            using parent_t = function_traits<decltype(&T::operator())>;
+            static const size_t arity = parent_t::arity;
+            using result_type = typename parent_t::result_type;
+            template <size_t i>
+            using arg = typename parent_t::template arg<i>;
+        
+        };  
+
+        template<typename ClassType, typename R, typename ...Args> 
+        struct function_traits<R(ClassType::*)(Args...) const>
+        {
+            static const size_t arity = sizeof...(Args);
+
+            typedef R result_type;
+
+            template <size_t i>
+            using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
+        };
+
+        template<typename ClassType, typename R, typename ...Args> 
+        struct function_traits<R(ClassType::*)(Args...)>
+        {
+            static const size_t arity = sizeof...(Args);
+
+            typedef R result_type;
+
+            template <size_t i>
+            using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
+        };
+
+        template<typename R, typename ...Args> 
+        struct function_traits<std::function<R(Args...)>>
+        {
+            static const size_t arity = sizeof...(Args);
+
+            typedef R result_type;
+
+            template <size_t i>
+            using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
+        };
 
     } // namespace utility
 }
