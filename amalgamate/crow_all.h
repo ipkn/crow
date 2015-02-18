@@ -1,363 +1,5 @@
 #pragma once
 
-#include <cstdint>
-#include <stdexcept>
-#include <tuple>
-#include <type_traits>
-
-namespace crow
-{
-    namespace black_magic
-    {
-        struct OutOfRange
-        {
-            OutOfRange(unsigned pos, unsigned length) {}
-        };
-        constexpr unsigned requires_in_range( unsigned i, unsigned len )
-        {
-            return i >= len ? throw OutOfRange(i, len) : i;
-        }
-
-        class const_str
-        {
-            const char * const begin_;
-            unsigned size_;
-
-            public:
-            template< unsigned N >
-                constexpr const_str( const char(&arr)[N] ) : begin_(arr), size_(N - 1) {
-                    static_assert( N >= 1, "not a string literal");
-                }
-            constexpr char operator[]( unsigned i ) const { 
-                return requires_in_range(i, size_), begin_[i]; 
-            }
-
-            constexpr operator const char *() const { 
-                return begin_; 
-            }
-
-            constexpr const char* begin() const { return begin_; }
-            constexpr const char* end() const { return begin_ + size_; }
-
-            constexpr unsigned size() const { 
-                return size_; 
-            }
-        };
-
-
-        constexpr unsigned find_closing_tag(const_str s, unsigned p)
-        {
-            return s[p] == '>' ? p : find_closing_tag(s, p+1);
-        }
-
-        constexpr bool is_valid(const_str s, unsigned i = 0, int f = 0)
-        {
-            return 
-                i == s.size()
-                    ? f == 0 :
-                f < 0 || f >= 2
-                    ? false :
-                s[i] == '<'
-                    ? is_valid(s, i+1, f+1) :
-                s[i] == '>'
-                    ? is_valid(s, i+1, f-1) :
-                is_valid(s, i+1, f);
-        }
-
-        constexpr bool is_equ_p(const char* a, const char* b, unsigned n)
-        {
-            return
-                *a == 0 && *b == 0 && n == 0 
-                    ? true :
-                (*a == 0 || *b == 0)
-                    ? false :
-                n == 0
-                    ? true :
-                *a != *b
-                    ? false :
-                is_equ_p(a+1, b+1, n-1);
-        }
-
-        constexpr bool is_equ_n(const_str a, unsigned ai, const_str b, unsigned bi, unsigned n)
-        {
-            return 
-                ai + n > a.size() || bi + n > b.size() 
-                    ? false :
-                n == 0 
-                    ? true : 
-                a[ai] != b[bi] 
-                    ? false : 
-                is_equ_n(a,ai+1,b,bi+1,n-1);
-        }
-
-        constexpr bool is_int(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<int>", 0, 5);
-        }
-
-        constexpr bool is_uint(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<uint>", 0, 6);
-        }
-
-        constexpr bool is_float(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<float>", 0, 7) ||
-                is_equ_n(s, i, "<double>", 0, 8);
-        }
-
-        constexpr bool is_str(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<str>", 0, 5) ||
-                is_equ_n(s, i, "<string>", 0, 8);
-        }
-
-        constexpr bool is_path(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<path>", 0, 6);
-        }
-
-        constexpr uint64_t get_parameter_tag(const_str s, unsigned p = 0)
-        {
-            return
-                p == s.size() 
-                    ?  0 :
-                s[p] == '<' ? ( 
-                    is_int(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 1 :
-                    is_uint(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 2 :
-                    is_float(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 3 :
-                    is_str(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 4 :
-                    is_path(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 5 :
-                    throw std::runtime_error("invalid parameter type")
-                    ) : 
-                get_parameter_tag(s, p+1);
-        }
-
-        template <typename ... T>
-        struct S
-        {
-            template <typename U>
-            using push = S<U, T...>;
-            template <typename U>
-            using push_back = S<T..., U>;
-            template <template<typename ... Args> class U>
-            using rebind = U<T...>;
-        };
-template <typename F, typename Set>
-        struct CallHelper;
-        template <typename F, typename ...Args>
-        struct CallHelper<F, S<Args...>>
-        {
-            template <typename F1, typename ...Args1, typename = 
-                decltype(std::declval<F1>()(std::declval<Args1>()...))
-                >
-            static char __test(int);
-
-            template <typename ...>
-            static int __test(...);
-
-            static constexpr bool value = sizeof(__test<F, Args...>(0)) == sizeof(char);
-        };
-
-
-        template <int N>
-        struct single_tag_to_type
-        {
-        };
-
-        template <>
-        struct single_tag_to_type<1>
-        {
-            using type = int64_t;
-        };
-
-        template <>
-        struct single_tag_to_type<2>
-        {
-            using type = uint64_t;
-        };
-
-        template <>
-        struct single_tag_to_type<3>
-        {
-            using type = double;
-        };
-
-        template <>
-        struct single_tag_to_type<4>
-        {
-            using type = std::string;
-        };
-
-        template <>
-        struct single_tag_to_type<5>
-        {
-            using type = std::string;
-        };
-
-
-        template <uint64_t Tag> 
-        struct arguments
-        {
-            using subarguments = typename arguments<Tag/6>::type;
-            using type = 
-                typename subarguments::template push<typename single_tag_to_type<Tag%6>::type>;
-        };
-
-        template <> 
-        struct arguments<0>
-        {
-            using type = S<>;
-        };
-
-        template <typename ... T>
-        struct last_element_type
-        {
-            using type = typename std::tuple_element<sizeof...(T)-1, std::tuple<T...>>::type;
-        };
-
-
-        template <>
-        struct last_element_type<>
-        {
-        };
-
-
-        // from http://stackoverflow.com/questions/13072359/c11-compile-time-array-with-logarithmic-evaluation-depth
-        template<class T> using Invoke = typename T::type;
-
-        template<unsigned...> struct seq{ using type = seq; };
-
-        template<class S1, class S2> struct concat;
-
-        template<unsigned... I1, unsigned... I2>
-        struct concat<seq<I1...>, seq<I2...>>
-          : seq<I1..., (sizeof...(I1)+I2)...>{};
-
-        template<class S1, class S2>
-        using Concat = Invoke<concat<S1, S2>>;
-
-        template<unsigned N> struct gen_seq;
-        template<unsigned N> using GenSeq = Invoke<gen_seq<N>>;
-
-        template<unsigned N>
-        struct gen_seq : Concat<GenSeq<N/2>, GenSeq<N - N/2>>{};
-
-        template<> struct gen_seq<0> : seq<>{};
-        template<> struct gen_seq<1> : seq<0>{};
-
-        template <typename Seq, typename Tuple> 
-        struct pop_back_helper;
-
-        template <unsigned ... N, typename Tuple>
-        struct pop_back_helper<seq<N...>, Tuple>
-        {
-            template <template <typename ... Args> class U>
-            using rebind = U<typename std::tuple_element<N, Tuple>::type...>;
-        };
-
-        template <typename ... T>
-        struct pop_back //: public pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>
-        {
-            template <template <typename ... Args> class U>
-            using rebind = typename pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>::template rebind<U>;
-        };
-
-        template <>
-        struct pop_back<>
-        {
-            template <template <typename ... Args> class U>
-            using rebind = U<>;
-        };
-
-        // from http://stackoverflow.com/questions/2118541/check-if-c0x-parameter-pack-contains-a-type
-        template < typename Tp, typename... List >
-        struct contains : std::true_type {};
-
-        template < typename Tp, typename Head, typename... Rest >
-        struct contains<Tp, Head, Rest...>
-        : std::conditional< std::is_same<Tp, Head>::value,
-            std::true_type,
-            contains<Tp, Rest...>
-        >::type {};
-
-        template < typename Tp >
-        struct contains<Tp> : std::false_type {};
-
-        template <typename T>
-        struct empty_context
-        {
-        };
-
-    } // namespace black_magic
-
-    namespace detail
-    {
-
-        template <class T, std::size_t N, class... Args>
-        struct get_index_of_element_from_tuple_by_type_impl
-        {
-            static constexpr auto value = N;
-        };
-
-        template <class T, std::size_t N, class... Args>
-        struct get_index_of_element_from_tuple_by_type_impl<T, N, T, Args...>
-        {
-            static constexpr auto value = N;
-        };
-
-        template <class T, std::size_t N, class U, class... Args>
-        struct get_index_of_element_from_tuple_by_type_impl<T, N, U, Args...>
-        {
-            static constexpr auto value = get_index_of_element_from_tuple_by_type_impl<T, N + 1, Args...>::value;
-        };
-
-    } // namespace detail
-
-    namespace utility
-    {
-        template <class T, class... Args>
-        T& get_element_by_type(std::tuple<Args...>& t)
-        {
-            return std::get<detail::get_index_of_element_from_tuple_by_type_impl<T, 0, Args...>::value>(t);
-        }
-
-    } // namespace utility
-}
-
-
-
-#pragma once
-// settings for crow
-// TODO - replace with runtime config. libucl?
-
-/* #ifdef - enables debug mode */
-#define CROW_ENABLE_DEBUG
-
-/* #ifdef - enables logging */
-#define CROW_ENABLE_LOGGING
-
-/* #define - specifies log level */
-/*
-    DEBUG       = 0
-    INFO        = 1
-    WARNING     = 2
-    ERROR       = 3
-    CRITICAL    = 4
-
-    default to INFO
-*/
-#define CROW_LOG_LEVEL 1
-
-
-
-#pragma once
-
 #include <stdio.h>
 #include <string.h>
 #include <string>
@@ -697,135 +339,6 @@ namespace crow
     };
 
 } // end namespace
-
-
-
-#pragma once
-
-#include <string>
-#include <cstdio>
-#include <cstdlib>
-#include <ctime>
-#include <iostream>
-#include <sstream>
-
-
-
-
-namespace crow
-{
-    enum class LogLevel
-    {
-        DEBUG,
-        INFO,
-        WARNING,
-        ERROR,
-        CRITICAL,
-    };
-
-    class ILogHandler {
-        public:
-            virtual void log(std::string message, LogLevel level) = 0;
-    };
-
-    class CerrLogHandler : public ILogHandler {
-        public:
-            void log(std::string message, LogLevel level) override {
-                std::cerr << message;
-            }
-    };
-
-    class logger {
-
-        private:
-            //
-            static std::string timestamp()
-            {
-                char date[32];
-                  time_t t = time(0);
-                  strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", gmtime(&t));
-                  return std::string(date);
-            }
-
-        public:
-
-
-            logger(std::string prefix, LogLevel level) : level_(level) {
-    #ifdef CROW_ENABLE_LOGGING
-                    stringstream_ << "(" << timestamp() << ") [" << prefix << "] ";
-    #endif
-
-            }
-            ~logger() {
-    #ifdef CROW_ENABLE_LOGGING
-                if(level_ >= get_current_log_level()) {
-                    stringstream_ << std::endl;
-                    get_handler_ref()->log(stringstream_.str(), level_);
-                }
-    #endif
-            }
-
-            //
-            template <typename T>
-            logger& operator<<(T const &value) {
-
-    #ifdef CROW_ENABLE_LOGGING
-                if(level_ >= get_current_log_level()) {
-                    stringstream_ << value;
-                }
-    #endif
-                return *this;
-            }
-
-            //
-            static void setLogLevel(LogLevel level) {
-                get_log_level_ref() = level;
-            }
-
-            static void setHandler(ILogHandler* handler) {
-                get_handler_ref() = handler;
-            }
-
-            static LogLevel get_current_log_level() {
-                return get_log_level_ref();
-            }
-
-        private:
-            //
-            static LogLevel& get_log_level_ref()
-            {
-                static LogLevel current_level = (LogLevel)CROW_LOG_LEVEL;
-                return current_level;
-            }
-            static ILogHandler*& get_handler_ref()
-            {
-                static CerrLogHandler default_handler;
-                static ILogHandler* current_handler = &default_handler;
-                return current_handler;
-            }
-
-            //
-            std::ostringstream stringstream_;
-            LogLevel level_;
-    };
-}
-
-#define CROW_LOG_CRITICAL   \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::CRITICAL) \
-            crow::logger("CRITICAL", crow::LogLevel::CRITICAL)
-#define CROW_LOG_ERROR      \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::ERROR) \
-            crow::logger("ERROR   ", crow::LogLevel::ERROR)
-#define CROW_LOG_WARNING    \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::WARNING) \
-            crow::logger("WARNING ", crow::LogLevel::WARNING)
-#define CROW_LOG_INFO       \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::INFO) \
-            crow::logger("INFO    ", crow::LogLevel::INFO)
-#define CROW_LOG_DEBUG      \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::DEBUG) \
-            crow::logger("DEBUG   ", crow::LogLevel::DEBUG)
-
 
 
 
@@ -5443,6 +4956,276 @@ http_parser_version(void) {
 
 #pragma once
 
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/functional/hash.hpp>
+#include <unordered_map>
+
+namespace crow
+{
+    struct ci_hash
+    {
+        size_t operator()(const std::string& key) const
+        {
+            std::size_t seed = 0;
+            std::locale locale;
+
+            for(auto c : key)
+            {
+                boost::hash_combine(seed, std::toupper(c, locale));
+            }
+
+            return seed;
+        }
+    };
+
+    struct ci_key_eq
+    {
+        bool operator()(const std::string& l, const std::string& r) const
+        {
+            return boost::iequals(l, r);
+        }
+    };
+
+    using ci_map = std::unordered_multimap<std::string, std::string, ci_hash, ci_key_eq>;
+}
+
+
+
+#pragma once
+
+#include <string>
+#include <boost/date_time/local_time/local_time.hpp>
+#include <boost/filesystem.hpp>
+
+namespace crow
+{
+    // code from http://stackoverflow.com/questions/2838524/use-boost-date-time-to-parse-and-create-http-dates
+    class DateTime
+    {
+        public:
+            DateTime()
+                : m_dt(boost::local_time::local_sec_clock::local_time(boost::local_time::time_zone_ptr()))
+            {
+            }
+            DateTime(const std::string& path)
+                : DateTime()
+            {
+                from_file(path);
+            }
+
+            // return datetime string
+            std::string str()
+            {
+                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
+                std::string result;
+                try
+                {
+                    std::stringstream ss;
+                    ss.imbue(locale_);
+                    ss << m_dt;
+                    result = ss.str();
+                }
+                catch (std::exception& e)
+                {
+                    std::cerr << "Exception: " << e.what() << std::endl;
+                }
+                return result;
+            }
+
+            // update datetime from file mod date
+            std::string from_file(const std::string& path)
+            {
+                try
+                {
+                    boost::filesystem::path p(path);
+                    boost::posix_time::ptime pt = boost::posix_time::from_time_t(
+                            boost::filesystem::last_write_time(p));
+                    m_dt = boost::local_time::local_date_time(pt, boost::local_time::time_zone_ptr());
+                }
+                catch (std::exception& e)
+                {
+                    std::cout << "Exception: " << e.what() << std::endl;
+                }
+                return str();
+            }
+
+            // parse datetime string
+            void parse(const std::string& dt)
+            {
+                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
+                std::stringstream ss(dt);
+                ss.imbue(locale_);
+                ss >> m_dt;
+            }
+
+            // boolean equal operator
+            friend bool operator==(const DateTime& left, const DateTime& right)
+            {
+                return (left.m_dt == right.m_dt);
+            }
+
+        private:
+            boost::local_time::local_date_time m_dt;
+    };
+}
+
+
+
+#pragma once
+// settings for crow
+// TODO - replace with runtime config. libucl?
+
+/* #ifdef - enables debug mode */
+#define CROW_ENABLE_DEBUG
+
+/* #ifdef - enables logging */
+#define CROW_ENABLE_LOGGING
+
+/* #define - specifies log level */
+/*
+    DEBUG       = 0
+    INFO        = 1
+    WARNING     = 2
+    ERROR       = 3
+    CRITICAL    = 4
+
+    default to INFO
+*/
+#define CROW_LOG_LEVEL 1
+
+
+
+#pragma once
+
+#include <string>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <iostream>
+#include <sstream>
+
+
+
+
+namespace crow
+{
+    enum class LogLevel
+    {
+        DEBUG,
+        INFO,
+        WARNING,
+        ERROR,
+        CRITICAL,
+    };
+
+    class ILogHandler {
+        public:
+            virtual void log(std::string message, LogLevel level) = 0;
+    };
+
+    class CerrLogHandler : public ILogHandler {
+        public:
+            void log(std::string message, LogLevel level) override {
+                std::cerr << message;
+            }
+    };
+
+    class logger {
+
+        private:
+            //
+            static std::string timestamp()
+            {
+                char date[32];
+                  time_t t = time(0);
+                  strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", gmtime(&t));
+                  return std::string(date);
+            }
+
+        public:
+
+
+            logger(std::string prefix, LogLevel level) : level_(level) {
+    #ifdef CROW_ENABLE_LOGGING
+                    stringstream_ << "(" << timestamp() << ") [" << prefix << "] ";
+    #endif
+
+            }
+            ~logger() {
+    #ifdef CROW_ENABLE_LOGGING
+                if(level_ >= get_current_log_level()) {
+                    stringstream_ << std::endl;
+                    get_handler_ref()->log(stringstream_.str(), level_);
+                }
+    #endif
+            }
+
+            //
+            template <typename T>
+            logger& operator<<(T const &value) {
+
+    #ifdef CROW_ENABLE_LOGGING
+                if(level_ >= get_current_log_level()) {
+                    stringstream_ << value;
+                }
+    #endif
+                return *this;
+            }
+
+            //
+            static void setLogLevel(LogLevel level) {
+                get_log_level_ref() = level;
+            }
+
+            static void setHandler(ILogHandler* handler) {
+                get_handler_ref() = handler;
+            }
+
+            static LogLevel get_current_log_level() {
+                return get_log_level_ref();
+            }
+
+        private:
+            //
+            static LogLevel& get_log_level_ref()
+            {
+                static LogLevel current_level = (LogLevel)CROW_LOG_LEVEL;
+                return current_level;
+            }
+            static ILogHandler*& get_handler_ref()
+            {
+                static CerrLogHandler default_handler;
+                static ILogHandler* current_handler = &default_handler;
+                return current_handler;
+            }
+
+            //
+            std::ostringstream stringstream_;
+            LogLevel level_;
+    };
+}
+
+#define CROW_LOG_CRITICAL   \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::CRITICAL) \
+            crow::logger("CRITICAL", crow::LogLevel::CRITICAL)
+#define CROW_LOG_ERROR      \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::ERROR) \
+            crow::logger("ERROR   ", crow::LogLevel::ERROR)
+#define CROW_LOG_WARNING    \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::WARNING) \
+            crow::logger("WARNING ", crow::LogLevel::WARNING)
+#define CROW_LOG_INFO       \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::INFO) \
+            crow::logger("INFO    ", crow::LogLevel::INFO)
+#define CROW_LOG_DEBUG      \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::DEBUG) \
+            crow::logger("DEBUG   ", crow::LogLevel::DEBUG)
+
+
+
+
+#pragma once
+
 #include <boost/asio.hpp>
 #include <deque>
 #include <functional>
@@ -5534,80 +5317,410 @@ namespace crow
 
 #pragma once
 
-#include <string>
-#include <boost/date_time/local_time/local_time.hpp>
-#include <boost/filesystem.hpp>
+#include <cstdint>
+#include <stdexcept>
+#include <tuple>
+#include <type_traits>
 
 namespace crow
 {
-    // code from http://stackoverflow.com/questions/2838524/use-boost-date-time-to-parse-and-create-http-dates
-    class DateTime
+    namespace black_magic
     {
-        public:
-            DateTime()
-                : m_dt(boost::local_time::local_sec_clock::local_time(boost::local_time::time_zone_ptr()))
-            {
-            }
-            DateTime(const std::string& path)
-                : DateTime()
-            {
-                from_file(path);
-            }
+        struct OutOfRange
+        {
+            OutOfRange(unsigned pos, unsigned length) {}
+        };
+        constexpr unsigned requires_in_range( unsigned i, unsigned len )
+        {
+            return i >= len ? throw OutOfRange(i, len) : i;
+        }
 
-            // return datetime string
-            std::string str()
-            {
-                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
-                std::string result;
-                try
-                {
-                    std::stringstream ss;
-                    ss.imbue(locale_);
-                    ss << m_dt;
-                    result = ss.str();
+        class const_str
+        {
+            const char * const begin_;
+            unsigned size_;
+
+            public:
+            template< unsigned N >
+                constexpr const_str( const char(&arr)[N] ) : begin_(arr), size_(N - 1) {
+                    static_assert( N >= 1, "not a string literal");
                 }
-                catch (std::exception& e)
-                {
-                    std::cerr << "Exception: " << e.what() << std::endl;
-                }
-                return result;
+            constexpr char operator[]( unsigned i ) const { 
+                return requires_in_range(i, size_), begin_[i]; 
             }
 
-            // update datetime from file mod date
-            std::string from_file(const std::string& path)
-            {
-                try
-                {
-                    boost::filesystem::path p(path);
-                    boost::posix_time::ptime pt = boost::posix_time::from_time_t(
-                            boost::filesystem::last_write_time(p));
-                    m_dt = boost::local_time::local_date_time(pt, boost::local_time::time_zone_ptr());
-                }
-                catch (std::exception& e)
-                {
-                    std::cout << "Exception: " << e.what() << std::endl;
-                }
-                return str();
+            constexpr operator const char *() const { 
+                return begin_; 
             }
 
-            // parse datetime string
-            void parse(const std::string& dt)
-            {
-                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
-                std::stringstream ss(dt);
-                ss.imbue(locale_);
-                ss >> m_dt;
-            }
+            constexpr const char* begin() const { return begin_; }
+            constexpr const char* end() const { return begin_ + size_; }
 
-            // boolean equal operator
-            friend bool operator==(const DateTime& left, const DateTime& right)
-            {
-                return (left.m_dt == right.m_dt);
+            constexpr unsigned size() const { 
+                return size_; 
             }
+        };
 
-        private:
-            boost::local_time::local_date_time m_dt;
-    };
+
+        constexpr unsigned find_closing_tag(const_str s, unsigned p)
+        {
+            return s[p] == '>' ? p : find_closing_tag(s, p+1);
+        }
+
+        constexpr bool is_valid(const_str s, unsigned i = 0, int f = 0)
+        {
+            return 
+                i == s.size()
+                    ? f == 0 :
+                f < 0 || f >= 2
+                    ? false :
+                s[i] == '<'
+                    ? is_valid(s, i+1, f+1) :
+                s[i] == '>'
+                    ? is_valid(s, i+1, f-1) :
+                is_valid(s, i+1, f);
+        }
+
+        constexpr bool is_equ_p(const char* a, const char* b, unsigned n)
+        {
+            return
+                *a == 0 && *b == 0 && n == 0 
+                    ? true :
+                (*a == 0 || *b == 0)
+                    ? false :
+                n == 0
+                    ? true :
+                *a != *b
+                    ? false :
+                is_equ_p(a+1, b+1, n-1);
+        }
+
+        constexpr bool is_equ_n(const_str a, unsigned ai, const_str b, unsigned bi, unsigned n)
+        {
+            return 
+                ai + n > a.size() || bi + n > b.size() 
+                    ? false :
+                n == 0 
+                    ? true : 
+                a[ai] != b[bi] 
+                    ? false : 
+                is_equ_n(a,ai+1,b,bi+1,n-1);
+        }
+
+        constexpr bool is_int(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<int>", 0, 5);
+        }
+
+        constexpr bool is_uint(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<uint>", 0, 6);
+        }
+
+        constexpr bool is_float(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<float>", 0, 7) ||
+                is_equ_n(s, i, "<double>", 0, 8);
+        }
+
+        constexpr bool is_str(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<str>", 0, 5) ||
+                is_equ_n(s, i, "<string>", 0, 8);
+        }
+
+        constexpr bool is_path(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<path>", 0, 6);
+        }
+
+        constexpr uint64_t get_parameter_tag(const_str s, unsigned p = 0)
+        {
+            return
+                p == s.size() 
+                    ?  0 :
+                s[p] == '<' ? ( 
+                    is_int(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 1 :
+                    is_uint(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 2 :
+                    is_float(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 3 :
+                    is_str(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 4 :
+                    is_path(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 5 :
+                    throw std::runtime_error("invalid parameter type")
+                    ) : 
+                get_parameter_tag(s, p+1);
+        }
+
+        template <typename ... T>
+        struct S
+        {
+            template <typename U>
+            using push = S<U, T...>;
+            template <typename U>
+            using push_back = S<T..., U>;
+            template <template<typename ... Args> class U>
+            using rebind = U<T...>;
+        };
+template <typename F, typename Set>
+        struct CallHelper;
+        template <typename F, typename ...Args>
+        struct CallHelper<F, S<Args...>>
+        {
+            template <typename F1, typename ...Args1, typename = 
+                decltype(std::declval<F1>()(std::declval<Args1>()...))
+                >
+            static char __test(int);
+
+            template <typename ...>
+            static int __test(...);
+
+            static constexpr bool value = sizeof(__test<F, Args...>(0)) == sizeof(char);
+        };
+
+
+        template <int N>
+        struct single_tag_to_type
+        {
+        };
+
+        template <>
+        struct single_tag_to_type<1>
+        {
+            using type = int64_t;
+        };
+
+        template <>
+        struct single_tag_to_type<2>
+        {
+            using type = uint64_t;
+        };
+
+        template <>
+        struct single_tag_to_type<3>
+        {
+            using type = double;
+        };
+
+        template <>
+        struct single_tag_to_type<4>
+        {
+            using type = std::string;
+        };
+
+        template <>
+        struct single_tag_to_type<5>
+        {
+            using type = std::string;
+        };
+
+
+        template <uint64_t Tag> 
+        struct arguments
+        {
+            using subarguments = typename arguments<Tag/6>::type;
+            using type = 
+                typename subarguments::template push<typename single_tag_to_type<Tag%6>::type>;
+        };
+
+        template <> 
+        struct arguments<0>
+        {
+            using type = S<>;
+        };
+
+        template <typename ... T>
+        struct last_element_type
+        {
+            using type = typename std::tuple_element<sizeof...(T)-1, std::tuple<T...>>::type;
+        };
+
+
+        template <>
+        struct last_element_type<>
+        {
+        };
+
+
+        // from http://stackoverflow.com/questions/13072359/c11-compile-time-array-with-logarithmic-evaluation-depth
+        template<class T> using Invoke = typename T::type;
+
+        template<unsigned...> struct seq{ using type = seq; };
+
+        template<class S1, class S2> struct concat;
+
+        template<unsigned... I1, unsigned... I2>
+        struct concat<seq<I1...>, seq<I2...>>
+          : seq<I1..., (sizeof...(I1)+I2)...>{};
+
+        template<class S1, class S2>
+        using Concat = Invoke<concat<S1, S2>>;
+
+        template<unsigned N> struct gen_seq;
+        template<unsigned N> using GenSeq = Invoke<gen_seq<N>>;
+
+        template<unsigned N>
+        struct gen_seq : Concat<GenSeq<N/2>, GenSeq<N - N/2>>{};
+
+        template<> struct gen_seq<0> : seq<>{};
+        template<> struct gen_seq<1> : seq<0>{};
+
+        template <typename Seq, typename Tuple> 
+        struct pop_back_helper;
+
+        template <unsigned ... N, typename Tuple>
+        struct pop_back_helper<seq<N...>, Tuple>
+        {
+            template <template <typename ... Args> class U>
+            using rebind = U<typename std::tuple_element<N, Tuple>::type...>;
+        };
+
+        template <typename ... T>
+        struct pop_back //: public pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>
+        {
+            template <template <typename ... Args> class U>
+            using rebind = typename pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>::template rebind<U>;
+        };
+
+        template <>
+        struct pop_back<>
+        {
+            template <template <typename ... Args> class U>
+            using rebind = U<>;
+        };
+
+        // from http://stackoverflow.com/questions/2118541/check-if-c0x-parameter-pack-contains-a-type
+        template < typename Tp, typename... List >
+        struct contains : std::true_type {};
+
+        template < typename Tp, typename Head, typename... Rest >
+        struct contains<Tp, Head, Rest...>
+        : std::conditional< std::is_same<Tp, Head>::value,
+            std::true_type,
+            contains<Tp, Rest...>
+        >::type {};
+
+        template < typename Tp >
+        struct contains<Tp> : std::false_type {};
+
+        template <typename T>
+        struct empty_context
+        {
+        };
+
+        template <typename T>
+        struct promote
+        {
+            using type = T;
+        };
+
+#define CROW_INTERNAL_PROMOTE_TYPE(t1, t2) \
+        template<> \
+        struct promote<t1> \
+        {  \
+            using type = t2; \
+        }
+
+        CROW_INTERNAL_PROMOTE_TYPE(char, int64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(short, int64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(int, int64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(long, int64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(long long, int64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(unsigned char, uint64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(unsigned short, uint64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(unsigned int, uint64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(unsigned long, uint64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(unsigned long long, uint64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(float, double);
+#undef CROW_INTERNAL_PROMOTE_TYPE
+
+        template <typename T>
+        using promote_t = typename promote<T>::type;
+
+    } // namespace black_magic
+
+    namespace detail
+    {
+
+        template <class T, std::size_t N, class... Args>
+        struct get_index_of_element_from_tuple_by_type_impl
+        {
+            static constexpr auto value = N;
+        };
+
+        template <class T, std::size_t N, class... Args>
+        struct get_index_of_element_from_tuple_by_type_impl<T, N, T, Args...>
+        {
+            static constexpr auto value = N;
+        };
+
+        template <class T, std::size_t N, class U, class... Args>
+        struct get_index_of_element_from_tuple_by_type_impl<T, N, U, Args...>
+        {
+            static constexpr auto value = get_index_of_element_from_tuple_by_type_impl<T, N + 1, Args...>::value;
+        };
+
+    } // namespace detail
+
+    namespace utility
+    {
+        template <class T, class... Args>
+        T& get_element_by_type(std::tuple<Args...>& t)
+        {
+            return std::get<detail::get_index_of_element_from_tuple_by_type_impl<T, 0, Args...>::value>(t);
+        }
+
+        template<typename T> 
+        struct function_traits;  
+
+        template<typename T> 
+        struct function_traits : public function_traits<decltype(&T::operator())>
+        {
+            using parent_t = function_traits<decltype(&T::operator())>;
+            static const size_t arity = parent_t::arity;
+            using result_type = typename parent_t::result_type;
+            template <size_t i>
+            using arg = typename parent_t::template arg<i>;
+        
+        };  
+
+        template<typename ClassType, typename R, typename ...Args> 
+        struct function_traits<R(ClassType::*)(Args...) const>
+        {
+            static const size_t arity = sizeof...(Args);
+
+            typedef R result_type;
+
+            template <size_t i>
+            using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
+        };
+
+        template<typename ClassType, typename R, typename ...Args> 
+        struct function_traits<R(ClassType::*)(Args...)>
+        {
+            static const size_t arity = sizeof...(Args);
+
+            typedef R result_type;
+
+            template <size_t i>
+            using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
+        };
+
+        template<typename R, typename ...Args> 
+        struct function_traits<std::function<R(Args...)>>
+        {
+            static const size_t arity = sizeof...(Args);
+
+            typedef R result_type;
+
+            template <size_t i>
+            using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
+        };
+
+    } // namespace utility
 }
 
 
@@ -5738,43 +5851,6 @@ constexpr crow::HTTPMethod operator "" _method(const char* str, size_t len)
         throw std::runtime_error("invalid http method");
 };
 
-
-
-
-#pragma once
-
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/functional/hash.hpp>
-#include <unordered_map>
-
-namespace crow
-{
-    struct ci_hash
-    {
-        size_t operator()(const std::string& key) const
-        {
-            std::size_t seed = 0;
-            std::locale locale;
-
-            for(auto c : key)
-            {
-                boost::hash_combine(seed, std::toupper(c, locale));
-            }
-
-            return seed;
-        }
-    };
-
-    struct ci_key_eq
-    {
-        bool operator()(const std::string& l, const std::string& r) const
-        {
-            return boost::iequals(l, r);
-        }
-    };
-
-    using ci_map = std::unordered_multimap<std::string, std::string, ci_hash, ci_key_eq>;
-}
 
 
 
@@ -6126,6 +6202,185 @@ namespace crow
 
 
 #pragma once
+#include <boost/algorithm/string/trim.hpp>
+
+
+
+
+
+namespace crow
+{
+    // Any middleware requires following 3 members:
+
+    // struct context;
+    //      storing data for the middleware; can be read from another middleware or handlers
+
+    // before_handle
+    //      called before handling the request.
+    //      if res.end() is called, the operation is halted. 
+    //      (still call after_handle of this middleware)
+    //      2 signatures:
+    //      void before_handle(request& req, response& res, context& ctx)
+    //          if you only need to access this middlewares context.
+    //      template <typename AllContext>
+    //      void before_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    //          you can access another middlewares' context by calling `all_ctx.template get<MW>()'
+    //          ctx == all_ctx.template get<CurrentMiddleware>()
+
+    // after_handle
+    //      called after handling the request.
+    //      void after_handle(request& req, response& res, context& ctx)
+    //      template <typename AllContext>
+    //      void after_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+
+    struct CookieParser
+    {
+        struct context
+        {
+            std::unordered_map<std::string, std::string> jar;
+            std::unordered_map<std::string, std::string> cookies_to_add;
+
+            std::string get_cookie(const std::string& key)
+            {
+                if (jar.count(key))
+                    return jar[key];
+                return {};
+            }
+
+            void set_cookie(const std::string& key, const std::string& value)
+            {
+                cookies_to_add.emplace(key, value);
+            }
+        };
+
+        void before_handle(request& req, response& res, context& ctx)
+        {
+            int count = req.headers.count("Cookie");
+            if (!count)
+                return;
+            if (count > 1)
+            {
+                res.code = 400;
+                res.end();
+                return;
+            }
+            std::string cookies = req.get_header_value("Cookie");
+            size_t pos = 0;
+            while(pos < cookies.size())
+            {
+                size_t pos_equal = cookies.find('=', pos);
+                if (pos_equal == cookies.npos)
+                    break;
+                std::string name = cookies.substr(pos, pos_equal-pos);
+                boost::trim(name);
+                pos = pos_equal+1;
+                while(pos < cookies.size() && cookies[pos] == ' ') pos++;
+                if (pos == cookies.size())
+                    break;
+
+                std::string value;
+
+                if (cookies[pos] == '"')
+                {
+                    int dquote_meet_count = 0;
+                    pos ++;
+                    size_t pos_dquote = pos-1;
+                    do
+                    {
+                        pos_dquote = cookies.find('"', pos_dquote+1);
+                        dquote_meet_count ++;
+                    } while(pos_dquote < cookies.size() && cookies[pos_dquote-1] == '\\');
+                    if (pos_dquote == cookies.npos)
+                        break;
+
+                    if (dquote_meet_count == 1)
+                        value = cookies.substr(pos, pos_dquote - pos);
+                    else
+                    {
+                        value.clear();
+                        value.reserve(pos_dquote-pos);
+                        for(size_t p = pos; p < pos_dquote; p++)
+                        {
+                            // FIXME minimal escaping
+                            if (cookies[p] == '\\' && p + 1 < pos_dquote)
+                            {
+                                p++;
+                                if (cookies[p] == '\\' || cookies[p] == '"')
+                                    value += cookies[p];
+                                else
+                                {
+                                    value += '\\';
+                                    value += cookies[p];
+                                }
+                            }
+                            else
+                                value += cookies[p];
+                        }
+                    }
+
+                    ctx.jar.emplace(std::move(name), std::move(value));
+                    pos = cookies.find(";", pos_dquote+1);
+                    if (pos == cookies.npos)
+                        break;
+                    pos++;
+                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
+                    if (pos == cookies.size())
+                        break;
+                }
+                else
+                {
+                    size_t pos_semicolon = cookies.find(';', pos);
+                    value = cookies.substr(pos, pos_semicolon - pos);
+                    boost::trim(value);
+                    ctx.jar.emplace(std::move(name), std::move(value));
+                    pos = pos_semicolon;
+                    if (pos == cookies.npos)
+                        break;
+                    pos ++;
+                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
+                    if (pos == cookies.size())
+                        break;
+                }
+            }
+        }
+
+        void after_handle(request& req, response& res, context& ctx)
+        {
+            for(auto& cookie:ctx.cookies_to_add)
+            {
+                res.add_header("Set-Cookie", cookie.first + "=" + cookie.second);
+            }
+        }
+    };
+
+    /*
+    App<CookieParser, AnotherJarMW> app;
+    A B C
+    A::context
+        int aa;
+
+    ctx1 : public A::context
+    ctx2 : public ctx1, public B::context
+    ctx3 : public ctx2, public C::context
+
+    C depends on A
+
+    C::handle
+        context.aaa
+
+    App::context : private CookieParser::contetx, ... 
+    {
+        jar
+
+    }
+
+    SimpleApp
+    */
+}
+
+
+
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -6151,6 +6406,11 @@ namespace crow
     class BaseRule
     {
     public:
+        BaseRule(std::string rule)
+            : rule_(std::move(rule))
+        {
+        }
+
         virtual ~BaseRule()
         {
         }
@@ -6166,113 +6426,256 @@ namespace crow
 
     protected:
         uint32_t methods_{1<<(int)HTTPMethod::GET};
+
+        std::string rule_;
+        std::string name_;
+        friend class Router;
+    };
+
+
+    namespace detail
+    {
+        namespace routing_handler_call_helper
+        {
+            template <typename T, int Pos>
+            struct call_pair
+            {
+                using type = T;
+                static const int pos = Pos;
+            };
+
+            template <typename H1>
+            struct call_params
+            {
+                H1& handler;
+                const routing_params& params;
+                const request& req;
+                response& res;
+            };
+
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2> 
+            struct call
+            {
+            };
+
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+            struct call<F, NInt, NUint, NDouble, NString, black_magic::S<int64_t, Args1...>, black_magic::S<Args2...>>
+            {
+                void operator()(F cparams)
+                {
+                    using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<int64_t, NInt>>;
+                    call<F, NInt+1, NUint, NDouble, NString,
+                        black_magic::S<Args1...>, pushed>()(cparams);
+                }
+            };
+
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+            struct call<F, NInt, NUint, NDouble, NString, black_magic::S<uint64_t, Args1...>, black_magic::S<Args2...>>
+            {
+                void operator()(F cparams)
+                {
+                    using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<uint64_t, NUint>>;
+                    call<F, NInt, NUint+1, NDouble, NString,
+                        black_magic::S<Args1...>, pushed>()(cparams);
+                }
+            };
+
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+            struct call<F, NInt, NUint, NDouble, NString, black_magic::S<double, Args1...>, black_magic::S<Args2...>>
+            {
+                void operator()(F cparams)
+                {
+                    using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<double, NDouble>>;
+                    call<F, NInt, NUint, NDouble+1, NString,
+                        black_magic::S<Args1...>, pushed>()(cparams);
+                }
+            };
+
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+            struct call<F, NInt, NUint, NDouble, NString, black_magic::S<std::string, Args1...>, black_magic::S<Args2...>>
+            {
+                void operator()(F cparams)
+                {
+                    using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<std::string, NString>>;
+                    call<F, NInt, NUint, NDouble, NString+1,
+                        black_magic::S<Args1...>, pushed>()(cparams);
+                }
+            };
+
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1> 
+            struct call<F, NInt, NUint, NDouble, NString, black_magic::S<>, black_magic::S<Args1...>>
+            {
+                void operator()(F cparams)
+                {
+                    cparams.handler(
+                        cparams.req,
+                        cparams.res,
+                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
+                    );
+                }
+            };
+
+            template <typename Func, typename ... ArgsWrapped>
+            struct Wrapped
+            {
+                template <typename ... Args>
+                void set(Func f, typename std::enable_if<
+                    !std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request&>::value
+                , int>::type = 0)
+                {
+                    handler_ = (
+                        [f = std::move(f)]
+                        (const request&, response& res, Args... args){
+                            res = response(f(args...));
+                            res.end();
+                        });
+                }
+
+                template <typename Req, typename ... Args>
+                struct req_handler_wrapper
+                {
+                    req_handler_wrapper(Func f)
+                        : f(std::move(f))
+                    {
+                    }
+
+                    void operator()(const request& req, response& res, Args... args)
+                    {
+                        res = response(f(req, args...));
+                        res.end();
+                    }
+
+                    Func f;
+                };
+
+                template <typename ... Args>
+                void set(Func f, typename std::enable_if<
+                        std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request&>::value &&
+                        !std::is_same<typename std::tuple_element<1, std::tuple<Args..., void, void>>::type, response&>::value
+                        , int>::type = 0)
+                {
+                    handler_ = req_handler_wrapper<Args...>(std::move(f));
+                    /*handler_ = (
+                        [f = std::move(f)]
+                        (const request& req, response& res, Args... args){
+                             res = response(f(req, args...));
+                             res.end();
+                        });*/
+                }
+
+                template <typename ... Args>
+                void set(Func f, typename std::enable_if<
+                        std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request&>::value &&
+                        std::is_same<typename std::tuple_element<1, std::tuple<Args..., void, void>>::type, response&>::value
+                        , int>::type = 0)
+                {
+                    handler_ = std::move(f);
+                }
+
+                template <typename ... Args>
+                struct handler_type_helper
+                {
+                    using type = std::function<void(const crow::request&, crow::response&, Args...)>;
+                    using args_type = black_magic::S<typename black_magic::promote_t<Args>...>; 
+                };
+
+                template <typename ... Args>
+                struct handler_type_helper<const request&, Args...>
+                {
+                    using type = std::function<void(const crow::request&, crow::response&, Args...)>;
+                    using args_type = black_magic::S<typename black_magic::promote_t<Args>...>; 
+                };
+
+                template <typename ... Args>
+                struct handler_type_helper<const request&, response&, Args...>
+                {
+                    using type = std::function<void(const crow::request&, crow::response&, Args...)>;
+                    using args_type = black_magic::S<typename black_magic::promote_t<Args>...>; 
+                };
+
+                typename handler_type_helper<ArgsWrapped...>::type handler_;
+
+                void operator()(const request& req, response& res, const routing_params& params)
+                {
+                    detail::routing_handler_call_helper::call<
+                        detail::routing_handler_call_helper::call_params<
+                            decltype(handler_)>,
+                        0, 0, 0, 0, 
+                        typename handler_type_helper<ArgsWrapped...>::args_type,
+                        black_magic::S<>
+                    >()(
+                        detail::routing_handler_call_helper::call_params<
+                            decltype(handler_)>
+                        {handler_, params, req, res}
+                   );
+                }
+            };
+
+        }
+    }
+
+    class DynamicRule : public BaseRule
+    {
+    public:
+        DynamicRule(std::string rule)
+            : BaseRule(std::move(rule))
+        {
+        }
+
+        void validate() override
+        {
+            if (!erased_handler_)
+            {
+                throw std::runtime_error(name_ + (!name_.empty() ? ": " : "") + "no handler for url " + rule_);
+            }
+        }
+
+        void handle(const request& req, response& res, const routing_params& params) override
+        {
+            erased_handler_(req, res, params);
+        }
+
+        template <typename Func>
+        void operator()(Func f)
+        {
+            using function_t = utility::function_traits<Func>;
+            erased_handler_ = wrap(std::move(f), black_magic::gen_seq<function_t::arity>());
+        }
+
+        // enable_if Arg1 == request && Arg2 == response
+        // enable_if Arg1 == request && Arg2 != resposne
+        // enable_if Arg1 != request
+        template <typename Func, unsigned ... Indices>
+        std::function<void(const request&, response&, const routing_params&)> 
+        wrap(Func f, black_magic::seq<Indices...>)
+        {
+            using function_t = utility::function_traits<Func>;
+            auto ret = detail::routing_handler_call_helper::Wrapped<Func, typename function_t::template arg<Indices>...>();
+            ret.template set<
+                typename function_t::template arg<Indices>...
+            >(std::move(f));
+            return ret;
+        }
+
+        template <typename Func>
+        void operator()(std::string name, Func&& f)
+        {
+            name_ = std::move(name);
+            (*this).template operator()<Func>(std::forward(f));
+        }
+    private:
+        std::function<void(const request&, response&, const routing_params&)> erased_handler_;
+
     };
 
     template <typename ... Args>
     class TaggedRule : public BaseRule
     {
-    private:
-        template <typename H1, typename H2, typename H3>
-        struct call_params
-        {
-            H1& handler;
-            H2& handler_with_req;
-            H3& handler_with_req_res;
-            const routing_params& params;
-            const request& req;
-            response& res;
-        };
-
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2> 
-        struct call
-        {
-        };
-
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
-        struct call<F, NInt, NUint, NDouble, NString, black_magic::S<int64_t, Args1...>, black_magic::S<Args2...>>
-        {
-            void operator()(F cparams)
-            {
-                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<int64_t, NInt>>;
-                call<F, NInt+1, NUint, NDouble, NString,
-                    black_magic::S<Args1...>, pushed>()(cparams);
-            }
-        };
-
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
-        struct call<F, NInt, NUint, NDouble, NString, black_magic::S<uint64_t, Args1...>, black_magic::S<Args2...>>
-        {
-            void operator()(F cparams)
-            {
-                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<uint64_t, NUint>>;
-                call<F, NInt, NUint+1, NDouble, NString,
-                    black_magic::S<Args1...>, pushed>()(cparams);
-            }
-        };
-
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
-        struct call<F, NInt, NUint, NDouble, NString, black_magic::S<double, Args1...>, black_magic::S<Args2...>>
-        {
-            void operator()(F cparams)
-            {
-                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<double, NDouble>>;
-                call<F, NInt, NUint, NDouble+1, NString,
-                    black_magic::S<Args1...>, pushed>()(cparams);
-            }
-        };
-
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
-        struct call<F, NInt, NUint, NDouble, NString, black_magic::S<std::string, Args1...>, black_magic::S<Args2...>>
-        {
-            void operator()(F cparams)
-            {
-                using pushed = typename black_magic::S<Args2...>::template push_back<call_pair<std::string, NString>>;
-                call<F, NInt, NUint, NDouble, NString+1,
-                    black_magic::S<Args1...>, pushed>()(cparams);
-            }
-        };
-
-        template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1> 
-        struct call<F, NInt, NUint, NDouble, NString, black_magic::S<>, black_magic::S<Args1...>>
-        {
-            void operator()(F cparams)
-            {
-                if (cparams.handler) 
-                {
-                    cparams.res = cparams.handler(
-                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
-                    );
-                    cparams.res.end();
-                    return;
-                }
-                if (cparams.handler_with_req)
-                {
-                    cparams.res = cparams.handler_with_req(
-                        cparams.req,
-                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
-                    );
-                    cparams.res.end();
-                    return;
-                }
-                if (cparams.handler_with_req_res)
-                {
-                    cparams.handler_with_req_res(
-                        cparams.req,
-                        cparams.res,
-                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
-                    );
-                    return;
-                }
-                CROW_LOG_DEBUG << "ERROR cannot find handler";
-
-                // we already found matched url; this is server error
-                cparams.res = response(500);
-            }
-        };
     public:
         using self_t = TaggedRule<Args...>;
+
         TaggedRule(std::string rule)
-            : rule_(std::move(rule))
+            : BaseRule(std::move(rule))
         {
         }
         
@@ -6298,7 +6701,7 @@ namespace crow
 
         void validate()
         {
-            if (!handler_ && !handler_with_req_ && !handler_with_req_res_)
+            if (!handler_)
             {
                 throw std::runtime_error(name_ + (!name_.empty() ? ": " : "") + "no handler for url " + rule_);
             }
@@ -6314,11 +6717,10 @@ namespace crow
             static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value, 
                 "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
 
-                handler_ = [f = std::move(f)](Args ... args){
-                    return response(f(args...));
+                handler_ = [f = std::move(f)](const request&, response& res, Args ... args){
+                    res = response(f(args...));
+                    res.end();
                 };
-                handler_with_req_ = nullptr;
-                handler_with_req_res_ = nullptr;
         }
 
         template <typename Func>
@@ -6334,11 +6736,10 @@ namespace crow
             static_assert(!std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<Args>()...))>::value, 
                 "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
 
-                handler_with_req_ = [f = std::move(f)](const crow::request& req, Args ... args){
-                    return response(f(req, args...));
+                handler_ = [f = std::move(f)](const crow::request& req, crow::response& res, Args ... args){
+                    res = response(f(req, args...));
+                    res.end();
                 };
-                handler_ = nullptr;
-                handler_with_req_res_ = nullptr;
         }
 
         template <typename Func>
@@ -6356,12 +6757,7 @@ namespace crow
             static_assert(std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<crow::response&>(), std::declval<Args>()...))>::value, 
                 "Handler function with response argument should have void return type");
 
-                handler_with_req_res_ = std::move(f);
-                //[f = std::move(f)](const crow::request& req, crow::response& res, Args ... args){
-                //    f(req, response, args...);
-                //};
-                handler_ = nullptr;
-                handler_with_req_ = nullptr;
+                handler_ = std::move(f);
         }
 
         template <typename Func>
@@ -6373,39 +6769,22 @@ namespace crow
 
         void handle(const request& req, response& res, const routing_params& params) override
         {
-            call<
-                call_params<
-                    decltype(handler_), 
-                    decltype(handler_with_req_),
-                    decltype(handler_with_req_res_)>, 
+            detail::routing_handler_call_helper::call<
+                detail::routing_handler_call_helper::call_params<
+                    decltype(handler_)>, 
                 0, 0, 0, 0, 
                 black_magic::S<Args...>, 
                 black_magic::S<>
             >()(
-                call_params<
-                    decltype(handler_), 
-                    decltype(handler_with_req_),
-                    decltype(handler_with_req_res_)>
-                {handler_, handler_with_req_, handler_with_req_res_, params, req, res}
+                detail::routing_handler_call_helper::call_params<
+                    decltype(handler_)>
+                {handler_, params, req, res}
             );
         }
 
     private:
-        std::function<response(Args...)> handler_;
-        std::function<response(const crow::request&, Args...)> handler_with_req_;
-        std::function<void(const crow::request&, crow::response&, Args...)> handler_with_req_res_;
+        std::function<void(const crow::request&, crow::response&, Args...)> handler_;
 
-        std::string rule_;
-        std::string name_;
-
-        template <typename T, int Pos>
-        struct call_pair
-        {
-            using type = T;
-            static const int pos = Pos;
-        };
-
-        friend class Router;
     };
 
     const int RULE_SPECIAL_REDIRECT_SLASH = 1;
@@ -6745,13 +7124,29 @@ public:
         {
         }
 
+        DynamicRule& new_rule_dynamic(const std::string& rule)
+        {
+            auto ruleObject = new DynamicRule(rule);
+
+            internal_add_rule_object(rule, ruleObject);
+
+            return *ruleObject;
+        }
+
         template <uint64_t N>
         typename black_magic::arguments<N>::type::template rebind<TaggedRule>& new_rule_tagged(const std::string& rule)
         {
             using RuleT = typename black_magic::arguments<N>::type::template rebind<TaggedRule>;
             auto ruleObject = new RuleT(rule);
-            rules_.emplace_back(ruleObject);
 
+            internal_add_rule_object(rule, ruleObject);
+
+            return *ruleObject;
+        }
+
+        void internal_add_rule_object(const std::string& rule, BaseRule* ruleObject)
+        {
+            rules_.emplace_back(ruleObject);
             trie_.add(rule, rules_.size() - 1);
 
             // directory case: 
@@ -6762,8 +7157,6 @@ public:
                 rule_without_trailing_slash.pop_back();
                 trie_.add(rule_without_trailing_slash, RULE_SPECIAL_REDIRECT_SLASH);
             }
-
-            return *ruleObject;
         }
 
         void validate()
@@ -6820,7 +7213,7 @@ public:
                 return;
             }
 
-            CROW_LOG_DEBUG << "Matched rule '" << ((TaggedRule<>*)rules_[rule_index].get())->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->methods();
+            CROW_LOG_DEBUG << "Matched rule '" << (rules_[rule_index].get())->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->methods();
 
             // any uncaught exceptions become 500s
             try
@@ -6917,185 +7310,6 @@ namespace crow
             using partial = typename partial_context<Middlewares...>::template partial<N>;
         };
     }
-}
-
-
-
-#pragma once
-#include <boost/algorithm/string/trim.hpp>
-
-
-
-
-
-namespace crow
-{
-    // Any middleware requires following 3 members:
-
-    // struct context;
-    //      storing data for the middleware; can be read from another middleware or handlers
-
-    // before_handle
-    //      called before handling the request.
-    //      if res.end() is called, the operation is halted. 
-    //      (still call after_handle of this middleware)
-    //      2 signatures:
-    //      void before_handle(request& req, response& res, context& ctx)
-    //          if you only need to access this middlewares context.
-    //      template <typename AllContext>
-    //      void before_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
-    //          you can access another middlewares' context by calling `all_ctx.template get<MW>()'
-    //          ctx == all_ctx.template get<CurrentMiddleware>()
-
-    // after_handle
-    //      called after handling the request.
-    //      void after_handle(request& req, response& res, context& ctx)
-    //      template <typename AllContext>
-    //      void after_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
-
-    struct CookieParser
-    {
-        struct context
-        {
-            std::unordered_map<std::string, std::string> jar;
-            std::unordered_map<std::string, std::string> cookies_to_add;
-
-            std::string get_cookie(const std::string& key)
-            {
-                if (jar.count(key))
-                    return jar[key];
-                return {};
-            }
-
-            void set_cookie(const std::string& key, const std::string& value)
-            {
-                cookies_to_add.emplace(key, value);
-            }
-        };
-
-        void before_handle(request& req, response& res, context& ctx)
-        {
-            int count = req.headers.count("Cookie");
-            if (!count)
-                return;
-            if (count > 1)
-            {
-                res.code = 400;
-                res.end();
-                return;
-            }
-            std::string cookies = req.get_header_value("Cookie");
-            size_t pos = 0;
-            while(pos < cookies.size())
-            {
-                size_t pos_equal = cookies.find('=', pos);
-                if (pos_equal == cookies.npos)
-                    break;
-                std::string name = cookies.substr(pos, pos_equal-pos);
-                boost::trim(name);
-                pos = pos_equal+1;
-                while(pos < cookies.size() && cookies[pos] == ' ') pos++;
-                if (pos == cookies.size())
-                    break;
-
-                std::string value;
-
-                if (cookies[pos] == '"')
-                {
-                    int dquote_meet_count = 0;
-                    pos ++;
-                    size_t pos_dquote = pos-1;
-                    do
-                    {
-                        pos_dquote = cookies.find('"', pos_dquote+1);
-                        dquote_meet_count ++;
-                    } while(pos_dquote < cookies.size() && cookies[pos_dquote-1] == '\\');
-                    if (pos_dquote == cookies.npos)
-                        break;
-
-                    if (dquote_meet_count == 1)
-                        value = cookies.substr(pos, pos_dquote - pos);
-                    else
-                    {
-                        value.clear();
-                        value.reserve(pos_dquote-pos);
-                        for(size_t p = pos; p < pos_dquote; p++)
-                        {
-                            // FIXME minimal escaping
-                            if (cookies[p] == '\\' && p + 1 < pos_dquote)
-                            {
-                                p++;
-                                if (cookies[p] == '\\' || cookies[p] == '"')
-                                    value += cookies[p];
-                                else
-                                {
-                                    value += '\\';
-                                    value += cookies[p];
-                                }
-                            }
-                            else
-                                value += cookies[p];
-                        }
-                    }
-
-                    ctx.jar.emplace(std::move(name), std::move(value));
-                    pos = cookies.find(";", pos_dquote+1);
-                    if (pos == cookies.npos)
-                        break;
-                    pos++;
-                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
-                    if (pos == cookies.size())
-                        break;
-                }
-                else
-                {
-                    size_t pos_semicolon = cookies.find(';', pos);
-                    value = cookies.substr(pos, pos_semicolon - pos);
-                    boost::trim(value);
-                    ctx.jar.emplace(std::move(name), std::move(value));
-                    pos = pos_semicolon;
-                    if (pos == cookies.npos)
-                        break;
-                    pos ++;
-                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
-                    if (pos == cookies.size())
-                        break;
-                }
-            }
-        }
-
-        void after_handle(request& req, response& res, context& ctx)
-        {
-            for(auto& cookie:ctx.cookies_to_add)
-            {
-                res.add_header("Set-Cookie", cookie.first + "=" + cookie.second);
-            }
-        }
-    };
-
-    /*
-    App<CookieParser, AnotherJarMW> app;
-    A B C
-    A::context
-        int aa;
-
-    ctx1 : public A::context
-    ctx2 : public ctx1, public B::context
-    ctx3 : public ctx2, public C::context
-
-    C depends on A
-
-    C::handle
-        context.aaa
-
-    App::context : private CookieParser::contetx, ... 
-    {
-        jar
-
-    }
-
-    SimpleApp
-    */
 }
 
 
@@ -7785,6 +7999,11 @@ namespace crow
         void handle(const request& req, response& res)
         {
             router_.handle(req, res);
+        }
+
+        DynamicRule& route_dynamic(std::string&& rule)
+        {
+            return router_.new_rule_dynamic(std::move(rule));
         }
 
         template <uint64_t Tag>
