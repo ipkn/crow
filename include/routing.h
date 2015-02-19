@@ -263,6 +263,13 @@ namespace crow
         wrap(Func f, black_magic::seq<Indices...>)
         {
             using function_t = utility::function_traits<Func>;
+            if (!black_magic::is_paramter_tag_compatible(
+                black_magic::get_parameter_tag_runtime(rule_.c_str()), 
+                black_magic::compute_paramater_tag_from_args_list<
+                    typename function_t::template arg<Indices>...>::value))
+            {
+                throw std::runtime_error("route_dynamic: Handler type is mismatched with URL paramters: " + rule_);
+            }
             auto ret = detail::routing_handler_call_helper::Wrapped<Func, typename function_t::template arg<Indices>...>();
             ret.template set<
                 typename function_t::template arg<Indices>...
@@ -826,7 +833,7 @@ public:
                 return;
             }
 
-            CROW_LOG_DEBUG << "Matched rule '" << (rules_[rule_index].get())->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->methods();
+            CROW_LOG_DEBUG << "Matched rule '" << rules_[rule_index]->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->methods();
 
             // any uncaught exceptions become 500s
             try

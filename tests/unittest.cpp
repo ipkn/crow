@@ -1060,13 +1060,33 @@ TEST(route_dynamic)
         res.end();
     });
 
-
-
     app.route_dynamic("/set_int/<int>")
     ([&](int y){
         x = y;
         return "";
     });
+
+    try 
+    {
+        app.route_dynamic("/invalid_test/<double>/<path>")
+        ([](){
+            return "";
+        });
+        fail();
+    }
+    catch(std::exception&) 
+    {
+    }
+
+    // app is in an invalid state when route_dynamic throws an exception.
+    try 
+    {
+        app.validate();
+        fail();
+    }
+    catch(std::exception&) 
+    {
+    }
 
     {
         request req;

@@ -5361,6 +5361,14 @@ namespace crow
             }
         };
 
+        unsigned find_closing_tag_runtime(const char* s, unsigned p)
+        {
+            return 
+                s[p] == 0
+                    ? throw std::runtime_error("unmatched tag <") :
+                s[p] == '>' 
+                    ? p : find_closing_tag_runtime(s, p+1);
+        }
 
         constexpr unsigned find_closing_tag(const_str s, unsigned p)
         {
@@ -5434,6 +5442,87 @@ namespace crow
             return is_equ_n(s, i, "<path>", 0, 6);
         }
 
+        template <typename T> 
+        struct paramater_tag
+        {
+            static const int value = 0;
+        };
+#define CROW_INTERNAL_PARAMETER_TAG(t, i) \
+template <> \
+struct paramater_tag<t> \
+{ \
+    static const int value = i; \
+};
+        CROW_INTERNAL_PARAMETER_TAG(int, 1);
+        CROW_INTERNAL_PARAMETER_TAG(char, 1);
+        CROW_INTERNAL_PARAMETER_TAG(short, 1);
+        CROW_INTERNAL_PARAMETER_TAG(long, 1);
+        CROW_INTERNAL_PARAMETER_TAG(long long, 1);
+        CROW_INTERNAL_PARAMETER_TAG(unsigned int, 2);
+        CROW_INTERNAL_PARAMETER_TAG(unsigned char, 2);
+        CROW_INTERNAL_PARAMETER_TAG(unsigned short, 2);
+        CROW_INTERNAL_PARAMETER_TAG(unsigned long, 2);
+        CROW_INTERNAL_PARAMETER_TAG(unsigned long long, 2);
+        CROW_INTERNAL_PARAMETER_TAG(double, 3);
+        CROW_INTERNAL_PARAMETER_TAG(std::string, 4);
+#undef CROW_INTERNAL_PARAMETER_TAG
+        template <typename ... Args>
+        struct compute_paramater_tag_from_args_list;
+
+        template <>
+        struct compute_paramater_tag_from_args_list<>
+        {
+            static const int value = 0;
+        };
+
+        template <typename Arg, typename ... Args>
+        struct compute_paramater_tag_from_args_list<Arg, Args...>
+        {
+            static const int sub_value = 
+                compute_paramater_tag_from_args_list<Args...>::value;
+            static const int value = 
+                paramater_tag<typename std::decay<Arg>::type>::value 
+                ? sub_value* 6 + paramater_tag<typename std::decay<Arg>::type>::value 
+                : sub_value;
+        };
+
+        bool is_paramter_tag_compatible(uint64_t a, uint64_t b)
+        {
+            if (a == 0)
+                return b == 0;
+            if (b == 0)
+                return a == 0;
+            int sa = a%6;
+            int sb = a%6;
+            if (sa == 5) sa = 4;
+            if (sb == 5) sb = 4;
+            if (sa != sb)
+                return false;
+            return is_paramter_tag_compatible(a/6, b/6);
+        }
+
+        constexpr uint64_t get_parameter_tag_runtime(const char* s, unsigned p = 0)
+        {
+            return
+                s[p] == 0
+                    ?  0 :
+                s[p] == '<' ? (
+                    strncmp(s+p, "<int>", 5) == 0
+                        ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 1 :
+                    strncmp(s+p, "<uint>", 6) == 0
+                        ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 2 :
+                    (strncmp(s+p, "<float>", 7) == 0 ||
+                    strncmp(s+p, "<double>", 8) == 0)
+                        ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 3 :
+                    (strncmp(s+p, "<str>", 5) == 0 ||
+                    strncmp(s+p, "<string>", 8) == 0)
+                        ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 4 :
+                    strncmp(s+p, "<path>", 6) == 0
+                        ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 5 :
+                    throw std::runtime_error("invalid parameter type")
+                    ) :
+                get_parameter_tag_runtime(s, p+1);
+        }
         constexpr uint64_t get_parameter_tag(const_str s, unsigned p = 0)
         {
             return
@@ -6650,6 +6739,13 @@ namespace crow
         wrap(Func f, black_magic::seq<Indices...>)
         {
             using function_t = utility::function_traits<Func>;
+            if (!black_magic::is_paramter_tag_compatible(
+                black_magic::get_parameter_tag_runtime(rule_.c_str()), 
+                black_magic::compute_paramater_tag_from_args_list<
+                    typename function_t::template arg<Indices>...>::value))
+            {
+                throw std::runtime_error("route_dynamic: Handler type is mismatched with URL paramters: " + rule_);
+            }
             auto ret = detail::routing_handler_call_helper::Wrapped<Func, typename function_t::template arg<Indices>...>();
             ret.template set<
                 typename function_t::template arg<Indices>...
@@ -7213,7 +7309,7 @@ public:
                 return;
             }
 
-            CROW_LOG_DEBUG << "Matched rule '" << (rules_[rule_index].get())->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->methods();
+            CROW_LOG_DEBUG << "Matched rule '" << rules_[rule_index]->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->methods();
 
             // any uncaught exceptions become 500s
             try
