@@ -21,32 +21,104 @@ namespace crow
 {
     namespace detail
     {
+        template <typename MW>
+        struct check_before_handle_arity_3_const
+        {
+            template <typename T,
+                void (T::*)(request&, response&, typename MW::context&) const = &T::before_handle
+            >
+            struct get
+            { };
+        };
+
+        template <typename MW>
+        struct check_before_handle_arity_3
+        {
+            template <typename T,
+                void (T::*)(request&, response&, typename MW::context&) = &T::before_handle
+            >
+            struct get
+            { };
+        };
+
+        template <typename MW>
+        struct check_after_handle_arity_3_const
+        {
+            template <typename T,
+                void (T::*)(request&, response&, typename MW::context&) const = &T::after_handle
+            >
+            struct get
+            { };
+        };
+
+        template <typename MW>
+        struct check_after_handle_arity_3
+        {
+            template <typename T,
+                void (T::*)(request&, response&, typename MW::context&) = &T::after_handle
+            >
+            struct get
+            { };
+        };
+
+        template <typename T>
+        struct is_before_handle_arity_3_impl
+        {
+            template <typename C>
+            static std::true_type f(typename check_before_handle_arity_3_const<T>::template get<C>*);
+
+            template <typename C>
+            static std::true_type f(typename check_before_handle_arity_3<T>::template get<C>*);
+
+            template <typename C>
+            static std::false_type f(...);
+
+        public:
+            static const bool value = decltype(f<T>(nullptr))::value;
+        };
+
+        template <typename T>
+        struct is_after_handle_arity_3_impl
+        {
+            template <typename C>
+            static std::true_type f(typename check_after_handle_arity_3_const<T>::template get<C>*);
+
+            template <typename C>
+            static std::true_type f(typename check_after_handle_arity_3<T>::template get<C>*);
+
+            template <typename C>
+            static std::false_type f(...);
+
+        public:
+            static const bool value = decltype(f<T>(nullptr))::value;
+        };
+
         template <typename MW, typename Context, typename ParentContext>
-        void before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx, 
-            decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>()))* dummy = 0)
+        typename std::enable_if<!is_before_handle_arity_3_impl<MW>::value>::type
+        before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx)
+        {
+            mw.before_handle(req, res, ctx.template get<MW>(), ctx);
+        }
+
+        template <typename MW, typename Context, typename ParentContext>
+        typename std::enable_if<is_before_handle_arity_3_impl<MW>::value>::type
+        before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx)
         {
             mw.before_handle(req, res, ctx.template get<MW>());
         }
 
         template <typename MW, typename Context, typename ParentContext>
-        void before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx,
-            decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>(), std::declval<Context&>))* dummy = 0)
+        typename std::enable_if<!is_after_handle_arity_3_impl<MW>::value>::type
+        after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx)
         {
-            mw.before_handle(req, res, ctx.template get<MW>(), parent_ctx);
+            mw.after_handle(req, res, ctx.template get<MW>(), ctx);
         }
 
         template <typename MW, typename Context, typename ParentContext>
-        void after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx, 
-            decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>()))* dummy = 0)
+        typename std::enable_if<is_after_handle_arity_3_impl<MW>::value>::type
+        after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx)
         {
             mw.after_handle(req, res, ctx.template get<MW>());
-        }
-
-        template <typename MW, typename Context, typename ParentContext>
-        void after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx, 
-            decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>(), std::declval<Context&>))* dummy = 0)
-        {
-            mw.after_handle(req, res, ctx.template get<MW>(), parent_ctx);
         }
 
         template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares>
