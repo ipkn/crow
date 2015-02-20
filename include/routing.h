@@ -32,7 +32,7 @@ namespace crow
 
         virtual void handle(const request&, response&, const routing_params&) = 0;
 
-        uint32_t methods()
+        uint32_t get_methods()
         {
             return methods_;
         }
@@ -43,6 +43,8 @@ namespace crow
         std::string rule_;
         std::string name_;
         friend class Router;
+        template <typename T>
+        friend struct RuleParameterTraits;
     };
 
 
@@ -137,7 +139,11 @@ namespace crow
                 , int>::type = 0)
                 {
                     handler_ = (
+#ifdef CROW_CAN_USE_CPP14
                         [f = std::move(f)]
+#else
+                        [f]
+#endif
                         (const request&, response& res, Args... args){
                             res = response(f(args...));
                             res.end();
@@ -227,9 +233,35 @@ namespace crow
         }
     }
 
-    class DynamicRule : public BaseRule
+    template <typename T>
+    struct RuleParameterTraits
+    {
+        using self_t = T;
+        self_t& name(std::string name) noexcept
+        {
+            ((self_t*)this)->name_ = std::move(name);
+            return (self_t&)*this;
+        }
+
+        self_t& methods(HTTPMethod method)
+        {
+            ((self_t*)this)->methods_ = 1 << (int)method;
+            return (self_t&)*this;
+        }
+
+        template <typename ... MethodArgs>
+        self_t& methods(HTTPMethod method, MethodArgs ... args_method)
+        {
+            methods(args_method...);
+            ((self_t*)this)->methods_ |= 1 << (int)method;
+            return (self_t&)*this;
+        }
+    };
+
+    class DynamicRule : public BaseRule, public RuleParameterTraits<DynamicRule>
     {
     public:
+
         DynamicRule(std::string rule)
             : BaseRule(std::move(rule))
         {
@@ -251,7 +283,11 @@ namespace crow
         template <typename Func>
         void operator()(Func f)
         {
+#ifdef CROW_MSVC_WORKAROUND
+            using function_t = utility::function_traits<decltype(&Func::operator())>;
+#else
             using function_t = utility::function_traits<Func>;
+#endif
             erased_handler_ = wrap(std::move(f), black_magic::gen_seq<function_t::arity>());
         }
 
@@ -262,7 +298,11 @@ namespace crow
         std::function<void(const request&, response&, const routing_params&)> 
         wrap(Func f, black_magic::seq<Indices...>)
         {
+#ifdef CROW_MSVC_WORKAROUND
+            using function_t = utility::function_traits<decltype(&Func::operator())>;
+#else
             using function_t = utility::function_traits<Func>;
+#endif
             if (!black_magic::is_paramter_tag_compatible(
                 black_magic::get_parameter_tag_runtime(rule_.c_str()), 
                 black_magic::compute_paramater_tag_from_args_list<
@@ -289,7 +329,7 @@ namespace crow
     };
 
     template <typename ... Args>
-    class TaggedRule : public BaseRule
+    class TaggedRule : public BaseRule, public RuleParameterTraits<TaggedRule<Args...>>
     {
     public:
         using self_t = TaggedRule<Args...>;
@@ -297,26 +337,6 @@ namespace crow
         TaggedRule(std::string rule)
             : BaseRule(std::move(rule))
         {
-        }
-        
-        self_t& name(std::string name) noexcept
-        {
-            name_ = std::move(name);
-            return *this;
-        }
-
-        self_t& methods(HTTPMethod method)
-        {
-            methods_ = 1<<(int)method;
-            return *this;
-        }
-
-        template <typename ... MethodArgs>
-        self_t& methods(HTTPMethod method, MethodArgs ... args_method)
-        {
-            methods(args_method...);
-            methods_ |= 1<<(int)method;
-            return *this;
         }
 
         void validate()
@@ -825,15 +845,15 @@ public:
                 return;
             }
 
-            if ((rules_[rule_index]->methods() & (1<<(uint32_t)req.method)) == 0)
+            if ((rules_[rule_index]->get_methods() & (1<<(uint32_t)req.method)) == 0)
             {
-                CROW_LOG_DEBUG << "Rule found but method mismatch: " << req.url << " with " << method_name(req.method) << "(" << (uint32_t)req.method << ") / " << rules_[rule_index]->methods();
+                CROW_LOG_DEBUG << "Rule found but method mismatch: " << req.url << " with " << method_name(req.method) << "(" << (uint32_t)req.method << ") / " << rules_[rule_index]->get_methods();
                 res = response(404);
                 res.end();
                 return;
             }
 
-            CROW_LOG_DEBUG << "Matched rule '" << rules_[rule_index]->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->methods();
+            CROW_LOG_DEBUG << "Matched rule '" << rules_[rule_index]->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->get_methods();
 
             // any uncaught exceptions become 500s
             try
