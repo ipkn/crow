@@ -596,7 +596,7 @@ namespace crow
 
             explicit operator int() const
             {
-                return i();
+                return (int)i();
             }
 
             type t() const
@@ -674,14 +674,14 @@ namespace crow
                                             from_hex(head[4]);
                                         if (code >= 0x800)
                                         {
-                                            *tail++ = 0b11100000 | (code >> 12);
-                                            *tail++ = 0b10000000 | ((code >> 6) & 0b111111);
-                                            *tail++ = 0b10000000 | (code & 0b111111);
+                                            *tail++ = 0xE0 | (code >> 12);
+                                            *tail++ = 0x80 | ((code >> 6) & 0x3F);
+                                            *tail++ = 0x80 | (code & 0x3F);
                                         }
                                         else if (code >= 0x80)
                                         {
-                                            *tail++ = 0b11000000 | (code >> 6);
-                                            *tail++ = 0b10000000 | (code & 0b111111);
+                                            *tail++ = 0xC0 | (code >> 6);
+                                            *tail++ = 0x80 | (code & 0x3F);
                                         }
                                         else
                                         {
@@ -4992,86 +4992,6 @@ namespace crow
 
 
 #pragma once
-
-#include <string>
-#include <boost/date_time/local_time/local_time.hpp>
-#include <boost/filesystem.hpp>
-
-namespace crow
-{
-    // code from http://stackoverflow.com/questions/2838524/use-boost-date-time-to-parse-and-create-http-dates
-    class DateTime
-    {
-        public:
-            DateTime()
-                : m_dt(boost::local_time::local_sec_clock::local_time(boost::local_time::time_zone_ptr()))
-            {
-            }
-            DateTime(const std::string& path)
-                : DateTime()
-            {
-                from_file(path);
-            }
-
-            // return datetime string
-            std::string str()
-            {
-                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
-                std::string result;
-                try
-                {
-                    std::stringstream ss;
-                    ss.imbue(locale_);
-                    ss << m_dt;
-                    result = ss.str();
-                }
-                catch (std::exception& e)
-                {
-                    std::cerr << "Exception: " << e.what() << std::endl;
-                }
-                return result;
-            }
-
-            // update datetime from file mod date
-            std::string from_file(const std::string& path)
-            {
-                try
-                {
-                    boost::filesystem::path p(path);
-                    boost::posix_time::ptime pt = boost::posix_time::from_time_t(
-                            boost::filesystem::last_write_time(p));
-                    m_dt = boost::local_time::local_date_time(pt, boost::local_time::time_zone_ptr());
-                }
-                catch (std::exception& e)
-                {
-                    std::cout << "Exception: " << e.what() << std::endl;
-                }
-                return str();
-            }
-
-            // parse datetime string
-            void parse(const std::string& dt)
-            {
-                static const std::locale locale_(std::locale::classic(), new boost::local_time::local_time_facet("%a, %d %b %Y %H:%M:%S GMT") );
-                std::stringstream ss(dt);
-                ss.imbue(locale_);
-                ss >> m_dt;
-            }
-
-            // boolean equal operator
-            friend bool operator==(const DateTime& left, const DateTime& right)
-            {
-                return (left.m_dt == right.m_dt);
-            }
-
-        private:
-            boost::local_time::local_date_time m_dt;
-    };
-}
-
-
-
-#pragma once
 // settings for crow
 // TODO - replace with runtime config. libucl?
 
@@ -5092,6 +5012,20 @@ namespace crow
     default to INFO
 */
 #define CROW_LOG_LEVEL 1
+
+
+// compiler flags
+#if __cplusplus >= 201402L
+#define CROW_CAN_USE_CPP14
+#endif
+
+#if defined(_MSC_VER)
+#if _MSC_VER < 1900
+#define CROW_MSVC_WORKAROUND
+#define constexpr const
+#define noexcept throw()
+#endif
+#endif
 
 
 
@@ -5137,9 +5071,18 @@ namespace crow
             static std::string timestamp()
             {
                 char date[32];
-                  time_t t = time(0);
-                  strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", gmtime(&t));
-                  return std::string(date);
+                time_t t = time(0);
+
+                tm my_tm;
+
+#ifdef _MSC_VER
+                gmtime_s(&my_tm, &t);
+#else
+                gmtime_r(&t, &my_tm);
+#endif
+
+                size_t sz = strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", &my_tm);
+                return std::string(date, date+sz);
             }
 
         public:
@@ -5243,13 +5186,6 @@ namespace crow
         class dumb_timer_queue
         {
         public:
-            // tls based queue to avoid locking
-            static dumb_timer_queue& get_current_dumb_timer_queue()
-            {
-                thread_local dumb_timer_queue q;
-                return q;
-            }
-
             using key = std::pair<dumb_timer_queue*, int>;
 
             void cancel(key& k)
@@ -5300,10 +5236,11 @@ namespace crow
                 io_service_ = &io_service;
             }
 
-        private:
             dumb_timer_queue() noexcept
             {
             }
+
+        private:
 
             int tick{5};
             boost::asio::io_service* io_service_{};
@@ -5321,11 +5258,14 @@ namespace crow
 #include <stdexcept>
 #include <tuple>
 #include <type_traits>
+#include <cstring>
+#include <functional>
 
 namespace crow
 {
     namespace black_magic
     {
+#ifndef CROW_MSVC_WORKAROUND
         struct OutOfRange
         {
             OutOfRange(unsigned pos, unsigned length) {}
@@ -5360,15 +5300,6 @@ namespace crow
                 return size_; 
             }
         };
-
-        unsigned find_closing_tag_runtime(const char* s, unsigned p)
-        {
-            return 
-                s[p] == 0
-                    ? throw std::runtime_error("unmatched tag <") :
-                s[p] == '>' 
-                    ? p : find_closing_tag_runtime(s, p+1);
-        }
 
         constexpr unsigned find_closing_tag(const_str s, unsigned p)
         {
@@ -5441,7 +5372,7 @@ namespace crow
         {
             return is_equ_n(s, i, "<path>", 0, 6);
         }
-
+#endif
         template <typename T> 
         struct paramater_tag
         {
@@ -5501,28 +5432,38 @@ struct paramater_tag<t> \
             return is_paramter_tag_compatible(a/6, b/6);
         }
 
-        constexpr uint64_t get_parameter_tag_runtime(const char* s, unsigned p = 0)
+        unsigned find_closing_tag_runtime(const char* s, unsigned p)
+        {
+            return
+                s[p] == 0
+                ? throw std::runtime_error("unmatched tag <") :
+                s[p] == '>'
+                ? p : find_closing_tag_runtime(s, p + 1);
+        }
+        
+        uint64_t get_parameter_tag_runtime(const char* s, unsigned p = 0)
         {
             return
                 s[p] == 0
                     ?  0 :
                 s[p] == '<' ? (
-                    strncmp(s+p, "<int>", 5) == 0
+                    std::strncmp(s+p, "<int>", 5) == 0
                         ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 1 :
-                    strncmp(s+p, "<uint>", 6) == 0
+                    std::strncmp(s+p, "<uint>", 6) == 0
                         ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 2 :
-                    (strncmp(s+p, "<float>", 7) == 0 ||
-                    strncmp(s+p, "<double>", 8) == 0)
+                    (std::strncmp(s+p, "<float>", 7) == 0 ||
+                    std::strncmp(s+p, "<double>", 8) == 0)
                         ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 3 :
-                    (strncmp(s+p, "<str>", 5) == 0 ||
-                    strncmp(s+p, "<string>", 8) == 0)
+                    (std::strncmp(s+p, "<str>", 5) == 0 ||
+                    std::strncmp(s+p, "<string>", 8) == 0)
                         ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 4 :
-                    strncmp(s+p, "<path>", 6) == 0
+                    std::strncmp(s+p, "<path>", 6) == 0
                         ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 5 :
                     throw std::runtime_error("invalid parameter type")
                     ) :
                 get_parameter_tag_runtime(s, p+1);
         }
+#ifndef CROW_MSVC_WORKAROUND
         constexpr uint64_t get_parameter_tag(const_str s, unsigned p = 0)
         {
             return
@@ -5543,6 +5484,7 @@ struct paramater_tag<t> \
                     ) : 
                 get_parameter_tag(s, p+1);
         }
+#endif
 
         template <typename ... T>
         struct S
@@ -5765,6 +5707,7 @@ template <typename F, typename Set>
         template<typename T> 
         struct function_traits;  
 
+#ifndef CROW_MSVC_WORKAROUND
         template<typename T> 
         struct function_traits : public function_traits<decltype(&T::operator())>
         {
@@ -5775,6 +5718,7 @@ template <typename F, typename Set>
             using arg = typename parent_t::template arg<i>;
         
         };  
+#endif
 
         template<typename ClassType, typename R, typename ...Args> 
         struct function_traits<R(ClassType::*)(Args...) const>
@@ -5926,6 +5870,7 @@ namespace crow
     }
 }
 
+#ifndef CROW_MSVC_WORKAROUND
 constexpr crow::HTTPMethod operator "" _method(const char* str, size_t len)
 {
     return
@@ -5939,7 +5884,7 @@ constexpr crow::HTTPMethod operator "" _method(const char* str, size_t len)
         crow::black_magic::is_equ_p(str, "TRACE", 5) ? crow::HTTPMethod::TRACE :
         throw std::runtime_error("invalid http method");
 };
-
+#endif
 
 
 
@@ -6234,7 +6179,7 @@ namespace crow
             json_value = std::move(r.json_value);
             code = r.code;
             headers = std::move(r.headers);
-			completed_ = r.completed_;
+            completed_ = r.completed_;
             return *this;
         }
 
@@ -6508,7 +6453,7 @@ namespace crow
 
         virtual void handle(const request&, response&, const routing_params&) = 0;
 
-        uint32_t methods()
+        uint32_t get_methods()
         {
             return methods_;
         }
@@ -6519,6 +6464,8 @@ namespace crow
         std::string rule_;
         std::string name_;
         friend class Router;
+        template <typename T>
+        friend struct RuleParameterTraits;
     };
 
 
@@ -6613,7 +6560,11 @@ namespace crow
                 , int>::type = 0)
                 {
                     handler_ = (
+#ifdef CROW_CAN_USE_CPP14
                         [f = std::move(f)]
+#else
+                        [f]
+#endif
                         (const request&, response& res, Args... args){
                             res = response(f(args...));
                             res.end();
@@ -6703,9 +6654,35 @@ namespace crow
         }
     }
 
-    class DynamicRule : public BaseRule
+    template <typename T>
+    struct RuleParameterTraits
+    {
+        using self_t = T;
+        self_t& name(std::string name) noexcept
+        {
+            ((self_t*)this)->name_ = std::move(name);
+            return (self_t&)*this;
+        }
+
+        self_t& methods(HTTPMethod method)
+        {
+            ((self_t*)this)->methods_ = 1 << (int)method;
+            return (self_t&)*this;
+        }
+
+        template <typename ... MethodArgs>
+        self_t& methods(HTTPMethod method, MethodArgs ... args_method)
+        {
+            methods(args_method...);
+            ((self_t*)this)->methods_ |= 1 << (int)method;
+            return (self_t&)*this;
+        }
+    };
+
+    class DynamicRule : public BaseRule, public RuleParameterTraits<DynamicRule>
     {
     public:
+
         DynamicRule(std::string rule)
             : BaseRule(std::move(rule))
         {
@@ -6727,7 +6704,11 @@ namespace crow
         template <typename Func>
         void operator()(Func f)
         {
+#ifdef CROW_MSVC_WORKAROUND
+            using function_t = utility::function_traits<decltype(&Func::operator())>;
+#else
             using function_t = utility::function_traits<Func>;
+#endif
             erased_handler_ = wrap(std::move(f), black_magic::gen_seq<function_t::arity>());
         }
 
@@ -6738,7 +6719,11 @@ namespace crow
         std::function<void(const request&, response&, const routing_params&)> 
         wrap(Func f, black_magic::seq<Indices...>)
         {
+#ifdef CROW_MSVC_WORKAROUND
+            using function_t = utility::function_traits<decltype(&Func::operator())>;
+#else
             using function_t = utility::function_traits<Func>;
+#endif
             if (!black_magic::is_paramter_tag_compatible(
                 black_magic::get_parameter_tag_runtime(rule_.c_str()), 
                 black_magic::compute_paramater_tag_from_args_list<
@@ -6765,7 +6750,7 @@ namespace crow
     };
 
     template <typename ... Args>
-    class TaggedRule : public BaseRule
+    class TaggedRule : public BaseRule, public RuleParameterTraits<TaggedRule<Args...>>
     {
     public:
         using self_t = TaggedRule<Args...>;
@@ -6773,26 +6758,6 @@ namespace crow
         TaggedRule(std::string rule)
             : BaseRule(std::move(rule))
         {
-        }
-        
-        self_t& name(std::string name) noexcept
-        {
-            name_ = std::move(name);
-            return *this;
-        }
-
-        self_t& methods(HTTPMethod method)
-        {
-            methods_ = 1<<(int)method;
-            return *this;
-        }
-
-        template <typename ... MethodArgs>
-        self_t& methods(HTTPMethod method, MethodArgs ... args_method)
-        {
-            methods(args_method...);
-            methods_ |= 1<<(int)method;
-            return *this;
         }
 
         void validate()
@@ -7301,15 +7266,15 @@ public:
                 return;
             }
 
-            if ((rules_[rule_index]->methods() & (1<<(uint32_t)req.method)) == 0)
+            if ((rules_[rule_index]->get_methods() & (1<<(uint32_t)req.method)) == 0)
             {
-                CROW_LOG_DEBUG << "Rule found but method mismatch: " << req.url << " with " << method_name(req.method) << "(" << (uint32_t)req.method << ") / " << rules_[rule_index]->methods();
+                CROW_LOG_DEBUG << "Rule found but method mismatch: " << req.url << " with " << method_name(req.method) << "(" << (uint32_t)req.method << ") / " << rules_[rule_index]->get_methods();
                 res = response(404);
                 res.end();
                 return;
             }
 
-            CROW_LOG_DEBUG << "Matched rule '" << rules_[rule_index]->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->methods();
+            CROW_LOG_DEBUG << "Matched rule '" << rules_[rule_index]->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->get_methods();
 
             // any uncaught exceptions become 500s
             try
@@ -7435,38 +7400,108 @@ namespace crow
 
 
 
-
-
 namespace crow
 {
     namespace detail
     {
+        template <typename MW>
+        struct check_before_handle_arity_3_const
+        {
+            template <typename T,
+                void (T::*)(request&, response&, typename MW::context&) const = &T::before_handle
+            >
+            struct get
+            { };
+        };
+
+        template <typename MW>
+        struct check_before_handle_arity_3
+        {
+            template <typename T,
+                void (T::*)(request&, response&, typename MW::context&) = &T::before_handle
+            >
+            struct get
+            { };
+        };
+
+        template <typename MW>
+        struct check_after_handle_arity_3_const
+        {
+            template <typename T,
+                void (T::*)(request&, response&, typename MW::context&) const = &T::after_handle
+            >
+            struct get
+            { };
+        };
+
+        template <typename MW>
+        struct check_after_handle_arity_3
+        {
+            template <typename T,
+                void (T::*)(request&, response&, typename MW::context&) = &T::after_handle
+            >
+            struct get
+            { };
+        };
+
+        template <typename T>
+        struct is_before_handle_arity_3_impl
+        {
+            template <typename C>
+            static std::true_type f(typename check_before_handle_arity_3_const<T>::template get<C>*);
+
+            template <typename C>
+            static std::true_type f(typename check_before_handle_arity_3<T>::template get<C>*);
+
+            template <typename C>
+            static std::false_type f(...);
+
+        public:
+            static const bool value = decltype(f<T>(nullptr))::value;
+        };
+
+        template <typename T>
+        struct is_after_handle_arity_3_impl
+        {
+            template <typename C>
+            static std::true_type f(typename check_after_handle_arity_3_const<T>::template get<C>*);
+
+            template <typename C>
+            static std::true_type f(typename check_after_handle_arity_3<T>::template get<C>*);
+
+            template <typename C>
+            static std::false_type f(...);
+
+        public:
+            static const bool value = decltype(f<T>(nullptr))::value;
+        };
+
         template <typename MW, typename Context, typename ParentContext>
-        void before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx, 
-            decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>()))* dummy = 0)
+        typename std::enable_if<!is_before_handle_arity_3_impl<MW>::value>::type
+        before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx)
+        {
+            mw.before_handle(req, res, ctx.template get<MW>(), ctx);
+        }
+
+        template <typename MW, typename Context, typename ParentContext>
+        typename std::enable_if<is_before_handle_arity_3_impl<MW>::value>::type
+        before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx)
         {
             mw.before_handle(req, res, ctx.template get<MW>());
         }
 
         template <typename MW, typename Context, typename ParentContext>
-        void before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx,
-            decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>(), std::declval<Context&>))* dummy = 0)
+        typename std::enable_if<!is_after_handle_arity_3_impl<MW>::value>::type
+        after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx)
         {
-            mw.before_handle(req, res, ctx.template get<MW>(), parent_ctx);
+            mw.after_handle(req, res, ctx.template get<MW>(), ctx);
         }
 
         template <typename MW, typename Context, typename ParentContext>
-        void after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx, 
-            decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>()))* dummy = 0)
+        typename std::enable_if<is_after_handle_arity_3_impl<MW>::value>::type
+        after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx)
         {
             mw.after_handle(req, res, ctx.template get<MW>());
-        }
-
-        template <typename MW, typename Context, typename ParentContext>
-        void after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx, 
-            decltype(std::declval<MW>().before_handle(std::declval<request&>(), std::declval<response&>(), std::declval<typename MW::context&>(), std::declval<Context&>))* dummy = 0)
-        {
-            mw.after_handle(req, res, ctx.template get<MW>(), parent_ctx);
         }
 
         template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares>
@@ -7533,13 +7568,17 @@ namespace crow
             boost::asio::io_service& io_service, 
             Handler* handler, 
             const std::string& server_name,
-            std::tuple<Middlewares...>* middlewares
+            std::tuple<Middlewares...>* middlewares,
+            std::function<std::string()>& get_cached_date_str_f,
+            detail::dumb_timer_queue& timer_queue
             ) 
             : socket_(io_service), 
             handler_(handler), 
             parser_(this), 
             server_name_(server_name),
-            middlewares_(middlewares)
+            middlewares_(middlewares),
+            get_cached_date_str(get_cached_date_str_f),
+            timer_queue(timer_queue)
         {
 #ifdef CROW_ENABLE_DEBUG
             connectionCount ++;
@@ -7774,20 +7813,6 @@ namespace crow
         }
 
     private:
-        static std::string get_cached_date_str()
-        {
-            using namespace std::chrono;
-            thread_local auto last = steady_clock::now();
-            thread_local std::string date_str = DateTime().str();
-
-            if (steady_clock::now() - last >= seconds(1))
-            {
-                last = steady_clock::now();
-                date_str = DateTime().str();
-            }
-            return date_str;
-        }
-
         void do_read()
         {
             //auto self = this->shared_from_this();
@@ -7865,12 +7890,11 @@ namespace crow
         void cancel_deadline_timer()
         {
             CROW_LOG_DEBUG << this << " timer cancelled: " << timer_cancel_key_.first << ' ' << timer_cancel_key_.second;
-            detail::dumb_timer_queue::get_current_dumb_timer_queue().cancel(timer_cancel_key_);
+            timer_queue.cancel(timer_cancel_key_);
         }
 
         void start_deadline(int timeout = 5)
         {
-            auto& timer_queue = detail::dumb_timer_queue::get_current_dumb_timer_queue();
             cancel_deadline_timer();
             
             timer_cancel_key_ = timer_queue.add([this]
@@ -7913,6 +7937,9 @@ namespace crow
 
         std::tuple<Middlewares...>* middlewares_;
         detail::context<Middlewares...> ctx_;
+
+        std::function<std::string()>& get_cached_date_str;
+        detail::dumb_timer_queue& timer_queue;
     };
 
 }
@@ -7929,8 +7956,6 @@ namespace crow
 #include <vector>
 
 #include <memory>
-
-
 
 
 
@@ -7965,13 +7990,46 @@ namespace crow
 
             for(int i = 0; i < concurrency_;  i++)
                 io_service_pool_.emplace_back(new boost::asio::io_service());
+            get_cached_date_str_pool_.resize(concurrency_);
+            timer_queue_pool_.resize(concurrency_);
 
             std::vector<std::future<void>> v;
             for(uint16_t i = 0; i < concurrency_; i ++)
                 v.push_back(
                         std::async(std::launch::async, [this, i]{
+
+                            // thread local date string get function
+                            auto last = std::chrono::steady_clock::now();
+
+                            std::string date_str;
+                            auto update_date_str = [&]
+                            {
+                                auto last_time_t = time(0);
+                                tm my_tm;
+
+#ifdef _MSC_VER
+                                gmtime_s(&my_tm, &last_time_t);
+#else
+                                gmtime_r(&last_time_t, &my_tm);
+#endif
+                                date_str.resize(100);
+                                size_t date_str_sz = strftime(&date_str[0], 99, "%a, %d %b %Y %H:%M:%S GMT", &my_tm);
+                                date_str.resize(date_str_sz);
+                            };
+                            update_date_str();
+                            get_cached_date_str_pool_[i] = [&]()->std::string
+                            {
+                                if (std::chrono::steady_clock::now() - last >= std::chrono::seconds(1))
+                                {
+                                    last = std::chrono::steady_clock::now();
+                                    update_date_str();
+                                }
+                                return date_str;
+                            };
+
                             // initializing timer queue
-                            auto& timer_queue = detail::dumb_timer_queue::get_current_dumb_timer_queue();
+                            detail::dumb_timer_queue timer_queue;
+                            timer_queue_pool_[i] = &timer_queue;
 
                             timer_queue.set_io_service(*io_service_pool_[i]);
                             boost::asio::deadline_timer timer(*io_service_pool_[i]);
@@ -7996,12 +8054,18 @@ namespace crow
                     stop();
                 });
 
+            for (int i = 0; i < concurrency_; i++)
+            {
+                while (timer_queue_pool_[i] == nullptr)
+                    std::this_thread::yield();
+            }
+
             do_accept();
 
-            v.push_back(std::async(std::launch::async, [this]{
+            std::thread([this]{
                 io_service_.run();
                 CROW_LOG_INFO << "Exiting.";
-            }));
+            }).join();
         }
 
         void stop()
@@ -8023,7 +8087,11 @@ namespace crow
 
         void do_accept()
         {
-            auto p = new Connection<Handler, Middlewares...>(pick_io_service(), handler_, server_name_, middlewares_);
+            asio::io_service& is = pick_io_service();
+            auto p = new Connection<Handler, Middlewares...>(
+                is, handler_, server_name_, middlewares_,
+                get_cached_date_str_pool_[roundrobin_index_], *timer_queue_pool_[roundrobin_index_]
+                );
             acceptor_.async_accept(p->socket(), 
                 [this, p](boost::system::error_code ec)
                 {
@@ -8038,6 +8106,8 @@ namespace crow
     private:
         asio::io_service io_service_;
         std::vector<std::unique_ptr<asio::io_service>> io_service_pool_;
+        std::vector<detail::dumb_timer_queue*> timer_queue_pool_;
+        std::vector<std::function<std::string()>> get_cached_date_str_pool_;
         tcp::acceptor acceptor_;
         boost::asio::signal_set signals_;
 
