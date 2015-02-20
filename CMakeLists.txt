@@ -9,9 +9,15 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++1y")
 
+if (MSVC)
+set(Boost_USE_STATIC_LIBS "On")
+find_package( Boost 1.52 COMPONENTS date_time filesystem system thread regex REQUIRED )
+else()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++1y")
 find_package( Boost 1.52 COMPONENTS date_time filesystem system thread REQUIRED )
+endif()
+
 include_directories( ${Boost_INCLUDE_DIR} )
 
 set(PROJECT_INCLUDE_DIR 
@@ -22,8 +28,10 @@ include_directories("${PROJECT_INCLUDE_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}")
  
 #add_subdirectory(src)
-add_subdirectory(tests)
 add_subdirectory(examples)
+if (MSVC)
+else()
+add_subdirectory(tests)
 
 enable_testing()
 add_test(NAME crow_test COMMAND ${CMAKE_CURRENT_BINARY_DIR}/tests/unittest)
@@ -39,3 +47,4 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/amalgamate/crow_all.h
     )
 
 add_custom_target(amalgamation ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/amalgamate/crow_all.h)
+endif()

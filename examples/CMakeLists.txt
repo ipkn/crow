@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 2.8)
 project (crow_examples)
+
+if (MSVC)
+add_executable(example_vs example_vs.cpp)
+target_link_libraries(example_vs ${Boost_LIBRARIES})
+target_link_libraries(example_vs ${CMAKE_THREAD_LIBS_INIT})
+else ()
  
 add_executable(example example.cpp)
 #target_link_libraries(example crow)
@@ -35,3 +41,4 @@ add_custom_target(example_chat_copy ALL DEPENDS example_chat.html)
 
 #SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -g -pg" )
 #SET( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -g -pg" )
+endif()
