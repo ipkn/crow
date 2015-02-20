@@ -60,7 +60,7 @@ namespace crow
             json_value = std::move(r.json_value);
             code = r.code;
             headers = std::move(r.headers);
-			completed_ = r.completed_;
+            completed_ = r.completed_;
             return *this;
         }
 
