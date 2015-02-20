@@ -16,13 +16,6 @@ namespace crow
         class dumb_timer_queue
         {
         public:
-            // tls based queue to avoid locking
-            static dumb_timer_queue& get_current_dumb_timer_queue()
-            {
-                thread_local dumb_timer_queue q;
-                return q;
-            }
-
             using key = std::pair<dumb_timer_queue*, int>;
 
             void cancel(key& k)
@@ -73,10 +66,11 @@ namespace crow
                 io_service_ = &io_service;
             }
 
-        private:
             dumb_timer_queue() noexcept
             {
             }
+
+        private:
 
             int tick{5};
             boost::asio::io_service* io_service_{};

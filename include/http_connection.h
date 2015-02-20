@@ -9,7 +9,6 @@
 
 #include "http_parser_merged.h"
 
-#include "datetime.h"
 #include "parser.h"
 #include "http_response.h"
 #include "logging.h"
@@ -185,13 +184,17 @@ namespace crow
             boost::asio::io_service& io_service, 
             Handler* handler, 
             const std::string& server_name,
-            std::tuple<Middlewares...>* middlewares
+            std::tuple<Middlewares...>* middlewares,
+            std::function<std::string()>& get_cached_date_str_f,
+            detail::dumb_timer_queue& timer_queue
             ) 
             : socket_(io_service), 
             handler_(handler), 
             parser_(this), 
             server_name_(server_name),
-            middlewares_(middlewares)
+            middlewares_(middlewares),
+            get_cached_date_str(get_cached_date_str_f),
+            timer_queue(timer_queue)
         {
 #ifdef CROW_ENABLE_DEBUG
             connectionCount ++;
@@ -426,20 +429,6 @@ namespace crow
         }
 
     private:
-        static std::string get_cached_date_str()
-        {
-            using namespace std::chrono;
-            thread_local auto last = steady_clock::now();
-            thread_local std::string date_str = DateTime().str();
-
-            if (steady_clock::now() - last >= seconds(1))
-            {
-                last = steady_clock::now();
-                date_str = DateTime().str();
-            }
-            return date_str;
-        }
-
         void do_read()
         {
             //auto self = this->shared_from_this();
@@ -517,12 +506,11 @@ namespace crow
         void cancel_deadline_timer()
         {
             CROW_LOG_DEBUG << this << " timer cancelled: " << timer_cancel_key_.first << ' ' << timer_cancel_key_.second;
-            detail::dumb_timer_queue::get_current_dumb_timer_queue().cancel(timer_cancel_key_);
+            timer_queue.cancel(timer_cancel_key_);
         }
 
         void start_deadline(int timeout = 5)
         {
-            auto& timer_queue = detail::dumb_timer_queue::get_current_dumb_timer_queue();
             cancel_deadline_timer();
             
             timer_cancel_key_ = timer_queue.add([this]
@@ -565,6 +553,9 @@ namespace crow
 
         std::tuple<Middlewares...>* middlewares_;
         detail::context<Middlewares...> ctx_;
+
+        std::function<std::string()>& get_cached_date_str;
+        detail::dumb_timer_queue& timer_queue;
     };
 
 }

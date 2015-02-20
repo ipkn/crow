@@ -10,11 +10,11 @@
 
 #include "settings.h"
 #include "logging.h" 
-#include "http_server.h"
 #include "utility.h"
 #include "routing.h"
 #include "middleware_context.h"
 #include "http_request.h"
+#include "http_server.h"
 
 #define CROW_ROUTE(app, url) app.route<crow::black_magic::get_parameter_tag(url)>(url)
 

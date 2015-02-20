@@ -10,7 +10,6 @@
 #include <memory>
 
 #include "http_connection.h"
-#include "datetime.h"
 #include "logging.h"
 #include "dumb_timer_queue.h"
 
@@ -40,13 +39,46 @@ namespace crow
 
             for(int i = 0; i < concurrency_;  i++)
                 io_service_pool_.emplace_back(new boost::asio::io_service());
+            get_cached_date_str_pool_.resize(concurrency_);
+            timer_queue_pool_.resize(concurrency_);
 
             std::vector<std::future<void>> v;
             for(uint16_t i = 0; i < concurrency_; i ++)
                 v.push_back(
                         std::async(std::launch::async, [this, i]{
+
+                            // thread local date string get function
+                            auto last = std::chrono::steady_clock::now();
+
+                            std::string date_str;
+                            auto update_date_str = [&]
+                            {
+                                auto last_time_t = time(0);
+                                tm my_tm;
+
+#ifdef _MSC_VER
+                                gmtime_s(&my_tm, &last_time_t);
+#else
+                                gmtime_r(&last_time_t, &my_tm);
+#endif
+                                date_str.resize(100);
+                                size_t date_str_sz = strftime(&date_str[0], 99, "%a, %d %b %Y %H:%M:%S GMT", &my_tm);
+                                date_str.resize(date_str_sz);
+                            };
+                            update_date_str();
+                            get_cached_date_str_pool_[i] = [&]()->std::string
+                            {
+                                if (std::chrono::steady_clock::now() - last >= std::chrono::seconds(1))
+                                {
+                                    last = std::chrono::steady_clock::now();
+                                    update_date_str();
+                                }
+                                return date_str;
+                            };
+
                             // initializing timer queue
-                            auto& timer_queue = detail::dumb_timer_queue::get_current_dumb_timer_queue();
+                            detail::dumb_timer_queue timer_queue;
+                            timer_queue_pool_[i] = &timer_queue;
 
                             timer_queue.set_io_service(*io_service_pool_[i]);
                             boost::asio::deadline_timer timer(*io_service_pool_[i]);
@@ -71,12 +103,18 @@ namespace crow
                     stop();
                 });
 
+            for (int i = 0; i < concurrency_; i++)
+            {
+                while (timer_queue_pool_[i] == nullptr)
+                    std::this_thread::yield();
+            }
+
             do_accept();
 
-            v.push_back(std::async(std::launch::async, [this]{
+            std::thread([this]{
                 io_service_.run();
                 CROW_LOG_INFO << "Exiting.";
-            }));
+            }).join();
         }
 
         void stop()
@@ -98,7 +136,11 @@ namespace crow
 
         void do_accept()
         {
-            auto p = new Connection<Handler, Middlewares...>(pick_io_service(), handler_, server_name_, middlewares_);
+            asio::io_service& is = pick_io_service();
+            auto p = new Connection<Handler, Middlewares...>(
+                is, handler_, server_name_, middlewares_,
+                get_cached_date_str_pool_[roundrobin_index_], *timer_queue_pool_[roundrobin_index_]
+                );
             acceptor_.async_accept(p->socket(), 
                 [this, p](boost::system::error_code ec)
                 {
@@ -113,6 +155,8 @@ namespace crow
     private:
         asio::io_service io_service_;
         std::vector<std::unique_ptr<asio::io_service>> io_service_pool_;
+        std::vector<detail::dumb_timer_queue*> timer_queue_pool_;
+        std::vector<std::function<std::string()>> get_cached_date_str_pool_;
         tcp::acceptor acceptor_;
         boost::asio::signal_set signals_;
 
