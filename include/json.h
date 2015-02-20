@@ -252,7 +252,7 @@ namespace crow
 
             explicit operator int() const
             {
-                return i();
+                return (int)i();
             }
 
             type t() const
@@ -330,14 +330,14 @@ namespace crow
                                             from_hex(head[4]);
                                         if (code >= 0x800)
                                         {
-                                            *tail++ = 0b11100000 | (code >> 12);
-                                            *tail++ = 0b10000000 | ((code >> 6) & 0b111111);
-                                            *tail++ = 0b10000000 | (code & 0b111111);
+                                            *tail++ = 0xE0 | (code >> 12);
+                                            *tail++ = 0x80 | ((code >> 6) & 0x3F);
+                                            *tail++ = 0x80 | (code & 0x3F);
                                         }
                                         else if (code >= 0x80)
                                         {
-                                            *tail++ = 0b11000000 | (code >> 6);
-                                            *tail++ = 0b10000000 | (code & 0b111111);
+                                            *tail++ = 0xC0 | (code >> 6);
+                                            *tail++ = 0x80 | (code & 0x3F);
                                         }
                                         else
                                         {
