@@ -109,6 +109,7 @@ namespace crow
     }
 }
 
+#ifndef CROW_MSVC_WORKAROUND
 constexpr crow::HTTPMethod operator "" _method(const char* str, size_t len)
 {
     return
@@ -122,4 +123,4 @@ constexpr crow::HTTPMethod operator "" _method(const char* str, size_t len)
         crow::black_magic::is_equ_p(str, "TRACE", 5) ? crow::HTTPMethod::TRACE :
         throw std::runtime_error("invalid http method");
 };
-
+#endif

@@ -4,11 +4,14 @@
 #include <stdexcept>
 #include <tuple>
 #include <type_traits>
+#include <cstring>
+#include <functional>
 
 namespace crow
 {
     namespace black_magic
     {
+#ifndef CROW_MSVC_WORKAROUND
         struct OutOfRange
         {
             OutOfRange(unsigned pos, unsigned length) {}
@@ -43,15 +46,6 @@ namespace crow
                 return size_; 
             }
         };
-
-        unsigned find_closing_tag_runtime(const char* s, unsigned p)
-        {
-            return 
-                s[p] == 0
-                    ? throw std::runtime_error("unmatched tag <") :
-                s[p] == '>' 
-                    ? p : find_closing_tag_runtime(s, p+1);
-        }
 
         constexpr unsigned find_closing_tag(const_str s, unsigned p)
         {
@@ -124,7 +118,7 @@ namespace crow
         {
             return is_equ_n(s, i, "<path>", 0, 6);
         }
-
+#endif
         template <typename T> 
         struct paramater_tag
         {
@@ -184,28 +178,38 @@ struct paramater_tag<t> \
             return is_paramter_tag_compatible(a/6, b/6);
         }
 
-        constexpr uint64_t get_parameter_tag_runtime(const char* s, unsigned p = 0)
+        unsigned find_closing_tag_runtime(const char* s, unsigned p)
+        {
+            return
+                s[p] == 0
+                ? throw std::runtime_error("unmatched tag <") :
+                s[p] == '>'
+                ? p : find_closing_tag_runtime(s, p + 1);
+        }
+        
+        uint64_t get_parameter_tag_runtime(const char* s, unsigned p = 0)
         {
             return
                 s[p] == 0
                     ?  0 :
                 s[p] == '<' ? (
-                    strncmp(s+p, "<int>", 5) == 0
+                    std::strncmp(s+p, "<int>", 5) == 0
                         ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 1 :
-                    strncmp(s+p, "<uint>", 6) == 0
+                    std::strncmp(s+p, "<uint>", 6) == 0
                         ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 2 :
-                    (strncmp(s+p, "<float>", 7) == 0 ||
-                    strncmp(s+p, "<double>", 8) == 0)
+                    (std::strncmp(s+p, "<float>", 7) == 0 ||
+                    std::strncmp(s+p, "<double>", 8) == 0)
                         ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 3 :
-                    (strncmp(s+p, "<str>", 5) == 0 ||
-                    strncmp(s+p, "<string>", 8) == 0)
+                    (std::strncmp(s+p, "<str>", 5) == 0 ||
+                    std::strncmp(s+p, "<string>", 8) == 0)
                         ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 4 :
-                    strncmp(s+p, "<path>", 6) == 0
+                    std::strncmp(s+p, "<path>", 6) == 0
                         ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 5 :
                     throw std::runtime_error("invalid parameter type")
                     ) :
                 get_parameter_tag_runtime(s, p+1);
         }
+#ifndef CROW_MSVC_WORKAROUND
         constexpr uint64_t get_parameter_tag(const_str s, unsigned p = 0)
         {
             return
@@ -226,6 +230,7 @@ struct paramater_tag<t> \
                     ) : 
                 get_parameter_tag(s, p+1);
         }
+#endif
 
         template <typename ... T>
         struct S
@@ -448,6 +453,7 @@ template <typename F, typename Set>
         template<typename T> 
         struct function_traits;  
 
+#ifndef CROW_MSVC_WORKAROUND
         template<typename T> 
         struct function_traits : public function_traits<decltype(&T::operator())>
         {
@@ -458,6 +464,7 @@ template <typename F, typename Set>
             using arg = typename parent_t::template arg<i>;
         
         };  
+#endif
 
         template<typename ClassType, typename R, typename ...Args> 
         struct function_traits<R(ClassType::*)(Args...) const>
