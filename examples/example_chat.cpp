@@ -25,7 +25,7 @@ void broadcast(const string& msg)
     }
     ress.clear();
 }
-
+// To see how it works go on {ip}:40080 but I just got it working with external build (not directly in IDE, I guess a problem with dependency)
 int main()
 {
     crow::SimpleApp app;

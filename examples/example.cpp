@@ -62,7 +62,9 @@ int main()
         return "Trailing slash test case..";
     });
 
+
     // simple json response
+    // To see it in action enter {ip}:18080/json
     CROW_ROUTE(app, "/json")
     ([]{
         crow::json::wvalue x;
@@ -70,6 +72,8 @@ int main()
         return x;
     });
 
+    // To see it in action enter {ip}:18080/hello/{integer_between -2^32 and 100} and you should receive
+    // {integer_between -2^31 and 100} bottles of beer!
     CROW_ROUTE(app,"/hello/<int>")
     ([](int count){
         if (count > 100)
@@ -79,6 +83,7 @@ int main()
         return crow::response(os.str());
     });
 
+    // To see it in action submit {ip}:18080/add/1/2 and you should receive 3 (exciting, isn't it)
     CROW_ROUTE(app,"/add/<int>/<int>")
     ([](const crow::request& req, crow::response& res, int a, int b){
         std::ostringstream os;
@@ -94,6 +99,13 @@ int main()
     //});
 
     // more json example
+
+    // To see it in action, I recommend to use the Postman Chrome extension:
+    //      * Set the address to {ip}:18080/add_json
+    //      * Set the method to post
+    //      * Select 'raw' and then JSON
+    //      * Add {"a": 1, "b": 1}
+    //      * Send and you should receive 2
     CROW_ROUTE(app, "/add_json")
         .methods("POST"_method)
     ([](const crow::request& req){
