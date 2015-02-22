@@ -106,15 +106,27 @@ int main()
         return crow::response{os.str()};
     });
 
+    // Example of a request taking URL parameters
+    // If you want to activate all the functions just query
+    // {ip}:18080/params?foo='blabla'&pew=32&count[]=a&count[]=b
     CROW_ROUTE(app, "/params")
     ([](const crow::request& req){
         std::ostringstream os;
+
+        // To get a simple string from the url params
+        // To see it in action /param?foo='blabla'
         os << "Params: " << req.url_params << "\n\n"; 
         os << "The key 'foo' was " << (req.url_params.get("foo") == nullptr ? "not " : "") << "found.\n";
+
+        // To get a double from the request
+        // To see in action submit something like '/params?pew=42'
         if(req.url_params.get("pew") != nullptr) {
             double countD = boost::lexical_cast<double>(req.url_params.get("pew"));
             os << "The value of 'pew' is " <<  countD << '\n';
         }
+
+        // To get a list from the request
+        // You have to submit something like '/params?count[]=a&count[]=b' to have a list with two values (a and b)
         auto count = req.url_params.get_list("count");
         os << "The key 'count' contains " << count.size() << " value(s).\n";
         for(const auto& countVal : count) {
