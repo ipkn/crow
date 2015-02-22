@@ -126,7 +126,7 @@ int main()
         std::ostringstream os;
 
         // To get a simple string from the url params
-        // To see it in action /param?foo='blabla'
+        // To see it in action /params?foo='blabla'
         os << "Params: " << req.url_params << "\n\n"; 
         os << "The key 'foo' was " << (req.url_params.get("foo") == nullptr ? "not " : "") << "found.\n";
 
