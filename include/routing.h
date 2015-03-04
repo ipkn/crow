@@ -294,7 +294,7 @@ namespace crow
         // enable_if Arg1 == request && Arg2 == response
         // enable_if Arg1 == request && Arg2 != resposne
         // enable_if Arg1 != request
-        template <typename Func, unsigned ... Indices>
+        template <typename Func, size_t ... Indices>
         std::function<void(const request&, response&, const routing_params&)> 
         wrap(Func f, black_magic::seq<Indices...>)
         {
