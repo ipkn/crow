@@ -466,21 +466,6 @@ template <typename F, typename Set>
         };  
 #endif
 
-		template <size_t N, typename ...Args>
-		struct select_type;
-
-		template <typename Arg, typename ...Args>
-		struct select_type<0, Arg, Args...>
-		{
-			using type = Arg;
-		};
-
-		template <int N, typename Arg, typename ...Args>
-		struct select_type<N, Arg, Args...>
-		{
-			using type = typename select_type<N-1, Args...>::type;
-		};
-
         template<typename ClassType, typename R, typename ...Args> 
         struct function_traits<R(ClassType::*)(Args...) const>
         {
@@ -489,7 +474,7 @@ template <typename F, typename Set>
             typedef R result_type;
 
             template <size_t i>
-            using arg = typename select_type<i, Args...>::type;
+            using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
         };
 
         template<typename ClassType, typename R, typename ...Args> 
@@ -500,7 +485,7 @@ template <typename F, typename Set>
             typedef R result_type;
 
             template <size_t i>
-            using arg = typename select_type<i, Args...>::type;
+            using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
         };
 
         template<typename R, typename ...Args> 
@@ -511,7 +496,7 @@ template <typename F, typename Set>
             typedef R result_type;
 
             template <size_t i>
-            using arg = typename select_type<i, Args...>::type;
+            using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
         };
 
     } // namespace utility
