@@ -1091,9 +1091,42 @@ namespace crow
                 }
             }
 
+			wvalue(const wvalue& r)
+            {
+                *this = r;
+            }
+
             wvalue(wvalue&& r)
             {
                 *this = std::move(r);
+            }
+
+		   wvalue& operator = (const wvalue& r)
+            {
+                t_ = r.t_;
+                d = r.d;
+                s = r.s;
+
+				if( r.l )
+				{
+					l = std::move(std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{}));
+					l->resize(r.l->size());
+					size_t idx = 0;
+					for(auto& x:*r.l)
+					{
+	                    (*l)[idx++] = x;
+					}
+				}
+				if( r.o )
+				{
+                    o = std::move(std::unique_ptr<std::unordered_map<std::string, wvalue>>(new std::unordered_map<std::string, wvalue>{}));
+					o->reserve(r.o->size());
+					for(auto& i:*r.o)
+					{
+						(*o)[i.first] = i.second;
+					}
+				}
+                return *this;
             }
 
             wvalue& operator = (wvalue&& r)
