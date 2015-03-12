@@ -120,13 +120,13 @@ namespace crow
         }
 #endif
         template <typename T> 
-        struct paramater_tag
+        struct parameter_tag
         {
             static const int value = 0;
         };
 #define CROW_INTERNAL_PARAMETER_TAG(t, i) \
 template <> \
-struct paramater_tag<t> \
+struct parameter_tag<t> \
 { \
     static const int value = i; \
 };
@@ -144,26 +144,26 @@ struct paramater_tag<t> \
         CROW_INTERNAL_PARAMETER_TAG(std::string, 4);
 #undef CROW_INTERNAL_PARAMETER_TAG
         template <typename ... Args>
-        struct compute_paramater_tag_from_args_list;
+        struct compute_parameter_tag_from_args_list;
 
         template <>
-        struct compute_paramater_tag_from_args_list<>
+        struct compute_parameter_tag_from_args_list<>
         {
             static const int value = 0;
         };
 
         template <typename Arg, typename ... Args>
-        struct compute_paramater_tag_from_args_list<Arg, Args...>
+        struct compute_parameter_tag_from_args_list<Arg, Args...>
         {
             static const int sub_value = 
-                compute_paramater_tag_from_args_list<Args...>::value;
+                compute_parameter_tag_from_args_list<Args...>::value;
             static const int value = 
-                paramater_tag<typename std::decay<Arg>::type>::value 
-                ? sub_value* 6 + paramater_tag<typename std::decay<Arg>::type>::value 
+                parameter_tag<typename std::decay<Arg>::type>::value
+                ? sub_value* 6 + parameter_tag<typename std::decay<Arg>::type>::value
                 : sub_value;
         };
 
-        bool is_paramter_tag_compatible(uint64_t a, uint64_t b)
+        bool is_parameter_tag_compatible(uint64_t a, uint64_t b)
         {
             if (a == 0)
                 return b == 0;
@@ -175,7 +175,7 @@ struct paramater_tag<t> \
             if (sb == 5) sb = 4;
             if (sa != sb)
                 return false;
-            return is_paramter_tag_compatible(a/6, b/6);
+            return is_parameter_tag_compatible(a/6, b/6);
         }
 
         unsigned find_closing_tag_runtime(const char* s, unsigned p)

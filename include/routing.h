@@ -303,12 +303,12 @@ namespace crow
 #else
             using function_t = utility::function_traits<Func>;
 #endif
-            if (!black_magic::is_paramter_tag_compatible(
+            if (!black_magic::is_parameter_tag_compatible(
                 black_magic::get_parameter_tag_runtime(rule_.c_str()), 
-                black_magic::compute_paramater_tag_from_args_list<
+                black_magic::compute_parameter_tag_from_args_list<
                     typename function_t::template arg<Indices>...>::value))
             {
-                throw std::runtime_error("route_dynamic: Handler type is mismatched with URL paramters: " + rule_);
+                throw std::runtime_error("route_dynamic: Handler type is mismatched with URL parameters: " + rule_);
             }
             auto ret = detail::routing_handler_call_helper::Wrapped<Func, typename function_t::template arg<Indices>...>();
             ret.template set<
@@ -353,7 +353,7 @@ namespace crow
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
                 black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value , 
-                "Handler type is mismatched with URL paramters");
+                "Handler type is mismatched with URL parameters");
             static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value, 
                 "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
 
@@ -372,7 +372,7 @@ namespace crow
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
                 black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value, 
-                "Handler type is mismatched with URL paramters");
+                "Handler type is mismatched with URL parameters");
             static_assert(!std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<Args>()...))>::value, 
                 "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
 
@@ -393,7 +393,7 @@ namespace crow
                 black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value ||
                 black_magic::CallHelper<Func, black_magic::S<crow::request, crow::response&, Args...>>::value
                 , 
-                "Handler type is mismatched with URL paramters");
+                "Handler type is mismatched with URL parameters");
             static_assert(std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<crow::response&>(), std::declval<Args>()...))>::value, 
                 "Handler function with response argument should have void return type");
 
