@@ -294,7 +294,11 @@ namespace crow
         // enable_if Arg1 == request && Arg2 == response
         // enable_if Arg1 == request && Arg2 != resposne
         // enable_if Arg1 != request
+#ifdef CROW_MSVC_WORKAROUND
+        template <typename Func, size_t ... Indices>
+#else
         template <typename Func, unsigned ... Indices>
+#endif
         std::function<void(const request&, response&, const routing_params&)> 
         wrap(Func f, black_magic::seq<Indices...>)
         {
