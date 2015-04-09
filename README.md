@@ -1,6 +1,9 @@
 # Crow
 
+![Crow logo](http://i.imgur.com/wqivvjK.jpg)
+
 Crow is C++ microframework for web. (inspired by Python Flask)
+
 
 ![Travis Build](https://travis-ci.org/ipkn/crow.svg?branch=master)
 
