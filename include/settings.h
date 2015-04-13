@@ -2,9 +2,6 @@
 // settings for crow
 // TODO - replace with runtime config. libucl?
 
-// Server Name
-#define CROW_SERVER_NAME "Crow/0.1"
-
 /* #ifdef - enables debug mode */
 #define CROW_ENABLE_DEBUG
 

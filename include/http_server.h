@@ -12,7 +12,6 @@
 #include "http_connection.h"
 #include "logging.h"
 #include "dumb_timer_queue.h"
-#include "settings.h"
 
 namespace crow
 {
@@ -163,7 +162,7 @@ namespace crow
 
         Handler* handler_;
         uint16_t concurrency_{1};
-        std::string server_name_ = CROW_SERVER_NAME;
+        std::string server_name_ = "Crow/0.1";
         uint16_t port_;
         unsigned int roundrobin_index_{};
 
