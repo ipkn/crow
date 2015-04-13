@@ -40,11 +40,14 @@ namespace crow
         response() {}
         explicit response(int code) : code(code) {}
         response(std::string body) : body(std::move(body)) {}
-        response(json::wvalue&& json_value) : json_value(std::move(json_value)) {}
+        response(json::wvalue&& json_value) : json_value(std::move(json_value)) 
+        {
+            json_mode();    
+        }
         response(int code, std::string body) : body(std::move(body)), code(code) {}
         response(const json::wvalue& json_value) : body(json::dump(json_value)) 
         {
-            set_header("Content-Type", "application/json");
+            json_mode();
         }
 
         response(response&& r)
@@ -111,5 +114,11 @@ namespace crow
             bool completed_{};
             std::function<void()> complete_request_handler_;
             std::function<bool()> is_alive_helper_;
+            
+            //In case of a JSON object, set the Content-Type header
+            void json_mode()
+            {
+                set_header("Content-Type", "application/json");
+            }
     };
 }
