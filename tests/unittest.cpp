@@ -1,6 +1,7 @@
 //#define CROW_ENABLE_LOGGING
 #define CROW_ENABLE_DEBUG
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include "settings.h"
 #undef CROW_LOG_LEVEL
@@ -943,6 +944,20 @@ TEST(simple_url_params)
     asio::io_service is;
     std::string sendmsg;
 
+    // check empty params
+    sendmsg = "GET /params\r\n\r\n";
+    {
+        asio::ip::tcp::socket c(is);
+        c.connect(asio::ip::tcp::endpoint(asio::ip::address::from_string("127.0.0.1"), 45451));
+        c.send(asio::buffer(sendmsg));
+        c.receive(asio::buffer(buf, 2048));
+        c.close();
+
+        stringstream ss;
+        ss << last_url_params;
+
+        ASSERT_EQUAL("[  ]", ss.str());
+    }
     // check single presence
     sendmsg = "GET /params?foobar\r\n\r\n";
     {
