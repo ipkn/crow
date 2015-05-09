@@ -163,7 +163,7 @@ struct parameter_tag<t> \
                 : sub_value;
         };
 
-        bool is_parameter_tag_compatible(uint64_t a, uint64_t b)
+        static inline bool is_parameter_tag_compatible(uint64_t a, uint64_t b)
         {
             if (a == 0)
                 return b == 0;
@@ -178,7 +178,7 @@ struct parameter_tag<t> \
             return is_parameter_tag_compatible(a/6, b/6);
         }
 
-        unsigned find_closing_tag_runtime(const char* s, unsigned p)
+        static inline unsigned find_closing_tag_runtime(const char* s, unsigned p)
         {
             return
                 s[p] == 0
@@ -187,7 +187,7 @@ struct parameter_tag<t> \
                 ? p : find_closing_tag_runtime(s, p + 1);
         }
         
-        uint64_t get_parameter_tag_runtime(const char* s, unsigned p = 0)
+        static inline uint64_t get_parameter_tag_runtime(const char* s, unsigned p = 0)
         {
             return
                 s[p] == 0
