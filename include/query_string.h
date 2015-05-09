@@ -99,11 +99,12 @@ inline int qs_parse(char * qs, char * qs_kv[], int qs_kv_size)
 
     for(i=0; i<qs_kv_size; i++)  qs_kv[i] = NULL;
 
-    // find the beginning of the k/v substrings
-    if ( (substr_ptr = strchr(qs, '?')) != NULL )
+    // find the beginning of the k/v substrings or the fragment
+    substr_ptr = qs + strcspn(qs, "?#");
+    if (substr_ptr[0] != '\0')
         substr_ptr++;
     else
-        substr_ptr = qs;
+        return 0; // no query or fragment
 
     i=0;
     while(i<qs_kv_size)
@@ -121,7 +122,7 @@ inline int qs_parse(char * qs, char * qs_kv[], int qs_kv_size)
     for(j=0; j<i; j++)
     {
         substr_ptr = qs_kv[j] + strcspn(qs_kv[j], "=&#");
-        if ( substr_ptr[0] == '&' )  // blank value: skip decoding
+        if ( substr_ptr[0] == '&' || substr_ptr[0] == '\0')  // blank value: skip decoding
             substr_ptr[0] = '\0';
         else
             qs_decode(++substr_ptr);
