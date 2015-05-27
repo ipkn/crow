@@ -142,11 +142,14 @@ namespace crow
                 get_cached_date_str_pool_[roundrobin_index_], *timer_queue_pool_[roundrobin_index_]
                 );
             acceptor_.async_accept(p->socket(), 
-                [this, p](boost::system::error_code ec)
+                [this, p, &is](boost::system::error_code ec)
                 {
                     if (!ec)
                     {
-                        p->start();
+                        is.post([p]
+                        {
+                            p->start();
+                        });
                     }
                     do_accept();
                 });
