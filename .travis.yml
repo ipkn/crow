@@ -1,7 +1,7 @@
 language: cpp
 
 notifications:
-  # irc: "chat.freenode.net##crow"
+  irc: "chat.freenode.net##crow"
 
 compiler:
   - gcc
