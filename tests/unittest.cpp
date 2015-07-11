@@ -933,7 +933,7 @@ TEST(simple_url_params)
 
     CROW_ROUTE(app, "/params")
     ([&last_url_params](const crow::request& req){
-        last_url_params = boost::move(req.url_params);
+        last_url_params = std::move(req.url_params);
         return "OK";
     });
 
