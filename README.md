@@ -1,18 +1,31 @@
-# Crow
-
 ![Crow logo](http://i.imgur.com/wqivvjK.jpg)
 
 Crow is C++ microframework for web. (inspired by Python Flask)
 
-
 ![Travis Build](https://travis-ci.org/ipkn/crow.svg?branch=master)
+[![Coverage Status](https://coveralls.io/repos/ipkn/crow/badge.svg?branch=master)](https://coveralls.io/r/ipkn/crow?branch=master)
+
+```c++
+#include "crow.h"
+
+int main()
+{
+    crow::SimpleApp app;
+
+    CROW_ROUTE(app, "/")([](){
+        return "Hello world";
+    });
+
+    app.port(18080).multithreaded().run();
+}
+```
 
 ## Features
 
  - Easy routing
    - Similiar to Flask
    - Type-safe Handlers (see Example)
- - Very Fast 
+ - Very Fast
    - ![Benchmark Result in one chart](https://docs.google.com/spreadsheets/d/1KidO9XpuwCRZ2p_JRDJj2aep61H8Sh_KDOhApizv4LE/pubchart?oid=2041467789&format=image)
    - More data on [crow-benchmark](https://github.com/ipkn/crow-benchmark)
  - Fast built-in JSON parser (crow::json)
@@ -21,68 +34,54 @@ Crow is C++ microframework for web. (inspired by Python Flask)
  - Provide an amalgamated header file `crow_all.h' with every features
  - Middleware support
 
-## Still in development   
+## Still in development
  - Built-in ORM
 
-## Example
+## Examples
 
+#### JSON Response
 ```c++
+CROW_ROUTE(app, "/json")
+([]{
+    crow::json::wvalue x;
+    x["message"] = "Hello, World!";
+    return x;
+});
+```
 
-#include "crow.h"
-#include "json.h"
+#### Arguments
+```c++
+CROW_ROUTE(app,"/hello/<int>")
+([](int count){
+    if (count > 100)
+        return crow::response(400);
+    std::ostringstream os;
+    os << count << " bottles of beer!";
+    return crow::response(os.str());
+});
+```
+Handler arguments type check at compile time
+```c++
+// Compile error with message "Handler type is mismatched with URL paramters"
+CROW_ROUTE(app,"/another/<int>")
+([](int a, int b){
+    return crow::response(500);
+});
+```
 
-#include <sstream>
-
-int main()
-{
-    crow::SimpleApp app;
-
-    CROW_ROUTE(app, "/about")
-    ([](){
-        return "About Crow example.";
-    });
-
-    // simple json response
-    CROW_ROUTE(app, "/json")
-    ([]{
-        crow::json::wvalue x;
-        x["message"] = "Hello, World!";
-        return x;
-    });
-
-    // argument
-    CROW_ROUTE(app,"/hello/<int>")
-    ([](int count){
-        if (count > 100)
-            return crow::response(400);
-        std::ostringstream os;
-        os << count << " bottles of beer!";
-        return crow::response(os.str());
-    });
-
-    // Compile error with message "Handler type is mismatched with URL paramters"
-    //CROW_ROUTE(app,"/another/<int>")
-    //([](int a, int b){
-        //return crow::response(500);
-    //});
-
-    // more json example
-    CROW_ROUTE(app, "/add_json")
-    .methods("POST"_method)
-    ([](const crow::request& req){
-        auto x = crow::json::load(req.body);
-        if (!x)
-            return crow::response(400);
-        int sum = x["a"].i()+x["b"].i();
-        std::ostringstream os;
-        os << sum;
-        return crow::response{os.str()};
-    });
-
-    app.port(18080)
-        .multithreaded()
-        .run();
-}
+#### Handling JSON Requests
+```c++
+CROW_ROUTE(app, "/add_json")
+.methods("POST"_method)
+([](const crow::request& req){
+    auto x = crow::json::load(req.body);
+    if (!x)
+        return crow::response(400);
+    int sum = x["a"].i()+x["b"].i();
+    std::ostringstream os;
+    os << sum;
+    return crow::response{os.str()};
+});
 ```
 
 ## How to Build
@@ -97,7 +96,7 @@ If you just want to use crow, copy amalgamate/crow_all.h and include it.
  - Linking with tcmalloc/jemalloc is recommended for speed.
 
  - Now supporting VS2013 with limited functionality (only run-time check for url is available.)
- 
+
 ### Building (Tests, Examples)
 
 Out-of-source build with CMake is recommended.

@@ -7,6 +7,10 @@ target_link_libraries(example_vs ${Boost_LIBRARIES})
 target_link_libraries(example_vs ${CMAKE_THREAD_LIBS_INIT})
 else ()
  
+add_executable(helloworld helloworld.cpp)
+target_link_libraries(helloworld ${Boost_LIBRARIES})
+target_link_libraries(helloworld ${CMAKE_THREAD_LIBS_INIT})
+
 add_executable(example example.cpp)
 #target_link_libraries(example crow)
 target_link_libraries(example ${Boost_LIBRARIES})
