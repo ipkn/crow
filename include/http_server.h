@@ -2,6 +2,9 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/asio.hpp>
+#ifdef CROW_ENABLE_SSL
+#include <boost/asio/ssl.hpp>
+#endif
 #include <cstdint>
 #include <atomic>
 #include <future>
@@ -18,17 +21,18 @@ namespace crow
     using namespace boost;
     using tcp = asio::ip::tcp;
     
-    template <typename Handler, typename ... Middlewares>
+    template <typename Handler, typename Adaptor = SocketAdaptor, typename ... Middlewares>
     class Server
     {
     public:
-        Server(Handler* handler, uint16_t port, std::tuple<Middlewares...>* middlewares = nullptr, uint16_t concurrency = 1)
+        Server(Handler* handler, uint16_t port, std::tuple<Middlewares...>* middlewares = nullptr, uint16_t concurrency = 1, typename Adaptor::context* adaptor_ctx = nullptr)
             : acceptor_(io_service_, tcp::endpoint(asio::ip::address(), port)), 
             signals_(io_service_, SIGINT, SIGTERM),
             handler_(handler), 
             concurrency_(concurrency),
             port_(port),
-            middlewares_(middlewares)
+            middlewares_(middlewares),
+            adaptor_ctx_(adaptor_ctx)
         {
         }
 
@@ -137,10 +141,10 @@ namespace crow
         void do_accept()
         {
             asio::io_service& is = pick_io_service();
-            auto p = new Connection<Handler, Middlewares...>(
+            auto p = new Connection<Adaptor, Handler, Middlewares...>(
                 is, handler_, server_name_, middlewares_,
-                get_cached_date_str_pool_[roundrobin_index_], *timer_queue_pool_[roundrobin_index_]
-                );
+                get_cached_date_str_pool_[roundrobin_index_], *timer_queue_pool_[roundrobin_index_],
+                adaptor_ctx_);
             acceptor_.async_accept(p->socket(), 
                 [this, p, &is](boost::system::error_code ec)
                 {
@@ -170,5 +174,11 @@ namespace crow
         unsigned int roundrobin_index_{};
 
         std::tuple<Middlewares...>* middlewares_;
+
+#ifdef CROW_ENABLE_SSL
+        bool use_ssl_{false};
+        boost::asio::ssl::context ssl_context_{boost::asio::ssl::context::sslv23};
+#endif
+        typename Adaptor::context* adaptor_ctx_;
     };
 }

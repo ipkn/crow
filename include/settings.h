@@ -8,6 +8,9 @@
 /* #ifdef - enables logging */
 #define CROW_ENABLE_LOGGING
 
+/* #ifdef - enables SSL */
+//#define CROW_ENABLE_SSL
+
 /* #define - specifies log level */
 /*
     DEBUG       = 0

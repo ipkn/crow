@@ -25,12 +25,18 @@
 
 namespace crow
 {
+#ifdef CROW_ENABLE_SSL
+    using ssl_context_t = boost::asio::ssl::context;
+#endif
     template <typename ... Middlewares>
     class Crow
     {
     public:
         using self_t = Crow;
-        using server_t = Server<Crow, Middlewares...>;
+        using server_t = Server<Crow, SocketAdaptor, Middlewares...>;
+#ifdef CROW_ENABLE_SSL
+        using ssl_server_t = Server<Crow, SSLAdaptor, Middlewares...>;
+#endif
         Crow()
         {
         }
@@ -79,8 +85,18 @@ namespace crow
         void run()
         {
             validate();
-            server_t server(this, port_, &middlewares_, concurrency_);
-            server.run();
+#ifdef CROW_ENABLE_SSL
+            if (use_ssl_)
+            {
+                ssl_server_t server(this, port_, &middlewares_, concurrency_, &ssl_context_);
+                server.run();
+            }
+            else
+#endif
+            {
+                server_t server(this, port_, &middlewares_, concurrency_, nullptr);
+                server.run();
+            }
         }
 
         void debug_print()
@@ -88,6 +104,69 @@ namespace crow
             CROW_LOG_DEBUG << "Routing:";
             router_.debug_print();
         }
+
+#ifdef CROW_ENABLE_SSL
+        self_t& ssl_file(const std::string& crt_filename, const std::string& key_filename)
+        {
+            use_ssl_ = true;
+            ssl_context_.set_verify_mode(boost::asio::ssl::verify_peer);
+            ssl_context_.use_certificate_file(crt_filename, ssl_context_t::pem);
+            ssl_context_.use_private_key_file(key_filename, ssl_context_t::pem);
+            ssl_context_.set_options(
+                    boost::asio::ssl::context::default_workarounds
+                          | boost::asio::ssl::context::no_sslv2
+                          | boost::asio::ssl::context::no_sslv3
+                    );
+            return *this;
+        }
+
+        self_t& ssl_file(const std::string& pem_filename)
+        {
+            use_ssl_ = true;
+            ssl_context_.set_verify_mode(boost::asio::ssl::verify_peer);
+            ssl_context_.load_verify_file(pem_filename);
+            ssl_context_.set_options(
+                    boost::asio::ssl::context::default_workarounds
+                          | boost::asio::ssl::context::no_sslv2
+                          | boost::asio::ssl::context::no_sslv3
+                    );
+            return *this;
+        }
+
+        self_t& ssl(boost::asio::ssl::context&& ctx)
+        {
+            use_ssl_ = true;
+            ssl_context_ = std::move(ctx);
+            return *this;
+        }
+
+
+        bool use_ssl_{false};
+        ssl_context_t ssl_context_{boost::asio::ssl::context::sslv23};
+
+#else
+        template <typename T, typename ... Remain>
+        self_t& ssl_file(T&& t, Remain&&...)
+        {
+            // We can't call .ssl() member function unless CROW_ENABLE_SSL is defined.
+            static_assert(
+                    // make static_assert dependent to T; always false
+                    std::is_base_of<T, void>::value, 
+                    "Define CROW_ENABLE_SSL to enable ssl support.");
+            return *this;
+        }
+
+        template <typename T>
+        self_t& ssl(T&& ctx)
+        {
+            // We can't call .ssl() member function unless CROW_ENABLE_SSL is defined.
+            static_assert(
+                    // make static_assert dependent to T; always false
+                    std::is_base_of<T, void>::value, 
+                    "Define CROW_ENABLE_SSL to enable ssl support.");
+            return *this;
+        }
+#endif
 
         // middleware
         using context_t = detail::context<Middlewares...>;

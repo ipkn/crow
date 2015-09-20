@@ -7,11 +7,11 @@
 
 namespace crow
 {
-    template <typename Handler, typename ... Middlewares>
+    template <typename Adaptor, typename Handler, typename ... Middlewares>
     class Connection;
     struct response
     {
-        template <typename Handler, typename ... Middlewares>
+        template <typename Adaptor, typename Handler, typename ... Middlewares>
         friend class crow::Connection;
 
         std::string body;

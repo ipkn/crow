@@ -15,9 +15,13 @@
 #include "settings.h"
 #include "dumb_timer_queue.h"
 #include "middleware_context.h"
+#include "socket_adaptors.h"
 
 namespace crow
 {
+    using namespace boost;
+    using tcp = asio::ip::tcp;
+
     namespace detail
     {
         template <typename MW>
@@ -171,12 +175,10 @@ namespace crow
         }
     }
 
-    using namespace boost;
-    using tcp = asio::ip::tcp;
 #ifdef CROW_ENABLE_DEBUG
     static int connectionCount;
 #endif
-    template <typename Handler, typename ... Middlewares>
+    template <typename Adaptor, typename Handler, typename ... Middlewares>
     class Connection
     {
     public:
@@ -186,9 +188,10 @@ namespace crow
             const std::string& server_name,
             std::tuple<Middlewares...>* middlewares,
             std::function<std::string()>& get_cached_date_str_f,
-            detail::dumb_timer_queue& timer_queue
+            detail::dumb_timer_queue& timer_queue,
+            typename Adaptor::context* adaptor_ctx_
             ) 
-            : socket_(io_service), 
+            : adaptor_(io_service, adaptor_ctx_), 
             handler_(handler), 
             parser_(this), 
             server_name_(server_name),
@@ -212,17 +215,25 @@ namespace crow
 #endif
         }
 
-        tcp::socket& socket()
+        decltype(std::declval<Adaptor>().raw_socket())& socket()
         {
-            return socket_;
+            return adaptor_.raw_socket();
         }
 
         void start()
         {
-            //auto self = this->shared_from_this();
-            start_deadline();
+            adaptor_.start([this](const boost::system::error_code& ec) {
+                if (!ec)
+                {
+                    start_deadline();
 
-            do_read();
+                    do_read();
+                }
+                else
+                {
+                    check_destroy();
+                }
+            });
         }
 
         void handle_header()
@@ -273,7 +284,7 @@ namespace crow
                 }
             }
 
-            CROW_LOG_INFO << "Request: " << boost::lexical_cast<std::string>(socket_.remote_endpoint()) << " " << this << " HTTP/" << parser_.http_major << "." << parser_.http_minor << ' '
+            CROW_LOG_INFO << "Request: " << boost::lexical_cast<std::string>(adaptor_.remote_endpoint()) << " " << this << " HTTP/" << parser_.http_major << "." << parser_.http_minor << ' '
              << method_name(req.method) << " " << req.url;
 
 
@@ -281,7 +292,7 @@ namespace crow
             if (!is_invalid_request)
             {
                 res.complete_request_handler_ = []{};
-                res.is_alive_helper_ = [this]()->bool{ return socket_.is_open(); };
+                res.is_alive_helper_ = [this]()->bool{ return adaptor_.is_open(); };
 
                 ctx_ = detail::context<Middlewares...>();
                 req.middleware_context = (void*)&ctx_;
@@ -325,7 +336,7 @@ namespace crow
             //auto self = this->shared_from_this();
             res.complete_request_handler_ = nullptr;
             
-            if (!socket_.is_open())
+            if (!adaptor_.is_open())
             {
                 //CROW_LOG_DEBUG << this << " delete (socket is closed) " << is_reading << ' ' << is_writing;
                 //delete this;
@@ -415,7 +426,8 @@ namespace crow
             }
 
             buffers_.emplace_back(crlf.data(), crlf.size());
-            buffers_.emplace_back(res.body.data(), res.body.size());
+            res_body_copy_.swap(res.body);
+            buffers_.emplace_back(res_body_copy_.data(), res_body_copy_.size());
 
             do_write();
             res.clear();
@@ -433,14 +445,14 @@ namespace crow
         {
             //auto self = this->shared_from_this();
             is_reading = true;
-            socket_.async_read_some(boost::asio::buffer(buffer_), 
+            adaptor_.socket().async_read_some(boost::asio::buffer(buffer_), 
                 [this](const boost::system::error_code& ec, std::size_t bytes_transferred)
                 {
                     bool error_while_reading = true;
                     if (!ec)
                     {
                         bool ret = parser_.feed(buffer_.data(), bytes_transferred);
-                        if (ret && socket_.is_open() && !close_connection_)
+                        if (ret && adaptor_.is_open() && !close_connection_)
                         {
                             error_while_reading = false;
                         }
@@ -450,7 +462,7 @@ namespace crow
                     {
                         cancel_deadline_timer();
                         parser_.done();
-                        socket_.close();
+                        adaptor_.close();
                         is_reading = false;
                         CROW_LOG_DEBUG << this << " from read(1)";
                         check_destroy();
@@ -472,15 +484,16 @@ namespace crow
         {
             //auto self = this->shared_from_this();
             is_writing = true;
-            boost::asio::async_write(socket_, buffers_, 
+            boost::asio::async_write(adaptor_.socket(), buffers_, 
                 [&](const boost::system::error_code& ec, std::size_t bytes_transferred)
                 {
                     is_writing = false;
+                    res_body_copy_.clear();
                     if (!ec)
                     {
                         if (close_connection_)
                         {
-                            socket_.close();
+                            adaptor_.close();
                             CROW_LOG_DEBUG << this << " from write(1)";
                             check_destroy();
                         }
@@ -515,17 +528,17 @@ namespace crow
             
             timer_cancel_key_ = timer_queue.add([this]
             {
-                if (!socket_.is_open())
+                if (!adaptor_.is_open())
                 {
                     return;
                 }
-                socket_.close();
+                adaptor_.close();
             });
             CROW_LOG_DEBUG << this << " timer added: " << timer_cancel_key_.first << ' ' << timer_cancel_key_.second;
         }
 
     private:
-        tcp::socket socket_;
+        Adaptor adaptor_;
         Handler* handler_;
 
         boost::array<char, 4096> buffer_;
@@ -541,6 +554,7 @@ namespace crow
 
         std::string content_length_;
         std::string date_str_;
+        std::string res_body_copy_;
 
         //boost::asio::deadline_timer deadline_;
         detail::dumb_timer_queue::key timer_cancel_key_;
