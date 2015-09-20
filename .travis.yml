@@ -1,24 +1,34 @@
 language: cpp
 
+sudo: false
+
 notifications:
   irc: "chat.freenode.net##crow"
 
 compiler:
   - gcc
-  #- clang
+
+env:
+  matrix:
+    - COMPILER=g++-4.8 CCOMPILER=gcc-4.8 PUSH_COVERAGE=ON
+
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+      - boost-latest
+    packages:
+      - g++-4.8
+      - libboost1.55-all-dev
+      - python-pip
+
+install:
+  - if [ "$PUSH_COVERAGE" == "ON" ]; then pip install --user git+git://github.com/eddyxu/cpp-coveralls.git; fi
 
 before_script:
-  - sudo pip install cpp-coveralls
-  - sudo add-apt-repository -y ppa:kalakris/cmake
-  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-  - sudo add-apt-repository -y ppa:boost-latest/ppa
-  - sudo apt-get -qq update
-  - sudo apt-get install -qq libboost1.55-all-dev
-  - sudo apt-get install -qq g++-4.8
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
+  - export CXX=$COMPILER CC=$CCOMPILER
   - mkdir build
   - cd build
-  - sudo apt-get install cmake
   - cmake --version
   - cmake ..
 
@@ -26,4 +36,4 @@ script: make && ctest
 
 after_success:
   - cd ..
-  - coveralls --gcov gcov-4.8 -i include --gcov-options '\-lp'
+  - if [ "PUSH_COVERAGE" == "ON" ]; then coveralls --gcov gcov-4.8 -i include --gcov-options '\-lp'; fi
