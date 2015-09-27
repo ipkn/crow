@@ -82,6 +82,18 @@ namespace crow
             Object,
         };
 
+        const char* get_type_str(type t) {
+            switch(t){
+                case type::Number: return "Number";
+                case type::False: return "False";
+                case type::True: return "True";
+                case type::List: return "List";
+                case type::String: return "String";
+                case type::Object: return "Object";
+                default: return "Unknown";
+            }
+        };
+
         class rvalue;
         rvalue load(const char* data, size_t size);
 
@@ -269,8 +281,13 @@ namespace crow
             int64_t i() const
             {
 #ifndef CROW_JSON_NO_ERROR_CHECK
-                if (t() != type::Number)
-                    throw std::runtime_error("value is not number");
+                switch (t()) {
+                    case type::Number:
+                    case type::String:
+                        return boost::lexical_cast<int64_t>(start_, end_-start_);
+                    default:
+                        throw std::runtime_error(strcat("expected number, got: ", get_type_str(t())));
+                }
 #endif
                 return boost::lexical_cast<int64_t>(start_, end_-start_);
             }
