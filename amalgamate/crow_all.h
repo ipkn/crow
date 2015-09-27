@@ -6274,6 +6274,10 @@ namespace crow
         {
             json_mode();
         }
+        response(int code, const json::wvalue& json_value) : code(code), body(json::dump(json_value))
+        {
+            json_mode();
+        }
 
         response(response&& r)
         {
