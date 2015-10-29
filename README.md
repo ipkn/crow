@@ -84,6 +84,19 @@ CROW_ROUTE(app, "/add_json")
 });
 ```
 
+#### Handling Cookies
+```c++
+CROW_ROUTE(app, "/cookies")
+([](const crow::request& req){
+    std::ostringstream os;
+    os << "Last timestamp was: " << req.get_cookie("timestamp");
+
+    crow::response resp{os.str()};
+    resp.set_cookie("timestamp", std::to_string(std::chrono::seconds{std::time(nullptr)}.count()));
+    return resp;
+});
+```
+
 ## How to Build
 
 If you just want to use crow, copy amalgamate/crow_all.h and include it.

@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <unordered_map>
+#include <boost/format.hpp>
 #include "json.h"
 #include "http_request.h"
 #include "ci_map.h"
@@ -34,6 +35,11 @@ namespace crow
         const std::string& get_header_value(const std::string& key)
         {
             return crow::get_header_value(headers, key);
+        }
+
+        void set_cookie(const std::string& key, const std::string& value)
+        {
+            set_header("Set-Cookie", (boost::format("%1%=%2%") % key % value).str());
         }
 
 
