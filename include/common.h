@@ -110,7 +110,7 @@ namespace crow
 }
 
 #ifndef CROW_MSVC_WORKAROUND
-constexpr crow::HTTPMethod operator "" _method(const char* str, size_t len)
+constexpr crow::HTTPMethod operator "" _method(const char* str, size_t /*len*/)
 {
     return
         crow::black_magic::is_equ_p(str, "GET", 3) ? crow::HTTPMethod::GET :

@@ -139,7 +139,7 @@ namespace crow
             }
         }
 
-        void after_handle(request& req, response& res, context& ctx)
+        void after_handle(request& /*req*/, response& res, context& ctx)
         {
             for(auto& cookie:ctx.cookies_to_add)
             {

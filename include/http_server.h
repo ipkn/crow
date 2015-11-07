@@ -103,7 +103,7 @@ namespace crow
             CROW_LOG_INFO << server_name_ << " server is running, local port " << port_;
 
             signals_.async_wait(
-                [&](const boost::system::error_code& error, int signal_number){
+                [&](const boost::system::error_code& /*error*/, int /*signal_number*/){
                     stop();
                 });
 

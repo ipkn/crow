@@ -146,7 +146,7 @@ namespace crow
 
 #else
         template <typename T, typename ... Remain>
-        self_t& ssl_file(T&& t, Remain&&...)
+        self_t& ssl_file(T&& /*t*/, Remain&&...)
         {
             // We can't call .ssl() member function unless CROW_ENABLE_SSL is defined.
             static_assert(
@@ -157,7 +157,7 @@ namespace crow
         }
 
         template <typename T>
-        self_t& ssl(T&& ctx)
+        self_t& ssl(T&& /*ctx*/)
         {
             // We can't call .ssl() member function unless CROW_ENABLE_SSL is defined.
             static_assert(
