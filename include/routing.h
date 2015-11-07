@@ -343,7 +343,7 @@ namespace crow
         {
         }
 
-        void validate()
+        void validate() override
         {
             if (!handler_)
             {
