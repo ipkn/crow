@@ -35,7 +35,8 @@ int main()
  - Middleware support
 
 ## Still in development
- - Built-in ORM
+ - ~~Built-in ORM~~
+   - Check [sqlpp11](https://github.com/rbock/sqlpp11) if you want one.
 
 ## Examples
 
