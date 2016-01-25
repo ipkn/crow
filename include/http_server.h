@@ -25,12 +25,13 @@ namespace crow
     class Server
     {
     public:
-        Server(Handler* handler, uint16_t port, std::tuple<Middlewares...>* middlewares = nullptr, uint16_t concurrency = 1, typename Adaptor::context* adaptor_ctx = nullptr)
+        Server(Handler* handler, uint16_t port, const std::string& server_name, std::tuple<Middlewares...>* middlewares = nullptr, uint16_t concurrency = 1, typename Adaptor::context* adaptor_ctx = nullptr)
             : acceptor_(io_service_, tcp::endpoint(asio::ip::address(), port)), 
             signals_(io_service_, SIGINT, SIGTERM),
             handler_(handler), 
             concurrency_(concurrency),
             port_(port),
+			server_name_(server_name),
             middlewares_(middlewares),
             adaptor_ctx_(adaptor_ctx)
         {
@@ -169,7 +170,7 @@ namespace crow
 
         Handler* handler_;
         uint16_t concurrency_{1};
-        std::string server_name_ = "Crow/0.1";
+        std::string server_name_;
         uint16_t port_;
         unsigned int roundrobin_index_{};
 
