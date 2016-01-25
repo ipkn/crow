@@ -63,12 +63,12 @@ namespace crow
             port_ = port;
             return *this;
         }
-		
-		self_t& name(const std::string& name)
-		{
-			name_ = name;
-			return *this;
-		}
+        
+        self_t& name(const std::string& name)
+        {
+            name_ = name;
+            return *this;
+        }
 
         self_t& multithreaded()
         {
@@ -193,8 +193,8 @@ namespace crow
     private:
         uint16_t port_ = 80;
         uint16_t concurrency_ = 1;
-		std::string name_ = "Crow/0.1";
-		
+        std::string name_ = "Crow/0.1";
+        
         Router router_;
 
         std::tuple<Middlewares...> middlewares_;
