@@ -420,7 +420,7 @@ namespace crow
             }
             if (add_keep_alive_)
             {
-                static std::string keep_alive_tag = "Connetion: Keep-Alive";
+                static std::string keep_alive_tag = "Connection: Keep-Alive";
                 buffers_.emplace_back(keep_alive_tag.data(), keep_alive_tag.size());
                 buffers_.emplace_back(crlf.data(), crlf.size());
             }
