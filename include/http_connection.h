@@ -430,7 +430,6 @@ namespace crow
             buffers_.emplace_back(res_body_copy_.data(), res_body_copy_.size());
 
             do_write();
-            res.clear();
 
             if (need_to_start_read_after_complete_)
             {
@@ -488,6 +487,7 @@ namespace crow
                 [&](const boost::system::error_code& ec, std::size_t bytes_transferred)
                 {
                     is_writing = false;
+					res.clear();
                     res_body_copy_.clear();
                     if (!ec)
                     {
