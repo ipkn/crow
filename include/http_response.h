@@ -14,9 +14,9 @@ namespace crow
         template <typename Adaptor, typename Handler, typename ... Middlewares>
         friend class crow::Connection;
 
+        int code{200};
         std::string body;
         json::wvalue json_value;
-        int code{200};
 
         // `headers' stores HTTP headers.
         ci_map headers;
@@ -44,7 +44,7 @@ namespace crow
         {
             json_mode();    
         }
-        response(int code, std::string body) : body(std::move(body)), code(code) {}
+        response(int code, std::string body) : code(code), body(std::move(body)) {}
         response(const json::wvalue& json_value) : body(json::dump(json_value)) 
         {
             json_mode();
