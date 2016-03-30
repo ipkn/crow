@@ -522,7 +522,7 @@ template <typename F, typename Set>
     DEBUG       = 0
     INFO        = 1
     WARNING     = 2
-    ERROR       = 3
+    CROW_ERROR  = 3
     CRITICAL    = 4
 
     default to INFO
@@ -868,7 +868,7 @@ inline char * qs_scanvalue(const char * key, const char * qs, char * val, size_t
     if ( qs[0] == '=' )
     {
         qs++;
-        i = strcspn(qs, "&=#");
+        i = strcspn(qs, "&=#");		
         strncpy(val, qs, (val_len-1)<(i+1) ? (val_len-1) : (i+1));
         qs_decode(val);
     }
@@ -1011,7 +1011,7 @@ namespace crow
         DEBUG,
         INFO,
         WARNING,
-        ERROR,
+        CROW_ERROR,
         CRITICAL,
     };
 
@@ -1115,8 +1115,8 @@ namespace crow
         if (crow::logger::get_current_log_level() <= crow::LogLevel::CRITICAL) \
             crow::logger("CRITICAL", crow::LogLevel::CRITICAL)
 #define CROW_LOG_ERROR      \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::ERROR) \
-            crow::logger("ERROR   ", crow::LogLevel::ERROR)
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::CROW_ERROR) \
+            crow::logger("ERROR   ", crow::LogLevel::CROW_ERROR)
 #define CROW_LOG_WARNING    \
         if (crow::logger::get_current_log_level() <= crow::LogLevel::WARNING) \
             crow::logger("WARNING ", crow::LogLevel::WARNING)
@@ -5857,7 +5857,7 @@ namespace crow
 {
     enum class HTTPMethod
     {
-        DELETE,
+		CROW_DELETE,
         GET,
         HEAD,
         POST,
@@ -5871,7 +5871,7 @@ namespace crow
     {
         switch(method)
         {
-            case HTTPMethod::DELETE:
+            case HTTPMethod::CROW_DELETE:
                 return "DELETE";
             case HTTPMethod::GET:
                 return "GET";
@@ -5961,7 +5961,7 @@ constexpr crow::HTTPMethod operator "" _method(const char* str, size_t len)
 {
     return
         crow::black_magic::is_equ_p(str, "GET", 3) ? crow::HTTPMethod::GET :
-        crow::black_magic::is_equ_p(str, "DELETE", 6) ? crow::HTTPMethod::DELETE :
+        crow::black_magic::is_equ_p(str, "DELETE", 6) ? crow::HTTPMethod::CROW_DELETE :
         crow::black_magic::is_equ_p(str, "HEAD", 4) ? crow::HTTPMethod::HEAD :
         crow::black_magic::is_equ_p(str, "POST", 4) ? crow::HTTPMethod::POST :
         crow::black_magic::is_equ_p(str, "PUT", 3) ? crow::HTTPMethod::PUT :
