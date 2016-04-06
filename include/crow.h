@@ -195,5 +195,4 @@ namespace crow
     template <typename ... Middlewares>
     using App = Crow<Middlewares...>;
     using SimpleApp = Crow<>;
-};
-
+}

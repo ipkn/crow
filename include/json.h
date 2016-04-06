@@ -82,7 +82,7 @@ namespace crow
             Object,
         };
 
-        const char* get_type_str(type t) {
+        inline const char* get_type_str(type t) {
             switch(t){
                 case type::Number: return "Number";
                 case type::False: return "False";
@@ -92,7 +92,7 @@ namespace crow
                 case type::Object: return "Object";
                 default: return "Unknown";
             }
-        };
+        }
 
         class rvalue;
         rvalue load(const char* data, size_t size);
@@ -262,6 +262,11 @@ namespace crow
                 return i();
             }
 
+            explicit operator uint64_t() const
+            {
+                return u();
+            }
+
             explicit operator int() const
             {
                 return (int)i();
@@ -286,10 +291,24 @@ namespace crow
                     case type::String:
                         return boost::lexical_cast<int64_t>(start_, end_-start_);
                     default:
-                        throw std::runtime_error(strcat("expected number, got: ", get_type_str(t())));
+                        throw std::runtime_error(std::string("expected number, got: ") + get_type_str(t()));
                 }
 #endif
                 return boost::lexical_cast<int64_t>(start_, end_-start_);
+            }
+
+            uint64_t u() const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                switch (t()) {
+                    case type::Number:
+                    case type::String:
+                        return boost::lexical_cast<uint64_t>(start_, end_-start_);
+                    default:
+                        throw std::runtime_error(std::string("expected number, got: ") + get_type_str(t()));
+                }
+#endif
+                return boost::lexical_cast<uint64_t>(start_, end_-start_);
             }
 
             double d() const
