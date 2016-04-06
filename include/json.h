@@ -291,7 +291,7 @@ namespace crow
                     case type::String:
                         return boost::lexical_cast<int64_t>(start_, end_-start_);
                     default:
-                        throw std::runtime_error(strcat("expected number, got: ", get_type_str(t())));
+                        throw std::runtime_error(std::string("expected number, got: ") + get_type_str(t()));
                 }
 #endif
                 return boost::lexical_cast<int64_t>(start_, end_-start_);
