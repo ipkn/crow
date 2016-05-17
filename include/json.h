@@ -82,7 +82,7 @@ namespace crow
             Object,
         };
 
-        const char* get_type_str(type t) {
+        inline const char* get_type_str(type t) {
             switch(t){
                 case type::Number: return "Number";
                 case type::False: return "False";
@@ -97,10 +97,10 @@ namespace crow
         class rvalue;
         rvalue load(const char* data, size_t size);
 
-        namespace detail 
+        namespace detail
         {
 
-            struct r_string 
+            struct r_string
                 : boost::less_than_comparable<r_string>,
                 boost::less_than_comparable<r_string, std::string>,
                 boost::equality_comparable<r_string>,
@@ -203,7 +203,7 @@ namespace crow
             static const int cached_bit = 2;
             static const int error_bit = 4;
         public:
-            rvalue() noexcept : option_{error_bit} 
+            rvalue() noexcept : option_{error_bit}
             {}
             rvalue(type t) noexcept
                 : lsize_{}, lremain_{}, t_{t}
@@ -340,10 +340,10 @@ namespace crow
                                                 return c - 'A' + 10;
                                             return c - '0';
                                         };
-                                        unsigned int code = 
-                                            (from_hex(head[1])<<12) + 
-                                            (from_hex(head[2])<< 8) + 
-                                            (from_hex(head[3])<< 4) + 
+                                        unsigned int code =
+                                            (from_hex(head[1])<<12) +
+                                            (from_hex(head[2])<< 8) +
+                                            (from_hex(head[3])<< 4) +
                                             from_hex(head[4]);
                                         if (code >= 0x800)
                                         {
@@ -392,7 +392,7 @@ namespace crow
 
             bool has(const std::string& str) const
             {
-                struct Pred 
+                struct Pred
                 {
                     bool operator()(const rvalue& l, const rvalue& r) const
                     {
@@ -421,21 +421,21 @@ namespace crow
                 return has(str) ? 1 : 0;
             }
 
-            rvalue* begin() const 
-            { 
+            rvalue* begin() const
+            {
 #ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::Object && t() != type::List)
                     throw std::runtime_error("value is not a container");
 #endif
-                return l_.get(); 
+                return l_.get();
             }
-            rvalue* end() const 
-            { 
+            rvalue* end() const
+            {
 #ifndef CROW_JSON_NO_ERROR_CHECK
                 if (t() != type::Object && t() != type::List)
                     throw std::runtime_error("value is not a container");
 #endif
-                return l_.get()+lsize_; 
+                return l_.get()+lsize_;
             }
 
             const detail::r_string& key() const
@@ -487,7 +487,7 @@ namespace crow
                 if (t() != type::Object)
                     throw std::runtime_error("value is not an object");
 #endif
-                struct Pred 
+                struct Pred
                 {
                     bool operator()(const rvalue& l, const rvalue& r) const
                     {
@@ -587,9 +587,9 @@ namespace crow
                 case type::True: os << "true"; break;
                 case type::Number: os << r.d(); break;
                 case type::String: os << '"' << r.s() << '"'; break;
-                case type::List: 
+                case type::List:
                     {
-                        os << '['; 
+                        os << '[';
                         bool first = true;
                         for(auto& x : r)
                         {
@@ -598,12 +598,12 @@ namespace crow
                             first = false;
                             os << x;
                         }
-                        os << ']'; 
+                        os << ']';
                     }
                     break;
                 case type::Object:
                     {
-                        os << '{'; 
+                        os << '{';
                         bool first = true;
                         for(auto& x : r)
                         {
@@ -613,7 +613,7 @@ namespace crow
                             first = false;
                             os << x;
                         }
-                        os << '}'; 
+                        os << '}';
                     }
                     break;
                 }
@@ -716,14 +716,14 @@ namespace crow
                                     {
                                         auto check = [](char c)
                                         {
-                                            return 
+                                            return
                                                 ('0' <= c && c <= '9') ||
                                                 ('a' <= c && c <= 'f') ||
                                                 ('A' <= c && c <= 'F');
                                         };
-                                        if (!(check(*(data+1)) && 
-                                            check(*(data+2)) && 
-                                            check(*(data+3)) && 
+                                        if (!(check(*(data+1)) &&
+                                            check(*(data+2)) &&
+                                            check(*(data+3)) &&
                                             check(*(data+4))))
                                             return {};
                                     }
@@ -814,8 +814,8 @@ namespace crow
                                 {
                                     state = NumberParsingState::ZeroFirst;
                                 }
-                                else if (state == NumberParsingState::Digits || 
-                                    state == NumberParsingState::DigitsAfterE || 
+                                else if (state == NumberParsingState::Digits ||
+                                    state == NumberParsingState::DigitsAfterE ||
                                     state == NumberParsingState::DigitsAfterPoints)
                                 {
                                     // ok; pass
@@ -827,8 +827,8 @@ namespace crow
                                 else
                                     return {};*/
                                 break;
-                            case '1': case '2': case '3': 
-                            case '4': case '5': case '6': 
+                            case '1': case '2': case '3':
+                            case '4': case '5': case '6':
                             case '7': case '8': case '9':
                                 state = (NumberParsingState)"\3\3\7\3\4\6\6"[state];
                                 while(*(data+1) >= '0' && *(data+1) <= '9') data++;
@@ -836,8 +836,8 @@ namespace crow
                                 {
                                     state = NumberParsingState::Digits;
                                 }
-                                else if (state == NumberParsingState::Digits || 
-                                    state == NumberParsingState::DigitsAfterE || 
+                                else if (state == NumberParsingState::Digits ||
+                                    state == NumberParsingState::DigitsAfterE ||
                                     state == NumberParsingState::DigitsAfterPoints)
                                 {
                                     // ok; pass
@@ -884,18 +884,18 @@ namespace crow
                                 break;
                             case 'e': case 'E':
                                 state = (NumberParsingState)"\7\7\7\5\5\7\7"[state];
-                                /*if (state == NumberParsingState::Digits || 
+                                /*if (state == NumberParsingState::Digits ||
                                     state == NumberParsingState::DigitsAfterPoints)
                                 {
                                     state = NumberParsingState::E;
                                 }
-                                else 
+                                else
                                     return {};*/
                                 break;
                             default:
-                                if (crow_json_likely(state == NumberParsingState::ZeroFirst || 
-                                        state == NumberParsingState::Digits || 
-                                        state == NumberParsingState::DigitsAfterPoints || 
+                                if (crow_json_likely(state == NumberParsingState::ZeroFirst ||
+                                        state == NumberParsingState::Digits ||
+                                        state == NumberParsingState::DigitsAfterPoints ||
                                         state == NumberParsingState::DigitsAfterE))
                                     return {type::Number, start, data};
                                 else
@@ -951,8 +951,8 @@ namespace crow
                             }
                             else
                                 return {};
-                        //case '1': case '2': case '3': 
-                        //case '4': case '5': case '6': 
+                        //case '1': case '2': case '3':
+                        //case '4': case '5': case '6':
                         //case '7': case '8': case '9':
                         //case '0': case '-':
                         default:
@@ -1302,7 +1302,7 @@ namespace crow
                     case type::True: return 4;
                     case type::Number: return 30;
                     case type::String: return 2+s.size()+s.size()/2;
-                    case type::List: 
+                    case type::List:
                         {
                             size_t sum{};
                             if (l)
@@ -1351,7 +1351,7 @@ namespace crow
                 case type::Null: out += "null"; break;
                 case type::False: out += "false"; break;
                 case type::True: out += "true"; break;
-                case type::Number: 
+                case type::Number:
                     {
                         char outbuf[128];
                         sprintf(outbuf, "%g", v.d);
@@ -1359,7 +1359,7 @@ namespace crow
                     }
                     break;
                 case type::String: dump_string(v.s, out); break;
-                case type::List: 
+                case type::List:
                      {
                          out.push_back('[');
                          if (v.l)
