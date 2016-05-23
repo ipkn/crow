@@ -20,16 +20,17 @@ namespace crow
 {
     using namespace boost;
     using tcp = asio::ip::tcp;
-    
+
     template <typename Handler, typename Adaptor = SocketAdaptor, typename ... Middlewares>
     class Server
     {
     public:
-        Server(Handler* handler, uint16_t port, std::tuple<Middlewares...>* middlewares = nullptr, uint16_t concurrency = 1, typename Adaptor::context* adaptor_ctx = nullptr)
-            : acceptor_(io_service_, tcp::endpoint(asio::ip::address(), port)), 
+    Server(Handler* handler, std::string bindaddr, uint16_t port, std::tuple<Middlewares...>* middlewares = nullptr, uint16_t concurrency = 1, typename Adaptor::context* adaptor_ctx = nullptr)
+            : acceptor_(io_service_, tcp::endpoint(boost::asio::ip::address::from_string(bindaddr), port)),
             signals_(io_service_, SIGINT, SIGTERM),
-            handler_(handler), 
+            handler_(handler),
             concurrency_(concurrency),
+            bindaddr_(bindaddr),
             port_(port),
             middlewares_(middlewares),
             adaptor_ctx_(adaptor_ctx)
@@ -145,7 +146,7 @@ namespace crow
                 is, handler_, server_name_, middlewares_,
                 get_cached_date_str_pool_[roundrobin_index_], *timer_queue_pool_[roundrobin_index_],
                 adaptor_ctx_);
-            acceptor_.async_accept(p->socket(), 
+            acceptor_.async_accept(p->socket(),
                 [this, p, &is](boost::system::error_code ec)
                 {
                     if (!ec)
@@ -171,6 +172,7 @@ namespace crow
         uint16_t concurrency_{1};
         std::string server_name_ = "Crow/0.1";
         uint16_t port_;
+        std::string bindaddr_;
         unsigned int roundrobin_index_{};
 
         std::tuple<Middlewares...>* middlewares_;

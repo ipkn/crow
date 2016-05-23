@@ -9,7 +9,7 @@
 #include <thread>
 
 #include "settings.h"
-#include "logging.h" 
+#include "logging.h"
 #include "utility.h"
 #include "routing.h"
 #include "middleware_context.h"
@@ -64,6 +64,12 @@ namespace crow
             return *this;
         }
 
+        self_t& bindaddr(std::string bindaddr)
+        {
+            bindaddr_ = bindaddr;
+            return *this;
+        }
+
         self_t& multithreaded()
         {
             return concurrency(std::thread::hardware_concurrency());
@@ -88,13 +94,13 @@ namespace crow
 #ifdef CROW_ENABLE_SSL
             if (use_ssl_)
             {
-                ssl_server_t server(this, port_, &middlewares_, concurrency_, &ssl_context_);
+                ssl_server_t server(this, bindaddr_, port_, &middlewares_, concurrency_, &ssl_context_);
                 server.run();
             }
             else
 #endif
             {
-                server_t server(this, port_, &middlewares_, concurrency_, nullptr);
+                server_t server(this, bindaddr_, port_, &middlewares_, concurrency_, nullptr);
                 server.run();
             }
         }
@@ -151,7 +157,7 @@ namespace crow
             // We can't call .ssl() member function unless CROW_ENABLE_SSL is defined.
             static_assert(
                     // make static_assert dependent to T; always false
-                    std::is_base_of<T, void>::value, 
+                    std::is_base_of<T, void>::value,
                     "Define CROW_ENABLE_SSL to enable ssl support.");
             return *this;
         }
@@ -162,7 +168,7 @@ namespace crow
             // We can't call .ssl() member function unless CROW_ENABLE_SSL is defined.
             static_assert(
                     // make static_assert dependent to T; always false
-                    std::is_base_of<T, void>::value, 
+                    std::is_base_of<T, void>::value,
                     "Define CROW_ENABLE_SSL to enable ssl support.");
             return *this;
         }
@@ -187,7 +193,7 @@ namespace crow
     private:
         uint16_t port_ = 80;
         uint16_t concurrency_ = 1;
-
+        std::string bindaddr_ = "0.0.0.0";
         Router router_;
 
         std::tuple<Middlewares...> middlewares_;
@@ -196,4 +202,3 @@ namespace crow
     using App = Crow<Middlewares...>;
     using SimpleApp = Crow<>;
 };
-
