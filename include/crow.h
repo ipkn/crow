@@ -63,6 +63,12 @@ namespace crow
             port_ = port;
             return *this;
         }
+        
+        self_t& name(const std::string& name)
+        {
+            name_ = name;
+            return *this;
+        }
 
         self_t& multithreaded()
         {
@@ -88,13 +94,13 @@ namespace crow
 #ifdef CROW_ENABLE_SSL
             if (use_ssl_)
             {
-                ssl_server_t server(this, port_, &middlewares_, concurrency_, &ssl_context_);
+                ssl_server_t server(this, port_, name_, &middlewares_, concurrency_, &ssl_context_);
                 server.run();
             }
             else
 #endif
             {
-                server_t server(this, port_, &middlewares_, concurrency_, nullptr);
+                server_t server(this, port_, name_, &middlewares_, concurrency_, nullptr);
                 server.run();
             }
         }
@@ -187,7 +193,8 @@ namespace crow
     private:
         uint16_t port_ = 80;
         uint16_t concurrency_ = 1;
-
+        std::string name_ = "Crow/0.1";
+        
         Router router_;
 
         std::tuple<Middlewares...> middlewares_;
