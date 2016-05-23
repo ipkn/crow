@@ -30,8 +30,8 @@ namespace crow
             signals_(io_service_, SIGINT, SIGTERM),
             handler_(handler),
             concurrency_(concurrency),
-            bindaddr_(bindaddr),
             port_(port),
+            bindaddr_(bindaddr),
             middlewares_(middlewares),
             adaptor_ctx_(adaptor_ctx)
         {
