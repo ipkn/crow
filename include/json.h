@@ -82,7 +82,7 @@ namespace crow
             Object,
         };
 
-        const char* get_type_str(type t) {
+        inline const char* get_type_str(type t) {
             switch(t){
                 case type::Number: return "Number";
                 case type::False: return "False";
