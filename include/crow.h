@@ -94,14 +94,28 @@ namespace crow
 #ifdef CROW_ENABLE_SSL
             if (use_ssl_)
             {
-                ssl_server_t server(this, bindaddr_, port_, &middlewares_, concurrency_, &ssl_context_);
-                server.run();
+                ssl_server_ = std::move(std::unique_ptr<ssl_server_t>(new ssl_server_t(this, bindaddr_, port_, &middlewares_, concurrency_, &ssl_context_)));
+                ssl_server_->run();
             }
             else
 #endif
             {
-                server_t server(this, bindaddr_, port_, &middlewares_, concurrency_, nullptr);
-                server.run();
+                server_ = std::move(std::unique_ptr<server_t>(new server_t(this, bindaddr_, port_, &middlewares_, concurrency_, nullptr)));
+                server_->run();
+            }
+        }
+
+        void stop()
+        {
+#ifdef CROW_ENABLE_SSL
+            if (use_ssl_)
+            {
+                ssl_server_->stop();
+            }
+            else
+#endif
+            {
+                server_->stop();
             }
         }
 
@@ -197,6 +211,11 @@ namespace crow
         Router router_;
 
         std::tuple<Middlewares...> middlewares_;
+
+#ifdef CROW_ENABLE_SSL
+        std::unique_ptr<ssl_server_t> ssl_server_;
+#endif
+        std::unique_ptr<server_t> server_;
     };
     template <typename ... Middlewares>
     using App = Crow<Middlewares...>;
