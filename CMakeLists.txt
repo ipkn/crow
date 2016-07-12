@@ -27,6 +27,11 @@ ${PROJECT_SOURCE_DIR}/include
 include_directories("${PROJECT_INCLUDE_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}")
  
+find_package(ZLIB)
+if(ZLIB_FOUND)
+    include_directories( ${ZLIB_INCLUDE_DIR} )
+endif()
+ 
 #add_subdirectory(src)
 add_subdirectory(examples)
 if (MSVC)

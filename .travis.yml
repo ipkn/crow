@@ -21,6 +21,7 @@ addons:
       - g++-4.8
       - libboost1.55-all-dev
       - python-pip
+      - zlib1g-dev
 
 install:
   - if [ "$PUSH_COVERAGE" == "ON" ]; then pip install --user git+git://github.com/eddyxu/cpp-coveralls.git; fi

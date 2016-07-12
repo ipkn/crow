@@ -20,6 +20,14 @@ add_executable(example example.cpp)
 target_link_libraries(example ${Boost_LIBRARIES})
 target_link_libraries(example ${CMAKE_THREAD_LIBS_INIT})
 
+if (ZLIB_FOUND)
+    add_definitions(-DCROW_ENABLE_COMPRESSION)
+    add_executable(example_compression example_compression.cpp)
+    target_link_libraries(example_compression ${Boost_LIBRARIES})
+    target_link_libraries(example_compression ${CMAKE_THREAD_LIBS_INIT})
+    target_link_libraries(example_compression ${ZLIB_LIBRARIES})
+endif()
+
 if (Tcmalloc_FOUND)
 target_link_libraries(example ${Tcmalloc_LIBRARIES})
 endif(Tcmalloc_FOUND)
@@ -28,6 +36,7 @@ add_executable(example_with_all example_with_all.cpp)
 #target_link_libraries(example crow)
 target_link_libraries(example_with_all ${Boost_LIBRARIES})
 target_link_libraries(example_with_all ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(example_with_all ${ZLIB_LIBRARIES})
 
 add_custom_command(OUTPUT example_test.py
         COMMAND ${CMAKE_COMMAND} -E
