@@ -12,6 +12,7 @@
 #include "json.h"
 #include "mustache.h"
 #include "middleware.h"
+#include "middleware_compression.h"
 #include "query_string.h"
 
 using namespace std;
@@ -209,7 +210,7 @@ TEST(RoutingTest)
 
     app.validate();
     //app.debug_print();
-	{
+    {
         request req;
         response res;
 
@@ -218,7 +219,7 @@ TEST(RoutingTest)
         app.handle(req, res);
 
         ASSERT_EQUAL(404, res.code);
-	}
+    }
 
     {
         request req;
@@ -455,7 +456,7 @@ TEST(multi_server)
 
 TEST(json_read)
 {
-	{
+    {
         const char* json_error_tests[] =
         {
             "{} 3", "{{}", "{3}",
@@ -479,7 +480,7 @@ TEST(json_read)
                 return;
             }
         }
-	}
+    }
 
     auto x = json::load(R"({"message":"hello, world"})");
     if (!x)
@@ -492,24 +493,24 @@ TEST(json_read)
     //ASSERT_THROW(3 == x["message"]);
     ASSERT_EQUAL(12, x["message"].size());
 
-    std::string s = R"({"int":3,     "ints"  :[1,2,3,4,5]		})";
+    std::string s = R"({"int":3,     "ints"  :[1,2,3,4,5]       })";
     auto y = json::load(s);
     ASSERT_EQUAL(3, y["int"]);
     ASSERT_EQUAL(3.0, y["int"]);
     ASSERT_NOTEQUAL(3.01, y["int"]);
-	ASSERT_EQUAL(5, y["ints"].size());
-	ASSERT_EQUAL(1, y["ints"][0]);
-	ASSERT_EQUAL(2, y["ints"][1]);
-	ASSERT_EQUAL(3, y["ints"][2]);
-	ASSERT_EQUAL(4, y["ints"][3]);
-	ASSERT_EQUAL(5, y["ints"][4]);
-	ASSERT_EQUAL(1u, y["ints"][0]);
-	ASSERT_EQUAL(1.f, y["ints"][0]);
+    ASSERT_EQUAL(5, y["ints"].size());
+    ASSERT_EQUAL(1, y["ints"][0]);
+    ASSERT_EQUAL(2, y["ints"][1]);
+    ASSERT_EQUAL(3, y["ints"][2]);
+    ASSERT_EQUAL(4, y["ints"][3]);
+    ASSERT_EQUAL(5, y["ints"][4]);
+    ASSERT_EQUAL(1u, y["ints"][0]);
+    ASSERT_EQUAL(1.f, y["ints"][0]);
 
-	int q = (int)y["ints"][1];
-	ASSERT_EQUAL(2, q);
-	q = y["ints"][2].i();
-	ASSERT_EQUAL(3, q);
+    int q = (int)y["ints"][1];
+    ASSERT_EQUAL(2, q);
+    q = y["ints"][2].i();
+    ASSERT_EQUAL(3, q);
 
     std::string s2 = R"({"bools":[true, false], "doubles":[1.2, -3.4]})";
     auto z = json::load(s2);
@@ -888,6 +889,168 @@ TEST(middleware_cookieparser)
         ASSERT_EQUAL("val\"ue2", value2);
     }
     server.stop();
+}
+
+TEST(middleware_compression)
+{
+    static char buf_deflate[2048];
+    static char buf_gzip[2048];
+
+    App<CompressionDeflate> app_deflate;
+    App<CompressionGzip> app_gzip;
+
+    std::string expected_string = "Although moreover mistaken kindness me feelings do be marianne. Son over own nay with tell they cold upon are. "
+                                  "Cordial village and settled she ability law herself. Finished why bringing but sir bachelor unpacked any thoughts. "
+                                  "Unpleasing unsatiable particular inquietude did nor sir. Get his declared appetite distance his together now families. "
+                                  "Friends am himself at on norland it viewing. Suspected elsewhere you belonging continued commanded she.";
+
+    // test deflate
+    CROW_ROUTE(app_deflate, "/test_compress")([&](){
+        return expected_string;
+    });
+
+    CROW_ROUTE(app_deflate, "/test")([&](const request& req){
+        app_deflate.get_context<CompressionDeflate>(req).compress = false;
+        
+        return expected_string; 
+    });
+
+    // test gzip
+    CROW_ROUTE(app_gzip, "/test_compress")([&](){
+        return expected_string;
+    });
+
+    CROW_ROUTE(app_gzip, "/test")([&](const request& req){
+        app_gzip.get_context<CompressionGzip>(req).compress = false;
+        
+        return expected_string;
+    });
+
+    decltype(app_deflate)::server_t server_deflate(&app_deflate, LOCALHOST_ADDRESS, 45451);
+    decltype(app_gzip)::server_t server_gzip(&app_gzip, LOCALHOST_ADDRESS, 45452);
+    auto t1 = async(launch::async, [&]{ server_deflate.run(); });
+    auto t2 = async(launch::async, [&]{ server_gzip.run(); });
+    std::string test_compress_msg = "GET /test_compress\r\n\r\n";
+    std::string test_none_msg = "GET /test\r\n\r\n";
+
+    auto inflate_string = [](std::string const & deflated_string) -> const std::string
+    {
+        std::string inflated_string;
+        Bytef tmp[8192];
+
+        z_stream zstream{};
+        zstream.avail_in = deflated_string.size();
+        // Nasty const_cast but zlib won't alter its contents
+        zstream.next_in = const_cast<Bytef *>(reinterpret_cast<Bytef const *>(deflated_string.c_str()));
+        // Initialize with automatic header detection, for gzip support
+        if (::inflateInit2(&zstream, MAX_WBITS | 32) == Z_OK)
+        {
+            do
+            {
+                zstream.avail_out = sizeof(tmp);
+                zstream.next_out = &tmp[0];
+
+                auto ret = ::inflate(&zstream, Z_NO_FLUSH);
+                if (ret == Z_OK || ret == Z_STREAM_END)
+                {
+                    std::copy(&tmp[0], &tmp[sizeof(tmp) - zstream.avail_out], std::back_inserter(inflated_string));
+                }
+                else
+                {
+                    // Something went wrong with inflate; make sure we return an empty string
+                    inflated_string.clear();
+                    break;
+                }
+
+            } while (zstream.avail_out == 0);
+
+            // Free zlib's internal memory
+            ::inflateEnd(&zstream);
+        }
+
+        return inflated_string;
+    };
+
+    std::string response_deflate;
+    std::string response_gzip;
+    std::string response_deflate_none;
+    std::string response_gzip_none;
+
+    auto on_body = [](http_parser * parser, const char * body, size_t body_length) -> int
+    {
+        std::string * body_ptr = reinterpret_cast<std::string *>(parser->data);
+        *body_ptr = std::string(body, body + body_length);
+
+        return 0;
+    };
+
+    http_parser_settings settings{};
+    settings.on_body = on_body;
+    
+    asio::io_service is;
+    {
+        // Compression
+        {
+            asio::ip::tcp::socket socket[2] = { asio::ip::tcp::socket(is), asio::ip::tcp::socket(is) };
+            socket[0].connect(asio::ip::tcp::endpoint(asio::ip::address::from_string(LOCALHOST_ADDRESS), 45451));
+            socket[1].connect(asio::ip::tcp::endpoint(asio::ip::address::from_string(LOCALHOST_ADDRESS), 45452));
+
+            socket[0].send(asio::buffer(test_compress_msg));
+            socket[1].send(asio::buffer(test_compress_msg));
+
+            auto bytes_deflate = socket[0].receive(asio::buffer(buf_deflate, 2048));
+            auto bytes_gzip = socket[1].receive(asio::buffer(buf_gzip, 2048));
+
+            http_parser parser[2] = { {}, {} };
+            http_parser_init(&parser[0], HTTP_RESPONSE);
+            http_parser_init(&parser[1], HTTP_RESPONSE);
+            parser[0].data = reinterpret_cast<void *>(&response_deflate);
+            parser[1].data = reinterpret_cast<void *>(&response_gzip);
+
+            http_parser_execute(&parser[0], &settings, buf_deflate, bytes_deflate);
+            http_parser_execute(&parser[1], &settings, buf_gzip, bytes_gzip);
+
+            response_deflate = inflate_string(response_deflate);
+            response_gzip = inflate_string(response_gzip);
+
+            socket[0].close();
+            socket[1].close();            
+        }
+        // No compression
+        {
+            asio::ip::tcp::socket socket[2] = { asio::ip::tcp::socket(is), asio::ip::tcp::socket(is) };
+            socket[0].connect(asio::ip::tcp::endpoint(asio::ip::address::from_string(LOCALHOST_ADDRESS), 45451));
+            socket[1].connect(asio::ip::tcp::endpoint(asio::ip::address::from_string(LOCALHOST_ADDRESS), 45452));
+
+            socket[0].send(asio::buffer(test_none_msg));
+            socket[1].send(asio::buffer(test_none_msg));
+
+            auto bytes_deflate = socket[0].receive(asio::buffer(buf_deflate, 2048));
+            auto bytes_gzip = socket[1].receive(asio::buffer(buf_gzip, 2048));
+
+            http_parser parser[2] = { {}, {} };
+            http_parser_init(&parser[0], HTTP_RESPONSE);
+            http_parser_init(&parser[1], HTTP_RESPONSE);
+            parser[0].data = reinterpret_cast<void *>(&response_deflate_none);
+            parser[1].data = reinterpret_cast<void *>(&response_gzip_none);
+
+            http_parser_execute(&parser[0], &settings, buf_deflate, bytes_deflate);
+            http_parser_execute(&parser[1], &settings, buf_gzip, bytes_gzip);
+
+            socket[0].close();
+            socket[1].close(); 
+        }
+    }
+    {
+        ASSERT_EQUAL(expected_string, response_deflate);
+        ASSERT_EQUAL(expected_string, response_gzip);
+
+        ASSERT_EQUAL(expected_string, response_deflate_none);
+        ASSERT_EQUAL(expected_string, response_gzip_none);
+    }
+
+    server_deflate.stop();
+    server_gzip.stop();
 }
 
 TEST(bug_quick_repeated_request)
