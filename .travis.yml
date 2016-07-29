@@ -1,6 +1,7 @@
 language: cpp
 
 sudo: false
+cache: ccache
 
 notifications:
   irc: "chat.freenode.net##crow"
