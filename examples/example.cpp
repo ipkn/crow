@@ -5,7 +5,7 @@
 
 class ExampleLogHandler : public crow::ILogHandler {
     public:
-        void log(std::string message, crow::LogLevel level) override {
+        void log(std::string /*message*/, crow::LogLevel /*level*/) override {
 //            cerr << "ExampleLogHandler -> " << message;
         }
 };
@@ -28,12 +28,12 @@ struct ExampleMiddleware
     {
     };
 
-    void before_handle(crow::request& req, crow::response& res, context& ctx)
+    void before_handle(crow::request& /*req*/, crow::response& /*res*/, context& /*ctx*/)
     {
         CROW_LOG_DEBUG << " - MESSAGE: " << message;
     }
 
-    void after_handle(crow::request& req, crow::response& res, context& ctx)
+    void after_handle(crow::request& /*req*/, crow::response& /*res*/, context& /*ctx*/)
     {
         // no-op
     }
@@ -85,7 +85,7 @@ int main()
 
     // To see it in action submit {ip}:18080/add/1/2 and you should receive 3 (exciting, isn't it)
     CROW_ROUTE(app,"/add/<int>/<int>")
-    ([](const crow::request& req, crow::response& res, int a, int b){
+    ([](const crow::request& /*req*/, crow::response& res, int a, int b){
         std::ostringstream os;
         os << a+b;
         res.write(os.str());

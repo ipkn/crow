@@ -437,7 +437,7 @@ namespace crow
                 case type::Object: return "Object";
                 default: return "Unknown";
             }
-        };
+        }
 
         class rvalue;
         rvalue load(const char* data, size_t size);
@@ -509,7 +509,7 @@ namespace crow
                     return os;
                 }
             private:
-                void force(char* s, uint32_t length)
+                void force(char* s, uint32_t /*length*/)
                 {
                     s_ = s;
                     owned_ = 1;
@@ -1016,7 +1016,7 @@ namespace crow
             //static const char* escaped = "\"\\/\b\f\n\r\t";
             struct Parser
             {
-                Parser(char* data, size_t size)
+                Parser(char* data, size_t /*size*/)
                     : data(data)
                 {
                 }
@@ -5192,7 +5192,7 @@ namespace crow
 
     class CerrLogHandler : public ILogHandler {
         public:
-            void log(std::string message, LogLevel level) override {
+            void log(std::string message, LogLevel /*level*/) override {
                 std::cerr << message;
             }
     };
@@ -5401,7 +5401,7 @@ namespace crow
 #ifndef CROW_MSVC_WORKAROUND
         struct OutOfRange
         {
-            OutOfRange(unsigned pos, unsigned length) {}
+            OutOfRange(unsigned /*pos*/, unsigned /*length*/) {}
         };
         constexpr unsigned requires_in_range( unsigned i, unsigned len )
         {
@@ -5516,7 +5516,7 @@ template <> \
 struct parameter_tag<t> \
 { \
     static const int value = i; \
-};
+}
         CROW_INTERNAL_PARAMETER_TAG(int, 1);
         CROW_INTERNAL_PARAMETER_TAG(char, 1);
         CROW_INTERNAL_PARAMETER_TAG(short, 1);
@@ -6015,7 +6015,7 @@ namespace crow
 }
 
 #ifndef CROW_MSVC_WORKAROUND
-constexpr crow::HTTPMethod operator "" _method(const char* str, size_t len)
+constexpr crow::HTTPMethod operator "" _method(const char* str, size_t /*len*/)
 {
     return
         crow::black_magic::is_equ_p(str, "GET", 3) ? crow::HTTPMethod::Get :
@@ -6027,7 +6027,7 @@ constexpr crow::HTTPMethod operator "" _method(const char* str, size_t len)
         crow::black_magic::is_equ_p(str, "CONNECT", 7) ? crow::HTTPMethod::Connect :
         crow::black_magic::is_equ_p(str, "TRACE", 5) ? crow::HTTPMethod::Trace :
         throw std::runtime_error("invalid http method");
-};
+}
 #endif
 
 
@@ -6535,7 +6535,7 @@ namespace crow
             }
         }
 
-        void after_handle(request& req, response& res, context& ctx)
+        void after_handle(request& /*req*/, response& res, context& ctx)
         {
             for(auto& cookie:ctx.cookies_to_add)
             {
@@ -7644,28 +7644,28 @@ namespace crow
 
         template <typename MW, typename Context, typename ParentContext>
         typename std::enable_if<!is_before_handle_arity_3_impl<MW>::value>::type
-        before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx)
+        before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& /*parent_ctx*/)
         {
             mw.before_handle(req, res, ctx.template get<MW>(), ctx);
         }
 
         template <typename MW, typename Context, typename ParentContext>
         typename std::enable_if<is_before_handle_arity_3_impl<MW>::value>::type
-        before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx)
+        before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& /*parent_ctx*/)
         {
             mw.before_handle(req, res, ctx.template get<MW>());
         }
 
         template <typename MW, typename Context, typename ParentContext>
         typename std::enable_if<!is_after_handle_arity_3_impl<MW>::value>::type
-        after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx)
+        after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& /*parent_ctx*/)
         {
             mw.after_handle(req, res, ctx.template get<MW>(), ctx);
         }
 
         template <typename MW, typename Context, typename ParentContext>
         typename std::enable_if<is_after_handle_arity_3_impl<MW>::value>::type
-        after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& parent_ctx)
+        after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& /*parent_ctx*/)
         {
             mw.after_handle(req, res, ctx.template get<MW>());
         }
@@ -7692,14 +7692,14 @@ namespace crow
         }
 
         template <int N, typename Context, typename Container>
-        bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx)
+        bool middleware_call_helper(Container& /*middlewares*/, request& /*req*/, response& /*res*/, Context& /*ctx*/)
         {
             return false;
         }
 
         template <int N, typename Context, typename Container>
         typename std::enable_if<(N<0)>::type 
-        after_handlers_call_helper(Container& middlewares, Context& context, request& req, response& res)
+        after_handlers_call_helper(Container& /*middlewares*/, Context& /*context*/, request& /*req*/, response& /*res*/)
         {
         }
 
@@ -8030,7 +8030,7 @@ namespace crow
             //auto self = this->shared_from_this();
             is_writing = true;
             boost::asio::async_write(adaptor_.socket(), buffers_, 
-                [&](const boost::system::error_code& ec, std::size_t bytes_transferred)
+                [&](const boost::system::error_code& ec, std::size_t /*bytes_transferred*/)
                 {
                     is_writing = false;
                     res.clear();
@@ -8068,7 +8068,7 @@ namespace crow
             timer_queue.cancel(timer_cancel_key_);
         }
 
-        void start_deadline(int timeout = 5)
+        void start_deadline(/*int timeout = 5*/)
         {
             cancel_deadline_timer();
             
@@ -8231,7 +8231,7 @@ namespace crow
             CROW_LOG_INFO << server_name_ << " server is running, local port " << port_;
 
             signals_.async_wait(
-                [&](const boost::system::error_code& error, int signal_number){
+                [&](const boost::system::error_code& /*error*/, int /*signal_number*/){
                     stop();
                 });
 
@@ -8543,6 +8543,6 @@ namespace crow
     template <typename ... Middlewares>
     using App = Crow<Middlewares...>;
     using SimpleApp = Crow<>;
-};
+}
 
 

@@ -14,7 +14,7 @@ namespace crow
 #ifndef CROW_MSVC_WORKAROUND
         struct OutOfRange
         {
-            OutOfRange(unsigned pos, unsigned length) {}
+            OutOfRange(unsigned /*pos*/, unsigned /*length*/) {}
         };
         constexpr unsigned requires_in_range( unsigned i, unsigned len )
         {
@@ -129,7 +129,7 @@ template <> \
 struct parameter_tag<t> \
 { \
     static const int value = i; \
-};
+}
         CROW_INTERNAL_PARAMETER_TAG(int, 1);
         CROW_INTERNAL_PARAMETER_TAG(char, 1);
         CROW_INTERNAL_PARAMETER_TAG(short, 1);

@@ -38,7 +38,7 @@ template <typename ...Args>
 void fail(Args...args) { error_print(args...);failed__ = true; }
 
 #define ASSERT_TRUE(x) if (!(x)) fail(__FILE__ ":", __LINE__, ": Assert fail: expected ", #x, " is true, at " __FILE__ ":",__LINE__)
-#define ASSERT_EQUAL(a, b) if ((a) != (b)) fail(__FILE__ ":", __LINE__, ": Assert fail: expected ", (a), " actual " , (b),  ", " #a " == " #b ", at " __FILE__ ":",__LINE__)
+#define ASSERT_EQUAL(a, b) if ((a) != (b)) fail(__FILE__ ":", __LINE__, ": Assert fail: expected ", (a), " actual ", (b),  ", " #a " == " #b ", at " __FILE__ ":",__LINE__)
 #define ASSERT_NOTEQUAL(a, b) if ((a) == (b)) fail(__FILE__ ":", __LINE__, ": Assert fail: not expected ", (a), ", " #a " != " #b ", at " __FILE__ ":",__LINE__)
 #define ASSERT_THROW(x) \
     try \
@@ -323,12 +323,12 @@ TEST(http_method)
 
     CROW_ROUTE(app, "/get_only")
         .methods("GET"_method)
-    ([](const request& req){
+    ([](const request& /*req*/){
         return "get";
     });
     CROW_ROUTE(app, "/post_only")
         .methods("POST"_method)
-    ([](const request& req){
+    ([](const request& /*req*/){
         return "post";
     });
 
@@ -678,10 +678,10 @@ struct NullSimpleMiddleware
 {
     struct context {};
 
-    void before_handle(request& req, response& res, context& ctx)
+    void before_handle(request& /*req*/, response& /*res*/, context& /*ctx*/)
     {}
 
-    void after_handle(request& req, response& res, context& ctx)
+    void after_handle(request& /*req*/, response& /*res*/, context& /*ctx*/)
     {}
 };
 
@@ -703,13 +703,13 @@ struct IntSettingMiddleware
     struct context { int val; };
 
     template <typename AllContext>
-    void before_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    void before_handle(request&, response&, context& ctx, AllContext& )
     {
         ctx.val = 1;
     }
 
     template <typename AllContext>
-    void after_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    void after_handle(request&, response&, context& ctx, AllContext& )
     {
         ctx.val = 2;
     }
@@ -724,12 +724,12 @@ struct FirstMW
         std::vector<string> v;
     };
 
-    void before_handle(request& req, response& res, context& ctx)
+    void before_handle(request& /*req*/, response& /*res*/, context& ctx)
     {
         ctx.v.push_back("1 before");
     }
 
-    void after_handle(request& req, response& res, context& ctx)
+    void after_handle(request& /*req*/, response& /*res*/, context& ctx)
     {
         ctx.v.push_back("1 after");
         test_middleware_context_vector = ctx.v;
@@ -740,7 +740,7 @@ struct SecondMW
 {
     struct context {};
     template <typename AllContext>
-    void before_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    void before_handle(request& req, response& res, context&, AllContext& all_ctx)
     {
         all_ctx.template get<FirstMW>().v.push_back("2 before");
         if (req.url == "/break")
@@ -748,7 +748,7 @@ struct SecondMW
     }
 
     template <typename AllContext>
-    void after_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    void after_handle(request&, response&, context&, AllContext& all_ctx)
     {
         all_ctx.template get<FirstMW>().v.push_back("2 after");
     }
@@ -758,13 +758,13 @@ struct ThirdMW
 {
     struct context {};
     template <typename AllContext>
-    void before_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    void before_handle(request&, response&, context&, AllContext& all_ctx)
     {
         all_ctx.template get<FirstMW>().v.push_back("3 before");
     }
 
     template <typename AllContext>
-    void after_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    void after_handle(request&, response&, context&, AllContext& all_ctx)
     {
         all_ctx.template get<FirstMW>().v.push_back("3 after");
     }
@@ -1070,12 +1070,12 @@ TEST(route_dynamic)
     });
 
     app.route_dynamic("/set4")
-    ([&](const request& req){
+    ([&](const request&){
         x = 4;
         return "";
     });
     app.route_dynamic("/set5")
-    ([&](const request& req, response& res){
+    ([&](const request&, response& res){
         x = 5;
         res.end();
     });

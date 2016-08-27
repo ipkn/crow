@@ -50,7 +50,7 @@ int main()
     });
 
     CROW_ROUTE(app, "/logs/<int>")
-    ([](const crow::request& req, crow::response& res, int after){
+    ([](const crow::request& /*req*/, crow::response& res, int after){
         CROW_LOG_INFO << "logs with last " << after;
         if (after < (int)msgs.size())
         {

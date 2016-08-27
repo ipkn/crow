@@ -4,7 +4,7 @@
 
 class ExampleLogHandler : public crow::ILogHandler {
     public:
-        void log(std::string message, crow::LogLevel level) override {
+        void log(std::string /*message*/, crow::LogLevel /*level*/) override {
 //            cerr << "ExampleLogHandler -> " << message;
         }
 };
@@ -42,7 +42,7 @@ int main()
     });
 
     CROW_ROUTE(app,"/add/<int>/<int>")
-    ([](const crow::request& req, crow::response& res, int a, int b){
+    ([](const crow::request& /*req*/, crow::response& res, int a, int b){
         std::ostringstream os;
         os << a+b;
         res.write(os.str());
@@ -85,7 +85,7 @@ int main()
     });    
 
     // ignore all log
-    crow::logger::setLogLevel(crow::LogLevel::DEBUG);
+    crow::logger::setLogLevel(crow::LogLevel::Debug);
     //crow::logger::setHandler(std::make_shared<ExampleLogHandler>());
 
     app.port(18080)
