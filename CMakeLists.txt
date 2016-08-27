@@ -12,10 +12,10 @@ endif()
 
 if (MSVC)
 set(Boost_USE_STATIC_LIBS "On")
-find_package( Boost 1.52 COMPONENTS date_time filesystem system thread regex REQUIRED )
+find_package( Boost 1.52 COMPONENTS system thread regex REQUIRED )
 else()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++1y")
-find_package( Boost 1.52 COMPONENTS date_time filesystem system thread REQUIRED )
+find_package( Boost 1.52 COMPONENTS system thread REQUIRED )
 endif()
 
 include_directories( ${Boost_INCLUDE_DIR} )
