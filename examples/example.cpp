@@ -106,6 +106,9 @@ int main()
     //      * Select 'raw' and then JSON
     //      * Add {"a": 1, "b": 1}
     //      * Send and you should receive 2
+
+    // A simpler way for json example:
+    //      * curl -d '{"a":1,"b":2}' {ip}:18080/add_json
     CROW_ROUTE(app, "/add_json")
         .methods("POST"_method)
     ([](const crow::request& req){
