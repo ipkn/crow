@@ -13,11 +13,11 @@
 
 /* #define - specifies log level */
 /*
-    DEBUG       = 0
-    INFO        = 1
-    WARNING     = 2
-    ERROR       = 3
-    CRITICAL    = 4
+    Debug       = 0
+    Info        = 1
+    Warning     = 2
+    Error       = 3
+    Critical    = 4
 
     default to INFO
 */

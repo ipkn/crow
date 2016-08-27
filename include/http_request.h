@@ -29,7 +29,7 @@ namespace crow
         void* middleware_context{};
 
         request()
-            : method(HTTPMethod::GET)
+            : method(HTTPMethod::Get)
         {
         }
 

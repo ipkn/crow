@@ -38,7 +38,7 @@ namespace crow
         }
 
     protected:
-        uint32_t methods_{1<<(int)HTTPMethod::GET};
+        uint32_t methods_{1<<(int)HTTPMethod::Get};
 
         std::string rule_;
         std::string name_;
