@@ -519,6 +519,10 @@ TEST(json_read)
     ASSERT_EQUAL(false, z["bools"][1].b());
     ASSERT_EQUAL(1.2, z["doubles"][0].d());
     ASSERT_EQUAL(-3.4, z["doubles"][1].d());
+
+    std::string s3 = R"({"uint64": 18446744073709551615})";
+    auto z1 = json::load(s3);
+    ASSERT_EQUAL(18446744073709551615ull, z1["uint64"].u());
 }
 
 TEST(json_read_real)
