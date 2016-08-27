@@ -2352,16 +2352,16 @@ namespace crow
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#ifndef http_parser_h
-#define http_parser_h
+#ifndef CROW_http_parser_h
+#define CROW_http_parser_h
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* Also update SONAME in the Makefile whenever you change these. */
-#define HTTP_PARSER_VERSION_MAJOR 2
-#define HTTP_PARSER_VERSION_MINOR 3
-#define HTTP_PARSER_VERSION_PATCH 0
+#define CROW_HTTP_PARSER_VERSION_MAJOR 2
+#define CROW_HTTP_PARSER_VERSION_MINOR 3
+#define CROW_HTTP_PARSER_VERSION_PATCH 0
 
 #include <sys/types.h>
 #if defined(_WIN32) && !defined(__MINGW32__) && (!defined(_MSC_VER) || _MSC_VER<1600)
@@ -2382,8 +2382,8 @@ typedef unsigned __int64 uint64_t;
 /* Compile with -DHTTP_PARSER_STRICT=0 to make less checks, but run
  * faster
  */
-#ifndef HTTP_PARSER_STRICT
-# define HTTP_PARSER_STRICT 1
+#ifndef CROW_HTTP_PARSER_STRICT
+# define CROW_HTTP_PARSER_STRICT 1
 #endif
 
 /* Maximium header size allowed. If the macro is not defined
@@ -2393,8 +2393,8 @@ typedef unsigned __int64 uint64_t;
  * the effective limit on the size of the header, define the macro
  * to a very large number (e.g. -DHTTP_MAX_HEADER_SIZE=0x7fffffff)
  */
-#ifndef HTTP_MAX_HEADER_SIZE
-# define HTTP_MAX_HEADER_SIZE (80*1024)
+#ifndef CROW_HTTP_MAX_HEADER_SIZE
+# define CROW_HTTP_MAX_HEADER_SIZE (80*1024)
 #endif
 
 typedef struct http_parser http_parser;
@@ -2419,46 +2419,46 @@ typedef int (*http_cb) (http_parser*);
 
 
 /* Request Methods */
-#define HTTP_METHOD_MAP(XX)         \
-  XX(0,  DELETE,      DELETE)       \
-  XX(1,  GET,         GET)          \
-  XX(2,  HEAD,        HEAD)         \
-  XX(3,  POST,        POST)         \
-  XX(4,  PUT,         PUT)          \
+#define CROW_HTTP_METHOD_MAP(CROW_XX)         \
+  CROW_XX(0,  DELETE,      DELETE)       \
+  CROW_XX(1,  GET,         GET)          \
+  CROW_XX(2,  HEAD,        HEAD)         \
+  CROW_XX(3,  POST,        POST)         \
+  CROW_XX(4,  PUT,         PUT)          \
   /* pathological */                \
-  XX(5,  CONNECT,     CONNECT)      \
-  XX(6,  OPTIONS,     OPTIONS)      \
-  XX(7,  TRACE,       TRACE)        \
+  CROW_XX(5,  CONNECT,     CONNECT)      \
+  CROW_XX(6,  OPTIONS,     OPTIONS)      \
+  CROW_XX(7,  TRACE,       TRACE)        \
   /* webdav */                      \
-  XX(8,  COPY,        COPY)         \
-  XX(9,  LOCK,        LOCK)         \
-  XX(10, MKCOL,       MKCOL)        \
-  XX(11, MOVE,        MOVE)         \
-  XX(12, PROPFIND,    PROPFIND)     \
-  XX(13, PROPPATCH,   PROPPATCH)    \
-  XX(14, SEARCH,      SEARCH)       \
-  XX(15, UNLOCK,      UNLOCK)       \
+  CROW_XX(8,  COPY,        COPY)         \
+  CROW_XX(9,  LOCK,        LOCK)         \
+  CROW_XX(10, MKCOL,       MKCOL)        \
+  CROW_XX(11, MOVE,        MOVE)         \
+  CROW_XX(12, PROPFIND,    PROPFIND)     \
+  CROW_XX(13, PROPPATCH,   PROPPATCH)    \
+  CROW_XX(14, SEARCH,      SEARCH)       \
+  CROW_XX(15, UNLOCK,      UNLOCK)       \
   /* subversion */                  \
-  XX(16, REPORT,      REPORT)       \
-  XX(17, MKACTIVITY,  MKACTIVITY)   \
-  XX(18, CHECKOUT,    CHECKOUT)     \
-  XX(19, MERGE,       MERGE)        \
+  CROW_XX(16, REPORT,      REPORT)       \
+  CROW_XX(17, MKACTIVITY,  MKACTIVITY)   \
+  CROW_XX(18, CHECKOUT,    CHECKOUT)     \
+  CROW_XX(19, MERGE,       MERGE)        \
   /* upnp */                        \
-  XX(20, MSEARCH,     M-SEARCH)     \
-  XX(21, NOTIFY,      NOTIFY)       \
-  XX(22, SUBSCRIBE,   SUBSCRIBE)    \
-  XX(23, UNSUBSCRIBE, UNSUBSCRIBE)  \
+  CROW_XX(20, MSEARCH,     M-SEARCH)     \
+  CROW_XX(21, NOTIFY,      NOTIFY)       \
+  CROW_XX(22, SUBSCRIBE,   SUBSCRIBE)    \
+  CROW_XX(23, UNSUBSCRIBE, UNSUBSCRIBE)  \
   /* RFC-5789 */                    \
-  XX(24, PATCH,       PATCH)        \
-  XX(25, PURGE,       PURGE)        \
+  CROW_XX(24, PATCH,       PATCH)        \
+  CROW_XX(25, PURGE,       PURGE)        \
   /* CalDAV */                      \
-  XX(26, MKCALENDAR,  MKCALENDAR)   \
+  CROW_XX(26, MKCALENDAR,  MKCALENDAR)   \
 
 enum http_method
   {
-#define XX(num, name, string) HTTP_##name = num,
-  HTTP_METHOD_MAP(XX)
-#undef XX
+#define CROW_XX(num, name, string) HTTP_##name = num,
+  CROW_HTTP_METHOD_MAP(CROW_XX)
+#undef CROW_XX
   };
 
 
@@ -2480,58 +2480,58 @@ enum flags
  * 
  * The provided argument should be a macro that takes 2 arguments.
  */
-#define HTTP_ERRNO_MAP(XX)                                           \
+#define CROW_HTTP_ERRNO_MAP(CROW_XX)                                           \
   /* No error */                                                     \
-  XX(OK, "success")                                                  \
+  CROW_XX(OK, "success")                                                  \
                                                                      \
   /* Callback-related errors */                                      \
-  XX(CB_message_begin, "the on_message_begin callback failed")       \
-  XX(CB_url, "the on_url callback failed")                           \
-  XX(CB_header_field, "the on_header_field callback failed")         \
-  XX(CB_header_value, "the on_header_value callback failed")         \
-  XX(CB_headers_complete, "the on_headers_complete callback failed") \
-  XX(CB_body, "the on_body callback failed")                         \
-  XX(CB_message_complete, "the on_message_complete callback failed") \
-  XX(CB_status, "the on_status callback failed")                     \
+  CROW_XX(CB_message_begin, "the on_message_begin callback failed")       \
+  CROW_XX(CB_url, "the on_url callback failed")                           \
+  CROW_XX(CB_header_field, "the on_header_field callback failed")         \
+  CROW_XX(CB_header_value, "the on_header_value callback failed")         \
+  CROW_XX(CB_headers_complete, "the on_headers_complete callback failed") \
+  CROW_XX(CB_body, "the on_body callback failed")                         \
+  CROW_XX(CB_message_complete, "the on_message_complete callback failed") \
+  CROW_XX(CB_status, "the on_status callback failed")                     \
                                                                      \
   /* Parsing-related errors */                                       \
-  XX(INVALID_EOF_STATE, "stream ended at an unexpected time")        \
-  XX(HEADER_OVERFLOW,                                                \
+  CROW_XX(INVALID_EOF_STATE, "stream ended at an unexpected time")        \
+  CROW_XX(HEADER_OVERFLOW,                                                \
      "too many header bytes seen; overflow detected")                \
-  XX(CLOSED_CONNECTION,                                              \
+  CROW_XX(CLOSED_CONNECTION,                                              \
      "data received after completed connection: close message")      \
-  XX(INVALID_VERSION, "invalid HTTP version")                        \
-  XX(INVALID_STATUS, "invalid HTTP status code")                     \
-  XX(INVALID_METHOD, "invalid HTTP method")                          \
-  XX(INVALID_URL, "invalid URL")                                     \
-  XX(INVALID_HOST, "invalid host")                                   \
-  XX(INVALID_PORT, "invalid port")                                   \
-  XX(INVALID_PATH, "invalid path")                                   \
-  XX(INVALID_QUERY_STRING, "invalid query string")                   \
-  XX(INVALID_FRAGMENT, "invalid fragment")                           \
-  XX(LF_EXPECTED, "LF character expected")                           \
-  XX(INVALID_HEADER_TOKEN, "invalid character in header")            \
-  XX(INVALID_CONTENT_LENGTH,                                         \
+  CROW_XX(INVALID_VERSION, "invalid HTTP version")                        \
+  CROW_XX(INVALID_STATUS, "invalid HTTP status code")                     \
+  CROW_XX(INVALID_METHOD, "invalid HTTP method")                          \
+  CROW_XX(INVALID_URL, "invalid URL")                                     \
+  CROW_XX(INVALID_HOST, "invalid host")                                   \
+  CROW_XX(INVALID_PORT, "invalid port")                                   \
+  CROW_XX(INVALID_PATH, "invalid path")                                   \
+  CROW_XX(INVALID_QUERY_STRING, "invalid query string")                   \
+  CROW_XX(INVALID_FRAGMENT, "invalid fragment")                           \
+  CROW_XX(LF_EXPECTED, "CROW_LF character expected")                           \
+  CROW_XX(INVALID_HEADER_TOKEN, "invalid character in header")            \
+  CROW_XX(INVALID_CONTENT_LENGTH,                                         \
      "invalid character in content-length header")                   \
-  XX(INVALID_CHUNK_SIZE,                                             \
+  CROW_XX(INVALID_CHUNK_SIZE,                                             \
      "invalid character in chunk size header")                       \
-  XX(INVALID_CONSTANT, "invalid constant string")                    \
-  XX(INVALID_INTERNAL_STATE, "encountered unexpected internal state")\
-  XX(STRICT, "strict mode assertion failed")                         \
-  XX(PAUSED, "parser is paused")                                     \
-  XX(UNKNOWN, "an unknown error occurred")
+  CROW_XX(INVALID_CONSTANT, "invalid constant string")                    \
+  CROW_XX(INVALID_INTERNAL_STATE, "encountered unexpected internal state")\
+  CROW_XX(STRICT, "strict mode assertion failed")                         \
+  CROW_XX(PAUSED, "parser is paused")                                     \
+  CROW_XX(UNKNOWN, "an unknown error occurred")
 
 
 /* Define HPE_* values for each errno value above */
-#define HTTP_ERRNO_GEN(n, s) HPE_##n,
+#define CROW_HTTP_ERRNO_GEN(n, s) HPE_##n,
 enum http_errno {
-  HTTP_ERRNO_MAP(HTTP_ERRNO_GEN)
+  CROW_HTTP_ERRNO_MAP(CROW_HTTP_ERRNO_GEN)
 };
-#undef HTTP_ERRNO_GEN
+#undef CROW_HTTP_ERRNO_GEN
 
 
 /* Get an http_errno value from an http_parser */
-#define HTTP_PARSER_ERRNO(p)            ((enum http_errno) (p)->http_errno)
+#define CROW_HTTP_PARSER_ERRNO(p)            ((enum http_errno) (p)->http_errno)
 
 
 struct http_parser {
@@ -2686,70 +2686,70 @@ int http_body_is_final(const http_parser *parser);
 #include <string.h>
 #include <limits.h>
 
-#ifndef ULLONG_MAX
-# define ULLONG_MAX ((uint64_t) -1) /* 2^64-1 */
+#ifndef CROW_ULLONG_MAX
+# define CROW_ULLONG_MAX ((uint64_t) -1) /* 2^64-1 */
 #endif
 
-#ifndef MIN
-# define MIN(a,b) ((a) < (b) ? (a) : (b))
+#ifndef CROW_MIN
+# define CROW_MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
-#ifndef ARRAY_SIZE
-# define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+#ifndef CROW_ARRAY_SIZE
+# define CROW_ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 #endif
 
-#ifndef BIT_AT
-# define BIT_AT(a, i)                                                \
+#ifndef CROW_BIT_AT
+# define CROW_BIT_AT(a, i)                                                \
   (!!((unsigned int) (a)[(unsigned int) (i) >> 3] &                  \
    (1 << ((unsigned int) (i) & 7))))
 #endif
 
-#ifndef ELEM_AT
-# define ELEM_AT(a, i, v) ((unsigned int) (i) < ARRAY_SIZE(a) ? (a)[(i)] : (v))
+#ifndef CROW_ELEM_AT
+# define CROW_ELEM_AT(a, i, v) ((unsigned int) (i) < CROW_ARRAY_SIZE(a) ? (a)[(i)] : (v))
 #endif
 
-#define SET_ERRNO(e)                                                 \
+#define CROW_SET_ERRNO(e)                                                 \
 do {                                                                 \
   parser->http_errno = (e);                                          \
 } while(0)
 
 
 /* Run the notify callback FOR, returning ER if it fails */
-#define CALLBACK_NOTIFY_(FOR, ER)                                    \
+#define CROW_CALLBACK_NOTIFY_(FOR, ER)                                    \
 do {                                                                 \
-  assert(HTTP_PARSER_ERRNO(parser) == HPE_OK);                       \
+  assert(CROW_HTTP_PARSER_ERRNO(parser) == HPE_OK);                       \
                                                                      \
   if (settings->on_##FOR) {                                          \
     if (0 != settings->on_##FOR(parser)) {                           \
-      SET_ERRNO(HPE_CB_##FOR);                                       \
+      CROW_SET_ERRNO(HPE_CB_##FOR);                                       \
     }                                                                \
                                                                      \
     /* We either errored above or got paused; get out */             \
-    if (HTTP_PARSER_ERRNO(parser) != HPE_OK) {                       \
+    if (CROW_HTTP_PARSER_ERRNO(parser) != HPE_OK) {                       \
       return (ER);                                                   \
     }                                                                \
   }                                                                  \
 } while (0)
 
 /* Run the notify callback FOR and consume the current byte */
-#define CALLBACK_NOTIFY(FOR)            CALLBACK_NOTIFY_(FOR, p - data + 1)
+#define CROW_CALLBACK_NOTIFY(FOR)            CROW_CALLBACK_NOTIFY_(FOR, p - data + 1)
 
 /* Run the notify callback FOR and don't consume the current byte */
-#define CALLBACK_NOTIFY_NOADVANCE(FOR)  CALLBACK_NOTIFY_(FOR, p - data)
+#define CROW_CALLBACK_NOTIFY_NOADVANCE(FOR)  CROW_CALLBACK_NOTIFY_(FOR, p - data)
 
 /* Run data callback FOR with LEN bytes, returning ER if it fails */
-#define CALLBACK_DATA_(FOR, LEN, ER)                                 \
+#define CROW_CALLBACK_DATA_(FOR, LEN, ER)                                 \
 do {                                                                 \
-  assert(HTTP_PARSER_ERRNO(parser) == HPE_OK);                       \
+  assert(CROW_HTTP_PARSER_ERRNO(parser) == HPE_OK);                       \
                                                                      \
   if (FOR##_mark) {                                                  \
     if (settings->on_##FOR) {                                        \
       if (0 != settings->on_##FOR(parser, FOR##_mark, (LEN))) {      \
-        SET_ERRNO(HPE_CB_##FOR);                                     \
+        CROW_SET_ERRNO(HPE_CB_##FOR);                                     \
       }                                                              \
                                                                      \
       /* We either errored above or got paused; get out */           \
-      if (HTTP_PARSER_ERRNO(parser) != HPE_OK) {                     \
+      if (CROW_HTTP_PARSER_ERRNO(parser) != HPE_OK) {                     \
         return (ER);                                                 \
       }                                                              \
     }                                                                \
@@ -2758,15 +2758,15 @@ do {                                                                 \
 } while (0)
   
 /* Run the data callback FOR and consume the current byte */
-#define CALLBACK_DATA(FOR)                                           \
-    CALLBACK_DATA_(FOR, p - FOR##_mark, p - data + 1)
+#define CROW_CALLBACK_DATA(FOR)                                           \
+    CROW_CALLBACK_DATA_(FOR, p - FOR##_mark, p - data + 1)
 
 /* Run the data callback FOR and don't consume the current byte */
-#define CALLBACK_DATA_NOADVANCE(FOR)                                 \
-    CALLBACK_DATA_(FOR, p - FOR##_mark, p - data)
+#define CROW_CALLBACK_DATA_NOADVANCE(FOR)                                 \
+    CROW_CALLBACK_DATA_(FOR, p - FOR##_mark, p - data)
 
 /* Set the mark FOR; non-destructive if mark is already set */
-#define MARK(FOR)                                                    \
+#define CROW_MARK(FOR)                                                    \
 do {                                                                 \
   if (!FOR##_mark) {                                                 \
     FOR##_mark = p;                                                  \
@@ -2774,14 +2774,14 @@ do {                                                                 \
 } while (0)
 
 
-#define PROXY_CONNECTION "proxy-connection"
-#define CONNECTION "connection"
-#define CONTENT_LENGTH "content-length"
-#define TRANSFER_ENCODING "transfer-encoding"
-#define UPGRADE "upgrade"
-#define CHUNKED "chunked"
-#define KEEP_ALIVE "keep-alive"
-#define CLOSE "close"
+#define CROW_PROXY_CONNECTION "proxy-connection"
+#define CROW_CONNECTION "connection"
+#define CROW_CONTENT_LENGTH "content-length"
+#define CROW_TRANSFER_ENCODING "transfer-encoding"
+#define CROW_UPGRADE "upgrade"
+#define CROW_CHUNKED "chunked"
+#define CROW_KEEP_ALIVE "keep-alive"
+#define CROW_CLOSE "close"
 
 
 
@@ -2853,7 +2853,7 @@ enum state
 
   /* Important: 's_headers_done' must be the last 'header' state. All
    * states beyond this must be 'body' states. It is used for overflow
-   * checking. See the PARSING_HEADER() macro.
+   * checking. See the CROW_PARSING_HEADER() macro.
    */
 
   , s_chunk_data
@@ -2867,7 +2867,7 @@ enum state
   };
 
 
-#define PARSING_HEADER(state) (state <= s_headers_done)
+#define CROW_PARSING_HEADER(state) (state <= s_headers_done)
 
 
 enum header_states
@@ -2911,48 +2911,48 @@ enum http_host_state
 };
 
 /* Macros for character classes; depends on strict-mode  */
-#define CR                  '\r'
-#define LF                  '\n'
-#define LOWER(c)            (unsigned char)(c | 0x20)
-#define IS_ALPHA(c)         (LOWER(c) >= 'a' && LOWER(c) <= 'z')
-#define IS_NUM(c)           ((c) >= '0' && (c) <= '9')
-#define IS_ALPHANUM(c)      (IS_ALPHA(c) || IS_NUM(c))
-#define IS_HEX(c)           (IS_NUM(c) || (LOWER(c) >= 'a' && LOWER(c) <= 'f'))
-#define IS_MARK(c)          ((c) == '-' || (c) == '_' || (c) == '.' || \
+#define CROW_CR                  '\r'
+#define CROW_LF                  '\n'
+#define CROW_LOWER(c)            (unsigned char)(c | 0x20)
+#define CROW_IS_ALPHA(c)         (CROW_LOWER(c) >= 'a' && CROW_LOWER(c) <= 'z')
+#define CROW_IS_NUM(c)           ((c) >= '0' && (c) <= '9')
+#define CROW_IS_ALPHANUM(c)      (CROW_IS_ALPHA(c) || CROW_IS_NUM(c))
+#define CROW_IS_HEX(c)           (CROW_IS_NUM(c) || (CROW_LOWER(c) >= 'a' && CROW_LOWER(c) <= 'f'))
+#define CROW_IS_MARK(c)          ((c) == '-' || (c) == '_' || (c) == '.' || \
   (c) == '!' || (c) == '~' || (c) == '*' || (c) == '\'' || (c) == '(' || \
   (c) == ')')
-#define IS_USERINFO_CHAR(c) (IS_ALPHANUM(c) || IS_MARK(c) || (c) == '%' || \
+#define CROW_IS_USERINFO_CHAR(c) (CROW_IS_ALPHANUM(c) || CROW_IS_MARK(c) || (c) == '%' || \
   (c) == ';' || (c) == ':' || (c) == '&' || (c) == '=' || (c) == '+' || \
   (c) == '$' || (c) == ',')
 
-#if HTTP_PARSER_STRICT
-#define TOKEN(c)            (tokens[(unsigned char)c])
-#define IS_URL_CHAR(c)      (BIT_AT(normal_url_char, (unsigned char)c))
-#define IS_HOST_CHAR(c)     (IS_ALPHANUM(c) || (c) == '.' || (c) == '-')
+#if CROW_HTTP_PARSER_STRICT
+#define CROW_TOKEN(c)            (tokens[(unsigned char)c])
+#define CROW_IS_URL_CHAR(c)      (CROW_BIT_AT(normal_url_char, (unsigned char)c))
+#define CROW_IS_HOST_CHAR(c)     (CROW_IS_ALPHANUM(c) || (c) == '.' || (c) == '-')
 #else
-#define TOKEN(c)            ((c == ' ') ? ' ' : tokens[(unsigned char)c])
-#define IS_URL_CHAR(c)                                                         \
-  (BIT_AT(normal_url_char, (unsigned char)c) || ((c) & 0x80))
-#define IS_HOST_CHAR(c)                                                        \
-  (IS_ALPHANUM(c) || (c) == '.' || (c) == '-' || (c) == '_')
+#define CROW_TOKEN(c)            ((c == ' ') ? ' ' : tokens[(unsigned char)c])
+#define CROW_IS_URL_CHAR(c)                                                         \
+  (CROW_BIT_AT(normal_url_char, (unsigned char)c) || ((c) & 0x80))
+#define CROW_IS_HOST_CHAR(c)                                                        \
+  (CROW_IS_ALPHANUM(c) || (c) == '.' || (c) == '-' || (c) == '_')
 #endif
 
 
-#define start_state (parser->type == HTTP_REQUEST ? s_start_req : s_start_res)
+#define CROW_start_state (parser->type == HTTP_REQUEST ? s_start_req : s_start_res)
 
 
-#if HTTP_PARSER_STRICT
-# define STRICT_CHECK(cond)                                          \
+#if CROW_HTTP_PARSER_STRICT
+# define CROW_STRICT_CHECK(cond)                                          \
 do {                                                                 \
   if (cond) {                                                        \
-    SET_ERRNO(HPE_STRICT);                                           \
+    CROW_SET_ERRNO(HPE_STRICT);                                           \
     goto error;                                                      \
   }                                                                  \
 } while (0)
-# define NEW_MESSAGE() (http_should_keep_alive(parser) ? start_state : s_dead)
+# define CROW_NEW_MESSAGE() (http_should_keep_alive(parser) ? CROW_start_state : s_dead)
 #else
-# define STRICT_CHECK(cond)
-# define NEW_MESSAGE() start_state
+# define CROW_STRICT_CHECK(cond)
+# define CROW_NEW_MESSAGE() CROW_start_state
 #endif
 
 
@@ -2973,10 +2973,10 @@ int http_message_needs_eof(const http_parser *parser);
 inline enum state
 parse_url_char(enum state s, const char ch)
 {
-#if HTTP_PARSER_STRICT
-# define T(v) 0
+#if CROW_HTTP_PARSER_STRICT
+# define CROW_T(v) 0
 #else
-# define T(v) v
+# define CROW_T(v) v
 #endif
 
 
@@ -2984,7 +2984,7 @@ static const uint8_t normal_url_char[32] = {
 /*   0 nul    1 soh    2 stx    3 etx    4 eot    5 enq    6 ack    7 bel  */
         0    |   0    |   0    |   0    |   0    |   0    |   0    |   0,
 /*   8 bs     9 ht    10 nl    11 vt    12 np    13 cr    14 so    15 si   */
-        0    | T(2)   |   0    |   0    | T(16)  |   0    |   0    |   0,
+        0    | CROW_T(2)   |   0    |   0    | CROW_T(16)  |   0    |   0    |   0,
 /*  16 dle   17 dc1   18 dc2   19 dc3   20 dc4   21 nak   22 syn   23 etb */
         0    |   0    |   0    |   0    |   0    |   0    |   0    |   0,
 /*  24 can   25 em    26 sub   27 esc   28 fs    29 gs    30 rs    31 us  */
@@ -3001,7 +3001,7 @@ static const uint8_t normal_url_char[32] = {
         1    |   2    |   4    |   8    |   16   |   32   |   64   |  128,
 /*  72  H    73  I    74  J    75  K    76  L    77  M    78  N    79  O  */
         1    |   2    |   4    |   8    |   16   |   32   |   64   |  128,
-/*  80  P    81  Q    82  R    83  S    84  T    85  U    86  V    87  W  */
+/*  80  P    81  Q    82  R    83  S    84  CROW_T    85  U    86  V    87  W  */
         1    |   2    |   4    |   8    |   16   |   32   |   64   |  128,
 /*  88  X    89  Y    90  Z    91  [    92  \    93  ]    94  ^    95  _  */
         1    |   2    |   4    |   8    |   16   |   32   |   64   |  128,
@@ -3014,13 +3014,13 @@ static const uint8_t normal_url_char[32] = {
 /* 120  x   121  y   122  z   123  {   124  |   125  }   126  ~   127 del */
         1    |   2    |   4    |   8    |   16   |   32   |   64   |   0, };
 
-#undef T
+#undef CROW_T
 
   if (ch == ' ' || ch == '\r' || ch == '\n') {
     return s_dead;
   }
 
-#if HTTP_PARSER_STRICT
+#if CROW_HTTP_PARSER_STRICT
   if (ch == '\t' || ch == '\f') {
     return s_dead;
   }
@@ -3036,14 +3036,14 @@ static const uint8_t normal_url_char[32] = {
         return s_req_path;
       }
 
-      if (IS_ALPHA(ch)) {
+      if (CROW_IS_ALPHA(ch)) {
         return s_req_schema;
       }
 
       break;
 
     case s_req_schema:
-      if (IS_ALPHA(ch)) {
+      if (CROW_IS_ALPHA(ch)) {
         return s;
       }
 
@@ -3087,14 +3087,14 @@ static const uint8_t normal_url_char[32] = {
         return s_req_server_with_at;
       }
 
-      if (IS_USERINFO_CHAR(ch) || ch == '[' || ch == ']') {
+      if (CROW_IS_USERINFO_CHAR(ch) || ch == '[' || ch == ']') {
         return s_req_server;
       }
 
       break;
 
     case s_req_path:
-      if (IS_URL_CHAR(ch)) {
+      if (CROW_IS_URL_CHAR(ch)) {
         return s;
       }
 
@@ -3110,7 +3110,7 @@ static const uint8_t normal_url_char[32] = {
 
     case s_req_query_string_start:
     case s_req_query_string:
-      if (IS_URL_CHAR(ch)) {
+      if (CROW_IS_URL_CHAR(ch)) {
         return s_req_query_string;
       }
 
@@ -3126,7 +3126,7 @@ static const uint8_t normal_url_char[32] = {
       break;
 
     case s_req_fragment_start:
-      if (IS_URL_CHAR(ch)) {
+      if (CROW_IS_URL_CHAR(ch)) {
         return s_req_fragment;
       }
 
@@ -3141,7 +3141,7 @@ static const uint8_t normal_url_char[32] = {
       break;
 
     case s_req_fragment:
-      if (IS_URL_CHAR(ch)) {
+      if (CROW_IS_URL_CHAR(ch)) {
         return s;
       }
 
@@ -3168,9 +3168,9 @@ inline size_t http_parser_execute (http_parser *parser,
 {
 static const char *method_strings[] =
   {
-#define XX(num, name, string) #string,
-  HTTP_METHOD_MAP(XX)
-#undef XX
+#define CROW_XX(num, name, string) #string,
+  CROW_HTTP_METHOD_MAP(CROW_XX)
+#undef CROW_XX
   };
 
 /* Tokens as defined by rfc 2616. Also lowercases them.
@@ -3238,17 +3238,17 @@ static const int8_t unhex[256] =
   const char *status_mark = 0;
 
   /* We're in an error state. Don't bother doing anything. */
-  if (HTTP_PARSER_ERRNO(parser) != HPE_OK) {
+  if (CROW_HTTP_PARSER_ERRNO(parser) != HPE_OK) {
     return 0;
   }
 
   if (len == 0) {
     switch (parser->state) {
       case s_body_identity_eof:
-        /* Use of CALLBACK_NOTIFY() here would erroneously return 1 byte read if
+        /* Use of CROW_CALLBACK_NOTIFY() here would erroneously return 1 byte read if
          * we got paused.
          */
-        CALLBACK_NOTIFY_NOADVANCE(message_complete);
+        CROW_CALLBACK_NOTIFY_NOADVANCE(message_complete);
         return 0;
 
       case s_dead:
@@ -3258,7 +3258,7 @@ static const int8_t unhex[256] =
         return 0;
 
       default:
-        SET_ERRNO(HPE_INVALID_EOF_STATE);
+        CROW_SET_ERRNO(HPE_INVALID_EOF_STATE);
         return 1;
     }
   }
@@ -3290,21 +3290,21 @@ static const int8_t unhex[256] =
   for (p=data; p != data + len; p++) {
     ch = *p;
 
-    if (PARSING_HEADER(parser->state)) {
+    if (CROW_PARSING_HEADER(parser->state)) {
       ++parser->nread;
       /* Don't allow the total size of the HTTP headers (including the status
-       * line) to exceed HTTP_MAX_HEADER_SIZE.  This check is here to protect
+       * line) to exceed CROW_HTTP_MAX_HEADER_SIZE.  This check is here to protect
        * embedders against denial-of-service attacks where the attacker feeds
        * us a never-ending header that the embedder keeps buffering.
        *
        * This check is arguably the responsibility of embedders but we're doing
        * it on the embedder's behalf because most won't bother and this way we
-       * make the web a little safer.  HTTP_MAX_HEADER_SIZE is still far bigger
+       * make the web a little safer.  CROW_HTTP_MAX_HEADER_SIZE is still far bigger
        * than any reasonable request or response so this should never affect
        * day-to-day operation.
        */
-      if (parser->nread > (HTTP_MAX_HEADER_SIZE)) {
-        SET_ERRNO(HPE_HEADER_OVERFLOW);
+      if (parser->nread > (CROW_HTTP_MAX_HEADER_SIZE)) {
+        CROW_SET_ERRNO(HPE_HEADER_OVERFLOW);
         goto error;
       }
     }
@@ -3316,23 +3316,23 @@ static const int8_t unhex[256] =
         /* this state is used after a 'Connection: close' message
          * the parser will error out if it reads another message
          */
-        if (ch == CR || ch == LF)
+        if (ch == CROW_CR || ch == CROW_LF)
           break;
 
-        SET_ERRNO(HPE_CLOSED_CONNECTION);
+        CROW_SET_ERRNO(HPE_CLOSED_CONNECTION);
         goto error;
 
       case s_start_req_or_res:
       {
-        if (ch == CR || ch == LF)
+        if (ch == CROW_CR || ch == CROW_LF)
           break;
         parser->flags = 0;
-        parser->content_length = ULLONG_MAX;
+        parser->content_length = CROW_ULLONG_MAX;
 
         if (ch == 'H') {
           parser->state = s_res_or_resp_H;
 
-          CALLBACK_NOTIFY(message_begin);
+          CROW_CALLBACK_NOTIFY(message_begin);
         } else {
           parser->type = HTTP_REQUEST;
           parser->state = s_start_req;
@@ -3348,7 +3348,7 @@ static const int8_t unhex[256] =
           parser->state = s_res_HT;
         } else {
           if (ch != 'E') {
-            SET_ERRNO(HPE_INVALID_CONSTANT);
+            CROW_SET_ERRNO(HPE_INVALID_CONSTANT);
             goto error;
           }
 
@@ -3362,49 +3362,49 @@ static const int8_t unhex[256] =
       case s_start_res:
       {
         parser->flags = 0;
-        parser->content_length = ULLONG_MAX;
+        parser->content_length = CROW_ULLONG_MAX;
 
         switch (ch) {
           case 'H':
             parser->state = s_res_H;
             break;
 
-          case CR:
-          case LF:
+          case CROW_CR:
+          case CROW_LF:
             break;
 
           default:
-            SET_ERRNO(HPE_INVALID_CONSTANT);
+            CROW_SET_ERRNO(HPE_INVALID_CONSTANT);
             goto error;
         }
 
-        CALLBACK_NOTIFY(message_begin);
+        CROW_CALLBACK_NOTIFY(message_begin);
         break;
       }
 
       case s_res_H:
-        STRICT_CHECK(ch != 'T');
+        CROW_STRICT_CHECK(ch != 'T');
         parser->state = s_res_HT;
         break;
 
       case s_res_HT:
-        STRICT_CHECK(ch != 'T');
+        CROW_STRICT_CHECK(ch != 'T');
         parser->state = s_res_HTT;
         break;
 
       case s_res_HTT:
-        STRICT_CHECK(ch != 'P');
+        CROW_STRICT_CHECK(ch != 'P');
         parser->state = s_res_HTTP;
         break;
 
       case s_res_HTTP:
-        STRICT_CHECK(ch != '/');
+        CROW_STRICT_CHECK(ch != '/');
         parser->state = s_res_first_http_major;
         break;
 
       case s_res_first_http_major:
         if (ch < '0' || ch > '9') {
-          SET_ERRNO(HPE_INVALID_VERSION);
+          CROW_SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
 
@@ -3420,8 +3420,8 @@ static const int8_t unhex[256] =
           break;
         }
 
-        if (!IS_NUM(ch)) {
-          SET_ERRNO(HPE_INVALID_VERSION);
+        if (!CROW_IS_NUM(ch)) {
+          CROW_SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
 
@@ -3429,7 +3429,7 @@ static const int8_t unhex[256] =
         parser->http_major += ch - '0';
 
         if (parser->http_major > 999) {
-          SET_ERRNO(HPE_INVALID_VERSION);
+          CROW_SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
 
@@ -3438,8 +3438,8 @@ static const int8_t unhex[256] =
 
       /* first digit of minor HTTP version */
       case s_res_first_http_minor:
-        if (!IS_NUM(ch)) {
-          SET_ERRNO(HPE_INVALID_VERSION);
+        if (!CROW_IS_NUM(ch)) {
+          CROW_SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
 
@@ -3455,8 +3455,8 @@ static const int8_t unhex[256] =
           break;
         }
 
-        if (!IS_NUM(ch)) {
-          SET_ERRNO(HPE_INVALID_VERSION);
+        if (!CROW_IS_NUM(ch)) {
+          CROW_SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
 
@@ -3464,7 +3464,7 @@ static const int8_t unhex[256] =
         parser->http_minor += ch - '0';
 
         if (parser->http_minor > 999) {
-          SET_ERRNO(HPE_INVALID_VERSION);
+          CROW_SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
 
@@ -3473,12 +3473,12 @@ static const int8_t unhex[256] =
 
       case s_res_first_status_code:
       {
-        if (!IS_NUM(ch)) {
+        if (!CROW_IS_NUM(ch)) {
           if (ch == ' ') {
             break;
           }
 
-          SET_ERRNO(HPE_INVALID_STATUS);
+          CROW_SET_ERRNO(HPE_INVALID_STATUS);
           goto error;
         }
         parser->status_code = ch - '0';
@@ -3488,19 +3488,19 @@ static const int8_t unhex[256] =
 
       case s_res_status_code:
       {
-        if (!IS_NUM(ch)) {
+        if (!CROW_IS_NUM(ch)) {
           switch (ch) {
             case ' ':
               parser->state = s_res_status_start;
               break;
-            case CR:
+            case CROW_CR:
               parser->state = s_res_line_almost_done;
               break;
-            case LF:
+            case CROW_LF:
               parser->state = s_header_field_start;
               break;
             default:
-              SET_ERRNO(HPE_INVALID_STATUS);
+              CROW_SET_ERRNO(HPE_INVALID_STATUS);
               goto error;
           }
           break;
@@ -3510,7 +3510,7 @@ static const int8_t unhex[256] =
         parser->status_code += ch - '0';
 
         if (parser->status_code > 999) {
-          SET_ERRNO(HPE_INVALID_STATUS);
+          CROW_SET_ERRNO(HPE_INVALID_STATUS);
           goto error;
         }
 
@@ -3519,51 +3519,51 @@ static const int8_t unhex[256] =
 
       case s_res_status_start:
       {
-        if (ch == CR) {
+        if (ch == CROW_CR) {
           parser->state = s_res_line_almost_done;
           break;
         }
 
-        if (ch == LF) {
+        if (ch == CROW_LF) {
           parser->state = s_header_field_start;
           break;
         }
 
-        MARK(status);
+        CROW_MARK(status);
         parser->state = s_res_status;
         parser->index = 0;
         break;
       }
 
       case s_res_status:
-        if (ch == CR) {
+        if (ch == CROW_CR) {
           parser->state = s_res_line_almost_done;
-          CALLBACK_DATA(status);
+          CROW_CALLBACK_DATA(status);
           break;
         }
 
-        if (ch == LF) {
+        if (ch == CROW_LF) {
           parser->state = s_header_field_start;
-          CALLBACK_DATA(status);
+          CROW_CALLBACK_DATA(status);
           break;
         }
 
         break;
 
       case s_res_line_almost_done:
-        STRICT_CHECK(ch != LF);
+        CROW_STRICT_CHECK(ch != CROW_LF);
         parser->state = s_header_field_start;
         break;
 
       case s_start_req:
       {
-        if (ch == CR || ch == LF)
+        if (ch == CROW_CR || ch == CROW_LF)
           break;
         parser->flags = 0;
-        parser->content_length = ULLONG_MAX;
+        parser->content_length = CROW_ULLONG_MAX;
 
-        if (!IS_ALPHA(ch)) {
-          SET_ERRNO(HPE_INVALID_METHOD);
+        if (!CROW_IS_ALPHA(ch)) {
+          CROW_SET_ERRNO(HPE_INVALID_METHOD);
           goto error;
         }
 
@@ -3586,12 +3586,12 @@ static const int8_t unhex[256] =
           case 'T': parser->method = HTTP_TRACE; break;
           case 'U': parser->method = HTTP_UNLOCK; /* or UNSUBSCRIBE */ break;
           default:
-            SET_ERRNO(HPE_INVALID_METHOD);
+            CROW_SET_ERRNO(HPE_INVALID_METHOD);
             goto error;
         }
         parser->state = s_req_method;
 
-        CALLBACK_NOTIFY(message_begin);
+        CROW_CALLBACK_NOTIFY(message_begin);
 
         break;
       }
@@ -3600,7 +3600,7 @@ static const int8_t unhex[256] =
       {
         const char *matcher;
         if (ch == '\0') {
-          SET_ERRNO(HPE_INVALID_METHOD);
+          CROW_SET_ERRNO(HPE_INVALID_METHOD);
           goto error;
         }
 
@@ -3615,7 +3615,7 @@ static const int8_t unhex[256] =
           } else if (parser->index == 2  && ch == 'P') {
             parser->method = HTTP_COPY;
           } else {
-            SET_ERRNO(HPE_INVALID_METHOD);
+            CROW_SET_ERRNO(HPE_INVALID_METHOD);
             goto error;
           }
         } else if (parser->method == HTTP_MKCOL) {
@@ -3630,14 +3630,14 @@ static const int8_t unhex[256] =
           } else if (parser->index == 3 && ch == 'A') {
             parser->method = HTTP_MKCALENDAR;
           } else {
-            SET_ERRNO(HPE_INVALID_METHOD);
+            CROW_SET_ERRNO(HPE_INVALID_METHOD);
             goto error;
           }
         } else if (parser->method == HTTP_SUBSCRIBE) {
           if (parser->index == 1 && ch == 'E') {
             parser->method = HTTP_SEARCH;
           } else {
-            SET_ERRNO(HPE_INVALID_METHOD);
+            CROW_SET_ERRNO(HPE_INVALID_METHOD);
             goto error;
           }
         } else if (parser->index == 1 && parser->method == HTTP_POST) {
@@ -3648,7 +3648,7 @@ static const int8_t unhex[256] =
           } else if (ch == 'A') {
             parser->method = HTTP_PATCH;
           } else {
-            SET_ERRNO(HPE_INVALID_METHOD);
+            CROW_SET_ERRNO(HPE_INVALID_METHOD);
             goto error;
           }
         } else if (parser->index == 2) {
@@ -3656,24 +3656,24 @@ static const int8_t unhex[256] =
             if (ch == 'R') {
               parser->method = HTTP_PURGE;
             } else {
-              SET_ERRNO(HPE_INVALID_METHOD);
+              CROW_SET_ERRNO(HPE_INVALID_METHOD);
               goto error;
             }
           } else if (parser->method == HTTP_UNLOCK) {
             if (ch == 'S') {
               parser->method = HTTP_UNSUBSCRIBE;
             } else {
-              SET_ERRNO(HPE_INVALID_METHOD);
+              CROW_SET_ERRNO(HPE_INVALID_METHOD);
               goto error;
             }
           } else {
-            SET_ERRNO(HPE_INVALID_METHOD);
+            CROW_SET_ERRNO(HPE_INVALID_METHOD);
             goto error;
           }
         } else if (parser->index == 4 && parser->method == HTTP_PROPFIND && ch == 'P') {
           parser->method = HTTP_PROPPATCH;
         } else {
-          SET_ERRNO(HPE_INVALID_METHOD);
+          CROW_SET_ERRNO(HPE_INVALID_METHOD);
           goto error;
         }
 
@@ -3685,14 +3685,14 @@ static const int8_t unhex[256] =
       {
         if (ch == ' ') break;
 
-        MARK(url);
+        CROW_MARK(url);
         if (parser->method == HTTP_CONNECT) {
           parser->state = s_req_server_start;
         }
 
         parser->state = parse_url_char((enum state)parser->state, ch);
         if (parser->state == s_dead) {
-          SET_ERRNO(HPE_INVALID_URL);
+          CROW_SET_ERRNO(HPE_INVALID_URL);
           goto error;
         }
 
@@ -3707,14 +3707,14 @@ static const int8_t unhex[256] =
         switch (ch) {
           /* No whitespace allowed here */
           case ' ':
-          case CR:
-          case LF:
-            SET_ERRNO(HPE_INVALID_URL);
+          case CROW_CR:
+          case CROW_LF:
+            CROW_SET_ERRNO(HPE_INVALID_URL);
             goto error;
           default:
             parser->state = parse_url_char((enum state)parser->state, ch);
             if (parser->state == s_dead) {
-              SET_ERRNO(HPE_INVALID_URL);
+              CROW_SET_ERRNO(HPE_INVALID_URL);
               goto error;
             }
         }
@@ -3733,21 +3733,21 @@ static const int8_t unhex[256] =
         switch (ch) {
           case ' ':
             parser->state = s_req_http_start;
-            CALLBACK_DATA(url);
+            CROW_CALLBACK_DATA(url);
             break;
-          case CR:
-          case LF:
+          case CROW_CR:
+          case CROW_LF:
             parser->http_major = 0;
             parser->http_minor = 9;
-            parser->state = (ch == CR) ?
+            parser->state = (ch == CROW_CR) ?
               s_req_line_almost_done :
               s_header_field_start;
-            CALLBACK_DATA(url);
+            CROW_CALLBACK_DATA(url);
             break;
           default:
             parser->state = parse_url_char((enum state)parser->state, ch);
             if (parser->state == s_dead) {
-              SET_ERRNO(HPE_INVALID_URL);
+              CROW_SET_ERRNO(HPE_INVALID_URL);
               goto error;
             }
         }
@@ -3762,35 +3762,35 @@ static const int8_t unhex[256] =
           case ' ':
             break;
           default:
-            SET_ERRNO(HPE_INVALID_CONSTANT);
+            CROW_SET_ERRNO(HPE_INVALID_CONSTANT);
             goto error;
         }
         break;
 
       case s_req_http_H:
-        STRICT_CHECK(ch != 'T');
+        CROW_STRICT_CHECK(ch != 'T');
         parser->state = s_req_http_HT;
         break;
 
       case s_req_http_HT:
-        STRICT_CHECK(ch != 'T');
+        CROW_STRICT_CHECK(ch != 'T');
         parser->state = s_req_http_HTT;
         break;
 
       case s_req_http_HTT:
-        STRICT_CHECK(ch != 'P');
+        CROW_STRICT_CHECK(ch != 'P');
         parser->state = s_req_http_HTTP;
         break;
 
       case s_req_http_HTTP:
-        STRICT_CHECK(ch != '/');
+        CROW_STRICT_CHECK(ch != '/');
         parser->state = s_req_first_http_major;
         break;
 
       /* first digit of major HTTP version */
       case s_req_first_http_major:
         if (ch < '1' || ch > '9') {
-          SET_ERRNO(HPE_INVALID_VERSION);
+          CROW_SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
 
@@ -3806,8 +3806,8 @@ static const int8_t unhex[256] =
           break;
         }
 
-        if (!IS_NUM(ch)) {
-          SET_ERRNO(HPE_INVALID_VERSION);
+        if (!CROW_IS_NUM(ch)) {
+          CROW_SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
 
@@ -3815,7 +3815,7 @@ static const int8_t unhex[256] =
         parser->http_major += ch - '0';
 
         if (parser->http_major > 999) {
-          SET_ERRNO(HPE_INVALID_VERSION);
+          CROW_SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
 
@@ -3824,8 +3824,8 @@ static const int8_t unhex[256] =
 
       /* first digit of minor HTTP version */
       case s_req_first_http_minor:
-        if (!IS_NUM(ch)) {
-          SET_ERRNO(HPE_INVALID_VERSION);
+        if (!CROW_IS_NUM(ch)) {
+          CROW_SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
 
@@ -3836,20 +3836,20 @@ static const int8_t unhex[256] =
       /* minor HTTP version or end of request line */
       case s_req_http_minor:
       {
-        if (ch == CR) {
+        if (ch == CROW_CR) {
           parser->state = s_req_line_almost_done;
           break;
         }
 
-        if (ch == LF) {
+        if (ch == CROW_LF) {
           parser->state = s_header_field_start;
           break;
         }
 
         /* XXX allow spaces after digit? */
 
-        if (!IS_NUM(ch)) {
-          SET_ERRNO(HPE_INVALID_VERSION);
+        if (!CROW_IS_NUM(ch)) {
+          CROW_SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
 
@@ -3857,7 +3857,7 @@ static const int8_t unhex[256] =
         parser->http_minor += ch - '0';
 
         if (parser->http_minor > 999) {
-          SET_ERRNO(HPE_INVALID_VERSION);
+          CROW_SET_ERRNO(HPE_INVALID_VERSION);
           goto error;
         }
 
@@ -3867,8 +3867,8 @@ static const int8_t unhex[256] =
       /* end of request line */
       case s_req_line_almost_done:
       {
-        if (ch != LF) {
-          SET_ERRNO(HPE_LF_EXPECTED);
+        if (ch != CROW_LF) {
+          CROW_SET_ERRNO(HPE_LF_EXPECTED);
           goto error;
         }
 
@@ -3878,26 +3878,26 @@ static const int8_t unhex[256] =
 
       case s_header_field_start:
       {
-        if (ch == CR) {
+        if (ch == CROW_CR) {
           parser->state = s_headers_almost_done;
           break;
         }
 
-        if (ch == LF) {
+        if (ch == CROW_LF) {
           /* they might be just sending \n instead of \r\n so this would be
            * the second \n to denote the end of headers*/
           parser->state = s_headers_almost_done;
           goto reexecute_byte;
         }
 
-        c = TOKEN(ch);
+        c = CROW_TOKEN(ch);
 
         if (!c) {
-          SET_ERRNO(HPE_INVALID_HEADER_TOKEN);
+          CROW_SET_ERRNO(HPE_INVALID_HEADER_TOKEN);
           goto error;
         }
 
-        MARK(header_field);
+        CROW_MARK(header_field);
 
         parser->index = 0;
         parser->state = s_header_field;
@@ -3928,7 +3928,7 @@ static const int8_t unhex[256] =
 
       case s_header_field:
       {
-        c = TOKEN(ch);
+        c = CROW_TOKEN(ch);
 
         if (c) {
           switch (parser->header_state) {
@@ -3964,10 +3964,10 @@ static const int8_t unhex[256] =
 
             case h_matching_connection:
               parser->index++;
-              if (parser->index > sizeof(CONNECTION)-1
-                  || c != CONNECTION[parser->index]) {
+              if (parser->index > sizeof(CROW_CONNECTION)-1
+                  || c != CROW_CONNECTION[parser->index]) {
                 parser->header_state = h_general;
-              } else if (parser->index == sizeof(CONNECTION)-2) {
+              } else if (parser->index == sizeof(CROW_CONNECTION)-2) {
                 parser->header_state = h_connection;
               }
               break;
@@ -3976,10 +3976,10 @@ static const int8_t unhex[256] =
 
             case h_matching_proxy_connection:
               parser->index++;
-              if (parser->index > sizeof(PROXY_CONNECTION)-1
-                  || c != PROXY_CONNECTION[parser->index]) {
+              if (parser->index > sizeof(CROW_PROXY_CONNECTION)-1
+                  || c != CROW_PROXY_CONNECTION[parser->index]) {
                 parser->header_state = h_general;
-              } else if (parser->index == sizeof(PROXY_CONNECTION)-2) {
+              } else if (parser->index == sizeof(CROW_PROXY_CONNECTION)-2) {
                 parser->header_state = h_connection;
               }
               break;
@@ -3988,10 +3988,10 @@ static const int8_t unhex[256] =
 
             case h_matching_content_length:
               parser->index++;
-              if (parser->index > sizeof(CONTENT_LENGTH)-1
-                  || c != CONTENT_LENGTH[parser->index]) {
+              if (parser->index > sizeof(CROW_CONTENT_LENGTH)-1
+                  || c != CROW_CONTENT_LENGTH[parser->index]) {
                 parser->header_state = h_general;
-              } else if (parser->index == sizeof(CONTENT_LENGTH)-2) {
+              } else if (parser->index == sizeof(CROW_CONTENT_LENGTH)-2) {
                 parser->header_state = h_content_length;
               }
               break;
@@ -4000,10 +4000,10 @@ static const int8_t unhex[256] =
 
             case h_matching_transfer_encoding:
               parser->index++;
-              if (parser->index > sizeof(TRANSFER_ENCODING)-1
-                  || c != TRANSFER_ENCODING[parser->index]) {
+              if (parser->index > sizeof(CROW_TRANSFER_ENCODING)-1
+                  || c != CROW_TRANSFER_ENCODING[parser->index]) {
                 parser->header_state = h_general;
-              } else if (parser->index == sizeof(TRANSFER_ENCODING)-2) {
+              } else if (parser->index == sizeof(CROW_TRANSFER_ENCODING)-2) {
                 parser->header_state = h_transfer_encoding;
               }
               break;
@@ -4012,10 +4012,10 @@ static const int8_t unhex[256] =
 
             case h_matching_upgrade:
               parser->index++;
-              if (parser->index > sizeof(UPGRADE)-1
-                  || c != UPGRADE[parser->index]) {
+              if (parser->index > sizeof(CROW_UPGRADE)-1
+                  || c != CROW_UPGRADE[parser->index]) {
                 parser->header_state = h_general;
-              } else if (parser->index == sizeof(UPGRADE)-2) {
+              } else if (parser->index == sizeof(CROW_UPGRADE)-2) {
                 parser->header_state = h_upgrade;
               }
               break;
@@ -4036,35 +4036,35 @@ static const int8_t unhex[256] =
 
         if (ch == ':') {
           parser->state = s_header_value_discard_ws;
-          CALLBACK_DATA(header_field);
+          CROW_CALLBACK_DATA(header_field);
           break;
         }
 
-        if (ch == CR) {
+        if (ch == CROW_CR) {
           parser->state = s_header_almost_done;
-          CALLBACK_DATA(header_field);
+          CROW_CALLBACK_DATA(header_field);
           break;
         }
 
-        if (ch == LF) {
+        if (ch == CROW_LF) {
           parser->state = s_header_field_start;
-          CALLBACK_DATA(header_field);
+          CROW_CALLBACK_DATA(header_field);
           break;
         }
 
-        SET_ERRNO(HPE_INVALID_HEADER_TOKEN);
+        CROW_SET_ERRNO(HPE_INVALID_HEADER_TOKEN);
         goto error;
       }
 
       case s_header_value_discard_ws:
         if (ch == ' ' || ch == '\t') break;
 
-        if (ch == CR) {
+        if (ch == CROW_CR) {
           parser->state = s_header_value_discard_ws_almost_done;
           break;
         }
 
-        if (ch == LF) {
+        if (ch == CROW_LF) {
           parser->state = s_header_value_discard_lws;
           break;
         }
@@ -4073,12 +4073,12 @@ static const int8_t unhex[256] =
 
       case s_header_value_start:
       {
-        MARK(header_value);
+        CROW_MARK(header_value);
 
         parser->state = s_header_value;
         parser->index = 0;
 
-        c = LOWER(ch);
+        c = CROW_LOWER(ch);
 
         switch (parser->header_state) {
           case h_upgrade:
@@ -4096,8 +4096,8 @@ static const int8_t unhex[256] =
             break;
 
           case h_content_length:
-            if (!IS_NUM(ch)) {
-              SET_ERRNO(HPE_INVALID_CONTENT_LENGTH);
+            if (!CROW_IS_NUM(ch)) {
+              CROW_SET_ERRNO(HPE_INVALID_CONTENT_LENGTH);
               goto error;
             }
 
@@ -4126,19 +4126,19 @@ static const int8_t unhex[256] =
       case s_header_value:
       {
 
-        if (ch == CR) {
+        if (ch == CROW_CR) {
           parser->state = s_header_almost_done;
-          CALLBACK_DATA(header_value);
+          CROW_CALLBACK_DATA(header_value);
           break;
         }
 
-        if (ch == LF) {
+        if (ch == CROW_LF) {
           parser->state = s_header_almost_done;
-          CALLBACK_DATA_NOADVANCE(header_value);
+          CROW_CALLBACK_DATA_NOADVANCE(header_value);
           goto reexecute_byte;
         }
 
-        c = LOWER(ch);
+        c = CROW_LOWER(ch);
 
         switch (parser->header_state) {
           case h_general:
@@ -4155,8 +4155,8 @@ static const int8_t unhex[256] =
 
             if (ch == ' ') break;
 
-            if (!IS_NUM(ch)) {
-              SET_ERRNO(HPE_INVALID_CONTENT_LENGTH);
+            if (!CROW_IS_NUM(ch)) {
+              CROW_SET_ERRNO(HPE_INVALID_CONTENT_LENGTH);
               goto error;
             }
 
@@ -4165,8 +4165,8 @@ static const int8_t unhex[256] =
             t += ch - '0';
 
             /* Overflow? Test against a conservative limit for simplicity. */
-            if ((ULLONG_MAX - 10) / 10 < parser->content_length) {
-              SET_ERRNO(HPE_INVALID_CONTENT_LENGTH);
+            if ((CROW_ULLONG_MAX - 10) / 10 < parser->content_length) {
+              CROW_SET_ERRNO(HPE_INVALID_CONTENT_LENGTH);
               goto error;
             }
 
@@ -4177,10 +4177,10 @@ static const int8_t unhex[256] =
           /* Transfer-Encoding: chunked */
           case h_matching_transfer_encoding_chunked:
             parser->index++;
-            if (parser->index > sizeof(CHUNKED)-1
-                || c != CHUNKED[parser->index]) {
+            if (parser->index > sizeof(CROW_CHUNKED)-1
+                || c != CROW_CHUNKED[parser->index]) {
               parser->header_state = h_general;
-            } else if (parser->index == sizeof(CHUNKED)-2) {
+            } else if (parser->index == sizeof(CROW_CHUNKED)-2) {
               parser->header_state = h_transfer_encoding_chunked;
             }
             break;
@@ -4188,10 +4188,10 @@ static const int8_t unhex[256] =
           /* looking for 'Connection: keep-alive' */
           case h_matching_connection_keep_alive:
             parser->index++;
-            if (parser->index > sizeof(KEEP_ALIVE)-1
-                || c != KEEP_ALIVE[parser->index]) {
+            if (parser->index > sizeof(CROW_KEEP_ALIVE)-1
+                || c != CROW_KEEP_ALIVE[parser->index]) {
               parser->header_state = h_general;
-            } else if (parser->index == sizeof(KEEP_ALIVE)-2) {
+            } else if (parser->index == sizeof(CROW_KEEP_ALIVE)-2) {
               parser->header_state = h_connection_keep_alive;
             }
             break;
@@ -4199,9 +4199,9 @@ static const int8_t unhex[256] =
           /* looking for 'Connection: close' */
           case h_matching_connection_close:
             parser->index++;
-            if (parser->index > sizeof(CLOSE)-1 || c != CLOSE[parser->index]) {
+            if (parser->index > sizeof(CROW_CLOSE)-1 || c != CROW_CLOSE[parser->index]) {
               parser->header_state = h_general;
-            } else if (parser->index == sizeof(CLOSE)-2) {
+            } else if (parser->index == sizeof(CROW_CLOSE)-2) {
               parser->header_state = h_connection_close;
             }
             break;
@@ -4222,7 +4222,7 @@ static const int8_t unhex[256] =
 
       case s_header_almost_done:
       {
-        STRICT_CHECK(ch != LF);
+        CROW_STRICT_CHECK(ch != CROW_LF);
 
         parser->state = s_header_value_lws;
         break;
@@ -4256,7 +4256,7 @@ static const int8_t unhex[256] =
 
       case s_header_value_discard_ws_almost_done:
       {
-        STRICT_CHECK(ch != LF);
+        CROW_STRICT_CHECK(ch != CROW_LF);
         parser->state = s_header_value_discard_lws;
         break;
       }
@@ -4268,21 +4268,21 @@ static const int8_t unhex[256] =
           break;
         } else {
           /* header value was empty */
-          MARK(header_value);
+          CROW_MARK(header_value);
           parser->state = s_header_field_start;
-          CALLBACK_DATA_NOADVANCE(header_value);
+          CROW_CALLBACK_DATA_NOADVANCE(header_value);
           goto reexecute_byte;
         }
       }
 
       case s_headers_almost_done:
       {
-        STRICT_CHECK(ch != LF);
+        CROW_STRICT_CHECK(ch != CROW_LF);
 
         if (parser->flags & F_TRAILING) {
           /* End of a chunked request */
-          parser->state = NEW_MESSAGE();
-          CALLBACK_NOTIFY(message_complete);
+          parser->state = CROW_NEW_MESSAGE();
+          CROW_CALLBACK_NOTIFY(message_complete);
           break;
         }
 
@@ -4298,7 +4298,7 @@ static const int8_t unhex[256] =
          * is needed for the annoying case of recieving a response to a HEAD
          * request.
          *
-         * We'd like to use CALLBACK_NOTIFY_NOADVANCE() here but we cannot, so
+         * We'd like to use CROW_CALLBACK_NOTIFY_NOADVANCE() here but we cannot, so
          * we have to simulate it by handling a change in errno below.
          */
         if (settings->on_headers_complete) {
@@ -4311,12 +4311,12 @@ static const int8_t unhex[256] =
               break;
 
             default:
-              SET_ERRNO(HPE_CB_headers_complete);
+              CROW_SET_ERRNO(HPE_CB_headers_complete);
               return p - data; /* Error */
           }
         }
 
-        if (HTTP_PARSER_ERRNO(parser) != HPE_OK) {
+        if (CROW_HTTP_PARSER_ERRNO(parser) != HPE_OK) {
           return p - data;
         }
 
@@ -4325,37 +4325,37 @@ static const int8_t unhex[256] =
 
       case s_headers_done:
       {
-        STRICT_CHECK(ch != LF);
+        CROW_STRICT_CHECK(ch != CROW_LF);
 
         parser->nread = 0;
 
         /* Exit, the rest of the connect is in a different protocol. */
         if (parser->upgrade) {
-          parser->state = NEW_MESSAGE();
-          CALLBACK_NOTIFY(message_complete);
+          parser->state = CROW_NEW_MESSAGE();
+          CROW_CALLBACK_NOTIFY(message_complete);
           return (p - data) + 1;
         }
 
         if (parser->flags & F_SKIPBODY) {
-          parser->state = NEW_MESSAGE();
-          CALLBACK_NOTIFY(message_complete);
+          parser->state = CROW_NEW_MESSAGE();
+          CROW_CALLBACK_NOTIFY(message_complete);
         } else if (parser->flags & F_CHUNKED) {
           /* chunked encoding - ignore Content-Length header */
           parser->state = s_chunk_size_start;
         } else {
           if (parser->content_length == 0) {
             /* Content-Length header given but zero: Content-Length: 0\r\n */
-            parser->state = NEW_MESSAGE();
-            CALLBACK_NOTIFY(message_complete);
-          } else if (parser->content_length != ULLONG_MAX) {
+            parser->state = CROW_NEW_MESSAGE();
+            CROW_CALLBACK_NOTIFY(message_complete);
+          } else if (parser->content_length != CROW_ULLONG_MAX) {
             /* Content-Length header given and non-zero */
             parser->state = s_body_identity;
           } else {
             if (parser->type == HTTP_REQUEST ||
                 !http_message_needs_eof(parser)) {
               /* Assume content-length 0 - read the next */
-              parser->state = NEW_MESSAGE();
-              CALLBACK_NOTIFY(message_complete);
+              parser->state = CROW_NEW_MESSAGE();
+              CROW_CALLBACK_NOTIFY(message_complete);
             } else {
               /* Read body until EOF */
               parser->state = s_body_identity_eof;
@@ -4368,25 +4368,25 @@ static const int8_t unhex[256] =
 
       case s_body_identity:
       {
-        uint64_t to_read = MIN(parser->content_length,
+        uint64_t to_read = CROW_MIN(parser->content_length,
                                (uint64_t) ((data + len) - p));
 
         assert(parser->content_length != 0
-            && parser->content_length != ULLONG_MAX);
+            && parser->content_length != CROW_ULLONG_MAX);
 
         /* The difference between advancing content_length and p is because
          * the latter will automaticaly advance on the next loop iteration.
          * Further, if content_length ends up at 0, we want to see the last
          * byte again for our message complete callback.
          */
-        MARK(body);
+        CROW_MARK(body);
         parser->content_length -= to_read;
         p += to_read - 1;
 
         if (parser->content_length == 0) {
           parser->state = s_message_done;
 
-          /* Mimic CALLBACK_DATA_NOADVANCE() but with one extra byte.
+          /* Mimic CROW_CALLBACK_DATA_NOADVANCE() but with one extra byte.
            *
            * The alternative to doing this is to wait for the next byte to
            * trigger the data callback, just as in every other case. The
@@ -4395,7 +4395,7 @@ static const int8_t unhex[256] =
            * complete-on-length. It's not clear that this distinction is
            * important for applications, but let's keep it for now.
            */
-          CALLBACK_DATA_(body, p - body_mark + 1, p - data);
+          CROW_CALLBACK_DATA_(body, p - body_mark + 1, p - data);
           goto reexecute_byte;
         }
 
@@ -4404,14 +4404,14 @@ static const int8_t unhex[256] =
 
       /* read until EOF */
       case s_body_identity_eof:
-        MARK(body);
+        CROW_MARK(body);
         p = data + len - 1;
 
         break;
 
       case s_message_done:
-        parser->state = NEW_MESSAGE();
-        CALLBACK_NOTIFY(message_complete);
+        parser->state = CROW_NEW_MESSAGE();
+        CROW_CALLBACK_NOTIFY(message_complete);
         break;
 
       case s_chunk_size_start:
@@ -4421,7 +4421,7 @@ static const int8_t unhex[256] =
 
         unhex_val = unhex[(unsigned char)ch];
         if (unhex_val == -1) {
-          SET_ERRNO(HPE_INVALID_CHUNK_SIZE);
+          CROW_SET_ERRNO(HPE_INVALID_CHUNK_SIZE);
           goto error;
         }
 
@@ -4436,7 +4436,7 @@ static const int8_t unhex[256] =
 
         assert(parser->flags & F_CHUNKED);
 
-        if (ch == CR) {
+        if (ch == CROW_CR) {
           parser->state = s_chunk_size_almost_done;
           break;
         }
@@ -4449,7 +4449,7 @@ static const int8_t unhex[256] =
             break;
           }
 
-          SET_ERRNO(HPE_INVALID_CHUNK_SIZE);
+          CROW_SET_ERRNO(HPE_INVALID_CHUNK_SIZE);
           goto error;
         }
 
@@ -4458,8 +4458,8 @@ static const int8_t unhex[256] =
         t += unhex_val;
 
         /* Overflow? Test against a conservative limit for simplicity. */
-        if ((ULLONG_MAX - 16) / 16 < parser->content_length) {
-          SET_ERRNO(HPE_INVALID_CONTENT_LENGTH);
+        if ((CROW_ULLONG_MAX - 16) / 16 < parser->content_length) {
+          CROW_SET_ERRNO(HPE_INVALID_CONTENT_LENGTH);
           goto error;
         }
 
@@ -4471,7 +4471,7 @@ static const int8_t unhex[256] =
       {
         assert(parser->flags & F_CHUNKED);
         /* just ignore this shit. TODO check for overflow */
-        if (ch == CR) {
+        if (ch == CROW_CR) {
           parser->state = s_chunk_size_almost_done;
           break;
         }
@@ -4481,7 +4481,7 @@ static const int8_t unhex[256] =
       case s_chunk_size_almost_done:
       {
         assert(parser->flags & F_CHUNKED);
-        STRICT_CHECK(ch != LF);
+        CROW_STRICT_CHECK(ch != CROW_LF);
 
         parser->nread = 0;
 
@@ -4496,17 +4496,17 @@ static const int8_t unhex[256] =
 
       case s_chunk_data:
       {
-        uint64_t to_read = MIN(parser->content_length,
+        uint64_t to_read = CROW_MIN(parser->content_length,
                                (uint64_t) ((data + len) - p));
 
         assert(parser->flags & F_CHUNKED);
         assert(parser->content_length != 0
-            && parser->content_length != ULLONG_MAX);
+            && parser->content_length != CROW_ULLONG_MAX);
 
         /* See the explanation in s_body_identity for why the content
          * length and data pointers are managed this way.
          */
-        MARK(body);
+        CROW_MARK(body);
         parser->content_length -= to_read;
         p += to_read - 1;
 
@@ -4520,21 +4520,21 @@ static const int8_t unhex[256] =
       case s_chunk_data_almost_done:
         assert(parser->flags & F_CHUNKED);
         assert(parser->content_length == 0);
-        STRICT_CHECK(ch != CR);
+        CROW_STRICT_CHECK(ch != CROW_CR);
         parser->state = s_chunk_data_done;
-        CALLBACK_DATA(body);
+        CROW_CALLBACK_DATA(body);
         break;
 
       case s_chunk_data_done:
         assert(parser->flags & F_CHUNKED);
-        STRICT_CHECK(ch != LF);
+        CROW_STRICT_CHECK(ch != CROW_LF);
         parser->nread = 0;
         parser->state = s_chunk_size_start;
         break;
 
       default:
         assert(0 && "unhandled state");
-        SET_ERRNO(HPE_INVALID_INTERNAL_STATE);
+        CROW_SET_ERRNO(HPE_INVALID_INTERNAL_STATE);
         goto error;
     }
   }
@@ -4545,7 +4545,7 @@ static const int8_t unhex[256] =
    *
    * We use the NOADVANCE() variety of callbacks here because 'p' has already
    * overflowed 'data' and this allows us to correct for the off-by-one that
-   * we'd otherwise have (since CALLBACK_DATA() is meant to be run with a 'p'
+   * we'd otherwise have (since CROW_CALLBACK_DATA() is meant to be run with a 'p'
    * value that's in-bounds).
    */
 
@@ -4555,17 +4555,17 @@ static const int8_t unhex[256] =
           (body_mark ? 1 : 0) +
           (status_mark ? 1 : 0)) <= 1);
 
-  CALLBACK_DATA_NOADVANCE(header_field);
-  CALLBACK_DATA_NOADVANCE(header_value);
-  CALLBACK_DATA_NOADVANCE(url);
-  CALLBACK_DATA_NOADVANCE(body);
-  CALLBACK_DATA_NOADVANCE(status);
+  CROW_CALLBACK_DATA_NOADVANCE(header_field);
+  CROW_CALLBACK_DATA_NOADVANCE(header_value);
+  CROW_CALLBACK_DATA_NOADVANCE(url);
+  CROW_CALLBACK_DATA_NOADVANCE(body);
+  CROW_CALLBACK_DATA_NOADVANCE(status);
 
   return len;
 
 error:
-  if (HTTP_PARSER_ERRNO(parser) == HPE_OK) {
-    SET_ERRNO(HPE_UNKNOWN);
+  if (CROW_HTTP_PARSER_ERRNO(parser) == HPE_OK) {
+    CROW_SET_ERRNO(HPE_UNKNOWN);
   }
 
   return (p - data);
@@ -4588,7 +4588,7 @@ http_message_needs_eof (const http_parser *parser)
     return 0;
   }
 
-  if ((parser->flags & F_CHUNKED) || parser->content_length != ULLONG_MAX) {
+  if ((parser->flags & F_CHUNKED) || parser->content_length != CROW_ULLONG_MAX) {
     return 0;
   }
 
@@ -4620,11 +4620,11 @@ http_method_str (enum http_method m)
 {
 static const char *method_strings[] =
   {
-#define XX(num, name, string) #string,
-  HTTP_METHOD_MAP(XX)
-#undef XX
+#define CROW_XX(num, name, string) #string,
+  CROW_HTTP_METHOD_MAP(CROW_XX)
+#undef CROW_XX
   };
-  return ELEM_AT(method_strings, m, "<unknown>");
+  return CROW_ELEM_AT(method_strings, m, "<unknown>");
 }
 
 
@@ -4642,14 +4642,14 @@ http_parser_init (http_parser *parser, enum http_parser_type t)
 inline const char *
 http_errno_name(enum http_errno err) {
 /* Map errno values to strings for human-readable output */
-#define HTTP_STRERROR_GEN(n, s) { "HPE_" #n, s },
+#define CROW_HTTP_STRERROR_GEN(n, s) { "HPE_" #n, s },
 static struct {
   const char *name;
   const char *description;
 } http_strerror_tab[] = {
-  HTTP_ERRNO_MAP(HTTP_STRERROR_GEN)
+  CROW_HTTP_ERRNO_MAP(CROW_HTTP_STRERROR_GEN)
 };
-#undef HTTP_STRERROR_GEN
+#undef CROW_HTTP_STRERROR_GEN
   assert(err < (sizeof(http_strerror_tab)/sizeof(http_strerror_tab[0])));
   return http_strerror_tab[err].name;
 }
@@ -4657,14 +4657,14 @@ static struct {
 inline const char *
 http_errno_description(enum http_errno err) {
 /* Map errno values to strings for human-readable output */
-#define HTTP_STRERROR_GEN(n, s) { "HPE_" #n, s },
+#define CROW_HTTP_STRERROR_GEN(n, s) { "HPE_" #n, s },
 static struct {
   const char *name;
   const char *description;
 } http_strerror_tab[] = {
-  HTTP_ERRNO_MAP(HTTP_STRERROR_GEN)
+  CROW_HTTP_ERRNO_MAP(CROW_HTTP_STRERROR_GEN)
 };
-#undef HTTP_STRERROR_GEN
+#undef CROW_HTTP_STRERROR_GEN
   assert(err < (sizeof(http_strerror_tab)/sizeof(http_strerror_tab[0])));
   return http_strerror_tab[err].description;
 }
@@ -4678,7 +4678,7 @@ http_parse_host_char(enum http_host_state s, const char ch) {
         return s_http_host_start;
       }
 
-      if (IS_USERINFO_CHAR(ch)) {
+      if (CROW_IS_USERINFO_CHAR(ch)) {
         return s_http_userinfo;
       }
       break;
@@ -4688,14 +4688,14 @@ http_parse_host_char(enum http_host_state s, const char ch) {
         return s_http_host_v6_start;
       }
 
-      if (IS_HOST_CHAR(ch)) {
+      if (CROW_IS_HOST_CHAR(ch)) {
         return s_http_host;
       }
 
       break;
 
     case s_http_host:
-      if (IS_HOST_CHAR(ch)) {
+      if (CROW_IS_HOST_CHAR(ch)) {
         return s_http_host;
       }
 
@@ -4714,7 +4714,7 @@ http_parse_host_char(enum http_host_state s, const char ch) {
 
     /* FALLTHROUGH */
     case s_http_host_v6_start:
-      if (IS_HEX(ch) || ch == ':' || ch == '.') {
+      if (CROW_IS_HEX(ch) || ch == ':' || ch == '.') {
         return s_http_host_v6;
       }
 
@@ -4722,7 +4722,7 @@ http_parse_host_char(enum http_host_state s, const char ch) {
 
     case s_http_host_port:
     case s_http_host_port_start:
-      if (IS_NUM(ch)) {
+      if (CROW_IS_NUM(ch)) {
         return s_http_host_port;
       }
 
@@ -4912,9 +4912,9 @@ http_parser_pause(http_parser *parser, int paused) {
    * state. In non-debug builds, there's not much that we can do about this
    * other than ignore it.
    */
-  if (HTTP_PARSER_ERRNO(parser) == HPE_OK ||
-      HTTP_PARSER_ERRNO(parser) == HPE_PAUSED) {
-    SET_ERRNO((paused) ? HPE_PAUSED : HPE_OK);
+  if (CROW_HTTP_PARSER_ERRNO(parser) == HPE_OK ||
+      CROW_HTTP_PARSER_ERRNO(parser) == HPE_PAUSED) {
+    CROW_SET_ERRNO((paused) ? HPE_PAUSED : HPE_OK);
   } else {
     assert(0 && "Attempting to pause parser in error state");
   }
@@ -4927,45 +4927,45 @@ http_body_is_final(const struct http_parser *parser) {
 
 inline unsigned long
 http_parser_version(void) {
-  return HTTP_PARSER_VERSION_MAJOR * 0x10000 |
-         HTTP_PARSER_VERSION_MINOR * 0x00100 |
-         HTTP_PARSER_VERSION_PATCH * 0x00001;
+  return CROW_HTTP_PARSER_VERSION_MAJOR * 0x10000 |
+         CROW_HTTP_PARSER_VERSION_MINOR * 0x00100 |
+         CROW_HTTP_PARSER_VERSION_PATCH * 0x00001;
 }
 
-#undef HTTP_METHOD_MAP
-#undef HTTP_ERRNO_MAP
-#undef SET_ERRNO
-#undef CALLBACK_NOTIFY_
-#undef CALLBACK_NOTIFY
-#undef CALLBACK_NOTIFY_NOADVANCE
-#undef CALLBACK_DATA_
-#undef CALLBACK_DATA
-#undef CALLBACK_DATA_NOADVANCE
-#undef MARK
-#undef PROXY_CONNECTION
-#undef CONNECTION
-#undef CONTENT_LENGTH
-#undef TRANSFER_ENCODING
-#undef UPGRADE
-#undef CHUNKED
-#undef KEEP_ALIVE
-#undef CLOSE
-#undef PARSING_HEADER
-#undef CR
-#undef LF
-#undef LOWER
-#undef IS_ALPHA
-#undef IS_NUM
-#undef IS_ALPHANUM
-#undef IS_HEX
-#undef IS_MARK
-#undef IS_USERINFO_CHAR
-#undef TOKEN
-#undef IS_URL_CHAR
-#undef IS_HOST_CHAR
-#undef start_state
-#undef STRICT_CHECK
-#undef NEW_MESSAGE
+#undef CROW_HTTP_METHOD_MAP
+#undef CROW_HTTP_ERRNO_MAP
+#undef CROW_SET_ERRNO
+#undef CROW_CALLBACK_NOTIFY_
+#undef CROW_CALLBACK_NOTIFY
+#undef CROW_CALLBACK_NOTIFY_NOADVANCE
+#undef CROW_CALLBACK_DATA_
+#undef CROW_CALLBACK_DATA
+#undef CROW_CALLBACK_DATA_NOADVANCE
+#undef CROW_MARK
+#undef CROW_PROXY_CONNECTION
+#undef CROW_CONNECTION
+#undef CROW_CONTENT_LENGTH
+#undef CROW_TRANSFER_ENCODING
+#undef CROW_UPGRADE
+#undef CROW_CHUNKED
+#undef CROW_KEEP_ALIVE
+#undef CROW_CLOSE
+#undef CROW_PARSING_HEADER
+#undef CROW_CR
+#undef CROW_LF
+#undef CROW_LOWER
+#undef CROW_IS_ALPHA
+#undef CROW_IS_NUM
+#undef CROW_IS_ALPHANUM
+#undef CROW_IS_HEX
+#undef CROW_IS_MARK
+#undef CROW_IS_USERINFO_CHAR
+#undef CROW_TOKEN
+#undef CROW_IS_URL_CHAR
+#undef CROW_IS_HOST_CHAR
+#undef CROW_start_state
+#undef CROW_STRICT_CHECK
+#undef CROW_NEW_MESSAGE
 
 #ifdef __cplusplus
 }
@@ -5026,11 +5026,11 @@ namespace crow
 
 /* #define - specifies log level */
 /*
-    DEBUG       = 0
-    INFO        = 1
-    WARNING     = 2
-    ERROR       = 3
-    CRITICAL    = 4
+    Debug       = 0
+    Info        = 1
+    Warning     = 2
+    Error       = 3
+    Critical    = 4
 
     default to INFO
 */
@@ -5170,11 +5170,19 @@ namespace crow
 {
     enum class LogLevel
     {
-        DEBUG,
+#ifndef ERROR
+        DEBUG = 0,
         INFO,
         WARNING,
         ERROR,
         CRITICAL,
+#endif
+
+        Debug = 0,
+        Info,
+        Warning,
+        Error,
+        Critical,
     };
 
     class ILogHandler {
@@ -5274,20 +5282,20 @@ namespace crow
 }
 
 #define CROW_LOG_CRITICAL   \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::CRITICAL) \
-            crow::logger("CRITICAL", crow::LogLevel::CRITICAL)
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::Critical) \
+            crow::logger("CRITICAL", crow::LogLevel::Critical)
 #define CROW_LOG_ERROR      \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::ERROR) \
-            crow::logger("ERROR   ", crow::LogLevel::ERROR)
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::Error) \
+            crow::logger("ERROR   ", crow::LogLevel::Error)
 #define CROW_LOG_WARNING    \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::WARNING) \
-            crow::logger("WARNING ", crow::LogLevel::WARNING)
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::Warning) \
+            crow::logger("WARNING ", crow::LogLevel::Warning)
 #define CROW_LOG_INFO       \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::INFO) \
-            crow::logger("INFO    ", crow::LogLevel::INFO)
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::Info) \
+            crow::logger("INFO    ", crow::LogLevel::Info)
 #define CROW_LOG_DEBUG      \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::DEBUG) \
-            crow::logger("DEBUG   ", crow::LogLevel::DEBUG)
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::Debug) \
+            crow::logger("DEBUG   ", crow::LogLevel::Debug)
 
 
 
@@ -5896,7 +5904,8 @@ namespace crow
 {
     enum class HTTPMethod
     {
-        DELETE,
+#ifndef DELETE
+        DELETE = 0,
         GET,
         HEAD,
         POST,
@@ -5904,27 +5913,37 @@ namespace crow
         CONNECT,
         OPTIONS,
         TRACE,
+#endif
+
+        Delete = 0,
+        Get,
+        Head,
+        Post,
+        Put,
+        Connect,
+        Options,
+        Trace,
     };
 
     inline std::string method_name(HTTPMethod method)
     {
         switch(method)
         {
-            case HTTPMethod::DELETE:
+            case HTTPMethod::Delete:
                 return "DELETE";
-            case HTTPMethod::GET:
+            case HTTPMethod::Get:
                 return "GET";
-            case HTTPMethod::HEAD:
+            case HTTPMethod::Head:
                 return "HEAD";
-            case HTTPMethod::POST:
+            case HTTPMethod::Post:
                 return "POST";
-            case HTTPMethod::PUT:
+            case HTTPMethod::Put:
                 return "PUT";
-            case HTTPMethod::CONNECT:
+            case HTTPMethod::Connect:
                 return "CONNECT";
-            case HTTPMethod::OPTIONS:
+            case HTTPMethod::Options:
                 return "OPTIONS";
-            case HTTPMethod::TRACE:
+            case HTTPMethod::Trace:
                 return "TRACE";
         }
         return "invalid";
@@ -5999,14 +6018,14 @@ namespace crow
 constexpr crow::HTTPMethod operator "" _method(const char* str, size_t len)
 {
     return
-        crow::black_magic::is_equ_p(str, "GET", 3) ? crow::HTTPMethod::GET :
-        crow::black_magic::is_equ_p(str, "DELETE", 6) ? crow::HTTPMethod::DELETE :
-        crow::black_magic::is_equ_p(str, "HEAD", 4) ? crow::HTTPMethod::HEAD :
-        crow::black_magic::is_equ_p(str, "POST", 4) ? crow::HTTPMethod::POST :
-        crow::black_magic::is_equ_p(str, "PUT", 3) ? crow::HTTPMethod::PUT :
-        crow::black_magic::is_equ_p(str, "OPTIONS", 7) ? crow::HTTPMethod::OPTIONS :
-        crow::black_magic::is_equ_p(str, "CONNECT", 7) ? crow::HTTPMethod::CONNECT :
-        crow::black_magic::is_equ_p(str, "TRACE", 5) ? crow::HTTPMethod::TRACE :
+        crow::black_magic::is_equ_p(str, "GET", 3) ? crow::HTTPMethod::Get :
+        crow::black_magic::is_equ_p(str, "DELETE", 6) ? crow::HTTPMethod::Delete :
+        crow::black_magic::is_equ_p(str, "HEAD", 4) ? crow::HTTPMethod::Head :
+        crow::black_magic::is_equ_p(str, "POST", 4) ? crow::HTTPMethod::Post :
+        crow::black_magic::is_equ_p(str, "PUT", 3) ? crow::HTTPMethod::Put :
+        crow::black_magic::is_equ_p(str, "OPTIONS", 7) ? crow::HTTPMethod::Options :
+        crow::black_magic::is_equ_p(str, "CONNECT", 7) ? crow::HTTPMethod::Connect :
+        crow::black_magic::is_equ_p(str, "TRACE", 5) ? crow::HTTPMethod::Trace :
         throw std::runtime_error("invalid http method");
 };
 #endif
@@ -6047,7 +6066,7 @@ namespace crow
         void* middleware_context{};
 
         request()
-            : method(HTTPMethod::GET)
+            : method(HTTPMethod::Get)
         {
         }
 
@@ -6597,7 +6616,7 @@ namespace crow
         }
 
     protected:
-        uint32_t methods_{1<<(int)HTTPMethod::GET};
+        uint32_t methods_{1<<(int)HTTPMethod::Get};
 
         std::string rule_;
         std::string name_;
@@ -8398,14 +8417,28 @@ namespace crow
 #ifdef CROW_ENABLE_SSL
             if (use_ssl_)
             {
-                ssl_server_t server(this, bindaddr_, port_, &middlewares_, concurrency_, &ssl_context_);
-                server.run();
+                ssl_server_ = std::move(std::unique_ptr<ssl_server_t>(new ssl_server_t(this, bindaddr_, port_, &middlewares_, concurrency_, &ssl_context_)));
+                ssl_server_->run();
             }
             else
 #endif
             {
-                server_t server(this, bindaddr_, port_, &middlewares_, concurrency_, nullptr);
-                server.run();
+                server_ = std::move(std::unique_ptr<server_t>(new server_t(this, bindaddr_, port_, &middlewares_, concurrency_, nullptr)));
+                server_->run();
+            }
+        }
+
+        void stop()
+        {
+#ifdef CROW_ENABLE_SSL
+            if (use_ssl_)
+            {
+                ssl_server_->stop();
+            }
+            else
+#endif
+            {
+                server_->stop();
             }
         }
 
@@ -8501,6 +8534,11 @@ namespace crow
         Router router_;
 
         std::tuple<Middlewares...> middlewares_;
+
+#ifdef CROW_ENABLE_SSL
+        std::unique_ptr<ssl_server_t> ssl_server_;
+#endif
+        std::unique_ptr<server_t> server_;
     };
     template <typename ... Middlewares>
     using App = Crow<Middlewares...>;
