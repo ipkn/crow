@@ -607,6 +607,11 @@ namespace crow
                 return i();
             }
 
+            explicit operator uint64_t() const
+            {
+                return u();
+            }
+
             explicit operator int() const
             {
                 return (int)i();
@@ -637,6 +642,20 @@ namespace crow
                 }
 #endif
                 return boost::lexical_cast<int64_t>(start_, end_-start_);
+            }
+
+            uint64_t u() const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                switch (t()) {
+                    case type::Number:
+                    case type::String:
+                        return boost::lexical_cast<uint64_t>(start_, end_-start_);
+                    default:
+                        throw std::runtime_error(std::string("expected number, got: ") + get_type_str(t()));
+                }
+#endif
+                return boost::lexical_cast<uint64_t>(start_, end_-start_);
             }
 
             double d() const
@@ -1438,17 +1457,16 @@ namespace crow
                         s = r.s();
                         return;
                     case type::List:
-                        l = std::move(std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{}));
+                        l = std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{});
                         l->reserve(r.size());
                         for(auto it = r.begin(); it != r.end(); ++it)
                             l->emplace_back(*it);
                         return;
                     case type::Object:
-                        o = std::move(
-                            std::unique_ptr<
+                        o = std::unique_ptr<
                                     std::unordered_map<std::string, wvalue>
                                 >(
-                                new std::unordered_map<std::string, wvalue>{}));
+                                new std::unordered_map<std::string, wvalue>{});
                         for(auto it = r.begin(); it != r.end(); ++it)
                             o->emplace(it->key(), *it);
                         return;
@@ -1594,7 +1612,7 @@ namespace crow
                     reset();
                 t_ = type::List;
                 if (!l)
-                    l = std::move(std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{}));
+                    l = std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{});
                 l->clear();
                 l->resize(v.size());
                 size_t idx = 0;
@@ -1611,7 +1629,7 @@ namespace crow
                     reset();
                 t_ = type::List;
                 if (!l)
-                    l = std::move(std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{}));
+                    l = std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{});
                 if (l->size() < index+1)
                     l->resize(index+1);
                 return (*l)[index];
@@ -1632,11 +1650,10 @@ namespace crow
                     reset();
                 t_ = type::Object;
                 if (!o)
-                    o = std::move(
-                        std::unique_ptr<
+                    o = std::unique_ptr<
                                 std::unordered_map<std::string, wvalue>
                             >(
-                            new std::unordered_map<std::string, wvalue>{}));
+                            new std::unordered_map<std::string, wvalue>{});
                 return (*o)[str];
             }
 
@@ -8489,7 +8506,7 @@ namespace crow
 
 #else
         template <typename T, typename ... Remain>
-        self_t& ssl_file(T&& t, Remain&&...)
+        self_t& ssl_file(T&&, Remain&&...)
         {
             // We can't call .ssl() member function unless CROW_ENABLE_SSL is defined.
             static_assert(
@@ -8500,7 +8517,7 @@ namespace crow
         }
 
         template <typename T>
-        self_t& ssl(T&& ctx)
+        self_t& ssl(T&&)
         {
             // We can't call .ssl() member function unless CROW_ENABLE_SSL is defined.
             static_assert(
