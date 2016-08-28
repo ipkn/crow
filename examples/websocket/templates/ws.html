@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+    <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
+</head>
+<body>
+    <input id="msg" type="text"></input>
+    <button id="send">
+        Send
+    </button><BR>
+    <textarea id="log" cols=100 rows=50>
+    </textarea>
+    <script>
+var sock = new WebSocket("ws://i.ipkn.me:40080/ws");
+sock.onopen = ()=>{
+    console.log('open')
+}
+sock.onerror = (e)=>{
+    console.log('error',e)
+}
+sock.onclose = ()=>{
+    console.log('close')
+}
+sock.onmessage = (e)=>{
+    $("#log").val(
+            e.data +"\n" + $("#log").val());
+}
+$("#msg").keypress(function(e){
+    if (e.which == 13)
+    {
+    sock.send($("#msg").val());
+    $("#msg").val("");
+    }
+});
+$("#send").click(()=>{
+    sock.send($("#msg").val());
+    $("#msg").val("");
+});
+    </script>
+</body>
+</html>

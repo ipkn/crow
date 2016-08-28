@@ -41,6 +41,12 @@ namespace crow
         {
         }
 
+		template <typename Adaptor> 
+        void handle_upgrade(const request& req, response& res, Adaptor&& adaptor)
+        {
+            router_.handle_upgrade(req, res, adaptor);
+        }
+
         void handle(const request& req, response& res)
         {
             router_.handle(req, res);

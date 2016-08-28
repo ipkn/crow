@@ -99,7 +99,13 @@ namespace crow
                             };
                             timer.async_wait(handler);
 
-                            io_service_pool_[i]->run();
+                            try 
+                            {
+                                io_service_pool_[i]->run();
+                            } catch(std::exception& e)
+                            {
+                                CROW_LOG_ERROR << "Worker Crash: An uncaught exception occurred: " << e.what();
+                            }
                         }));
             CROW_LOG_INFO << server_name_ << " server is running, local port " << port_;
 

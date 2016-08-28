@@ -520,7 +520,11 @@ namespace crow
 
         inline std::string default_loader(const std::string& filename)
         {
-            std::ifstream inf(detail::get_template_base_directory_ref() + filename);
+            std::string path = detail::get_template_base_directory_ref();
+            if (!(path.back() == '/' || path.back() == '\\'))
+                path += '/';
+            path += filename;
+            std::ifstream inf(path);
             if (!inf)
                 return {};
             return {std::istreambuf_iterator<char>(inf), std::istreambuf_iterator<char>()};

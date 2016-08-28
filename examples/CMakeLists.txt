@@ -15,6 +15,10 @@ add_executable(example_ssl ssl/example_ssl.cpp)
 target_link_libraries(example_ssl ${Boost_LIBRARIES})
 target_link_libraries(example_ssl ${CMAKE_THREAD_LIBS_INIT} ssl crypto)
 
+add_executable(example_websocket websocket/example_ws.cpp)
+target_link_libraries(example_websocket ${Boost_LIBRARIES})
+target_link_libraries(example_websocket ${CMAKE_THREAD_LIBS_INIT} ssl crypto)
+
 add_executable(example example.cpp)
 #target_link_libraries(example crow)
 target_link_libraries(example ${Boost_LIBRARIES})
