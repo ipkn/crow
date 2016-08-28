@@ -33,6 +33,7 @@ int main()
  - Header only
  - Provide an amalgamated header file `crow_all.h' with every features
  - Middleware support
+ - Websocket support
 
 ## Still in development
  - ~~Built-in ORM~~
