@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <string>
 #include <functional>
 #include <memory>
@@ -101,12 +102,14 @@ namespace crow
             if (use_ssl_)
             {
                 ssl_server_ = std::move(std::unique_ptr<ssl_server_t>(new ssl_server_t(this, bindaddr_, port_, &middlewares_, concurrency_, &ssl_context_)));
+                ssl_server_->set_tick_function(tick_interval_, tick_function_);
                 ssl_server_->run();
             }
             else
 #endif
             {
                 server_ = std::move(std::unique_ptr<server_t>(new server_t(this, bindaddr_, port_, &middlewares_, concurrency_, nullptr)));
+                server_->set_tick_function(tick_interval_, tick_function_);
                 server_->run();
             }
         }
@@ -210,11 +213,21 @@ namespace crow
             return utility::get_element_by_type<T, Middlewares...>(middlewares_);
         }
 
+        template <typename Duration, typename Func>
+        self_t& tick(Duration d, Func f) {
+            tick_interval_ = std::chrono::duration_cast<std::chrono::milliseconds>(d);
+            tick_function_ = f;
+            return *this;
+        }
+
     private:
         uint16_t port_ = 80;
         uint16_t concurrency_ = 1;
         std::string bindaddr_ = "0.0.0.0";
         Router router_;
+
+        std::chrono::milliseconds tick_interval_;
+        std::function<void()> tick_function_;
 
         std::tuple<Middlewares...> middlewares_;
 
