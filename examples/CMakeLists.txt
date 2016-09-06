@@ -11,9 +11,11 @@ add_executable(helloworld helloworld.cpp)
 target_link_libraries(helloworld ${Boost_LIBRARIES})
 target_link_libraries(helloworld ${CMAKE_THREAD_LIBS_INIT})
 
+if (OPENSSL_FOUND)
 add_executable(example_ssl ssl/example_ssl.cpp)
 target_link_libraries(example_ssl ${Boost_LIBRARIES})
-target_link_libraries(example_ssl ${CMAKE_THREAD_LIBS_INIT} ssl crypto)
+target_link_libraries(example_ssl ${CMAKE_THREAD_LIBS_INIT} ${OPENSSL_LIBRARIES})
+endif()
 
 add_executable(example_websocket websocket/example_ws.cpp)
 target_link_libraries(example_websocket ${Boost_LIBRARIES})
