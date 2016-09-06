@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <cstring>
 #include <functional>
+#include <string>
 
 namespace crow
 {
