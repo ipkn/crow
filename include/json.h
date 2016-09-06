@@ -131,6 +131,8 @@ namespace crow
                     s_ = r.s_;
                     e_ = r.e_;
                     owned_ = r.owned_;
+                    if (r.owned_)
+                        r.owned_ = 0;
                     return *this;
                 }
 
