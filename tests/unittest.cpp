@@ -670,11 +670,11 @@ struct NullMiddleware
     struct context {};
 
     template <typename AllContext>
-    void before_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    void before_handle(request&, response&, context&, AllContext&)
     {}
 
     template <typename AllContext>
-    void after_handle(request& req, response& res, context& ctx, AllContext& all_ctx)
+    void after_handle(request&, response&, context&, AllContext&)
     {}
 };
 
