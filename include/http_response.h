@@ -49,7 +49,7 @@ namespace crow
         {
             json_mode();
         }
-        response(int code, const json::wvalue& json_value) : code(code), body(json::dump(json_value))
+        response(int code, const json::wvalue& json_value) : body(json::dump(json_value)), code(code)
         {
             json_mode();
         }

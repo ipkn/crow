@@ -7100,7 +7100,7 @@ namespace crow
         {
             json_mode();
         }
-        response(int code, const json::wvalue& json_value) : code(code), body(json::dump(json_value))
+        response(int code, const json::wvalue& json_value) : body(json::dump(json_value)), code(code)
         {
             json_mode();
         }
@@ -8313,6 +8313,7 @@ namespace crow
 
 #pragma once
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/tokenizer.hpp>
 
 
 
@@ -8350,10 +8351,11 @@ namespace crow
             std::unordered_map<std::string, std::string> jar;
             std::unordered_map<std::string, std::string> cookies_to_add;
 
-            std::string get_cookie(const std::string& key)
+            std::string get_cookie(const std::string& key) const
             {
-                if (jar.count(key))
-                    return jar[key];
+                auto cookie = jar.find(key);
+                if (cookie != jar.end())
+                    return cookie->second;
                 return {};
             }
 
@@ -8365,92 +8367,25 @@ namespace crow
 
         void before_handle(request& req, response& res, context& ctx)
         {
-            int count = req.headers.count("Cookie");
-            if (!count)
+            auto cookie_headers = req.headers.find("Cookie");
+            if (cookie_headers == req.headers.end())
                 return;
-            if (count > 1)
+
+            std::string cookies{cookie_headers->second};
+            // Break the cookie value string up into tokens that are delimited
+            // by ';'. If there are quotes, they are properly escaped.
+            auto tokens = boost::tokenizer<boost::escaped_list_separator<char>>{cookies, boost::escaped_list_separator<char>{'\\', ';', '"'}};
+            for (const std::string& cookie : tokens)
             {
-                res.code = 400;
-                res.end();
-                return;
-            }
-            std::string cookies = req.get_header_value("Cookie");
-            size_t pos = 0;
-            while(pos < cookies.size())
-            {
-                size_t pos_equal = cookies.find('=', pos);
-                if (pos_equal == cookies.npos)
+                size_t pos_equal = cookie.find('=');
+                if (pos_equal == std::string::npos)
                     break;
-                std::string name = cookies.substr(pos, pos_equal-pos);
+
+                std::string name{cookie.substr(0, pos_equal)};
+                std::string value{cookie.substr(pos_equal+1)};
                 boost::trim(name);
-                pos = pos_equal+1;
-                while(pos < cookies.size() && cookies[pos] == ' ') pos++;
-                if (pos == cookies.size())
-                    break;
-
-                std::string value;
-
-                if (cookies[pos] == '"')
-                {
-                    int dquote_meet_count = 0;
-                    pos ++;
-                    size_t pos_dquote = pos-1;
-                    do
-                    {
-                        pos_dquote = cookies.find('"', pos_dquote+1);
-                        dquote_meet_count ++;
-                    } while(pos_dquote < cookies.size() && cookies[pos_dquote-1] == '\\');
-                    if (pos_dquote == cookies.npos)
-                        break;
-
-                    if (dquote_meet_count == 1)
-                        value = cookies.substr(pos, pos_dquote - pos);
-                    else
-                    {
-                        value.clear();
-                        value.reserve(pos_dquote-pos);
-                        for(size_t p = pos; p < pos_dquote; p++)
-                        {
-                            // FIXME minimal escaping
-                            if (cookies[p] == '\\' && p + 1 < pos_dquote)
-                            {
-                                p++;
-                                if (cookies[p] == '\\' || cookies[p] == '"')
-                                    value += cookies[p];
-                                else
-                                {
-                                    value += '\\';
-                                    value += cookies[p];
-                                }
-                            }
-                            else
-                                value += cookies[p];
-                        }
-                    }
-
-                    ctx.jar.emplace(std::move(name), std::move(value));
-                    pos = cookies.find(";", pos_dquote+1);
-                    if (pos == cookies.npos)
-                        break;
-                    pos++;
-                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
-                    if (pos == cookies.size())
-                        break;
-                }
-                else
-                {
-                    size_t pos_semicolon = cookies.find(';', pos);
-                    value = cookies.substr(pos, pos_semicolon - pos);
-                    boost::trim(value);
-                    ctx.jar.emplace(std::move(name), std::move(value));
-                    pos = pos_semicolon;
-                    if (pos == cookies.npos)
-                        break;
-                    pos ++;
-                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
-                    if (pos == cookies.size())
-                        break;
-                }
+                boost::trim(value);
+                ctx.jar.emplace(std::move(name), std::move(value));
             }
         }
 
