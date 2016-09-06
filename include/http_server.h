@@ -48,9 +48,10 @@ namespace crow
             timer_queue_pool_.resize(concurrency_);
 
             std::vector<std::future<void>> v;
+            std::atomic<int> init_count(0);
             for(uint16_t i = 0; i < concurrency_; i ++)
                 v.push_back(
-                        std::async(std::launch::async, [this, i]{
+                        std::async(std::launch::async, [this, i, &init_count]{
 
                             // thread local date string get function
                             auto last = std::chrono::steady_clock::now();
@@ -99,6 +100,7 @@ namespace crow
                             };
                             timer.async_wait(handler);
 
+                            init_count ++;
                             try 
                             {
                                 io_service_pool_[i]->run();
@@ -114,11 +116,8 @@ namespace crow
                     stop();
                 });
 
-            for (int i = 0; i < concurrency_; i++)
-            {
-                while (timer_queue_pool_[i] == nullptr)
-                    std::this_thread::yield();
-            }
+            while(concurrency_ != init_count)
+                std::this_thread::yield();
 
             do_accept();
 
