@@ -983,7 +983,6 @@ public:
             auto found = trie_.find(req.url);
 
             unsigned rule_index = found.first;
-            CROW_LOG_DEBUG << "???" << rule_index;
 
             if (!rule_index)
             {
