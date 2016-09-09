@@ -502,7 +502,7 @@ template <typename F, typename Set>
             using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
         };
 
-        static std::string base64encode(const char* data, size_t size, const char* key = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
+        inline static std::string base64encode(const char* data, size_t size, const char* key = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
         {
             std::string ret;
             ret.resize((size+2) / 3 * 4);
@@ -538,7 +538,7 @@ template <typename F, typename Set>
             return ret;
         }
 
-        static std::string base64encode_urlsafe(const char* data, size_t size)
+        inline static std::string base64encode_urlsafe(const char* data, size_t size)
         {
             return base64encode(data, size, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_");
         }
