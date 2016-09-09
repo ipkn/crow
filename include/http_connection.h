@@ -467,7 +467,7 @@ namespace crow
                     if (!ec)
                     {
                         bool ret = parser_.feed(buffer_.data(), bytes_transferred);
-                        if (ret && adaptor_.is_open() && !close_connection_)
+                        if (ret && adaptor_.is_open())
                         {
                             error_while_reading = false;
                         }
@@ -481,6 +481,14 @@ namespace crow
                         is_reading = false;
                         CROW_LOG_DEBUG << this << " from read(1)";
                         check_destroy();
+                    }
+                    else if (close_connection_)
+                    {
+                        cancel_deadline_timer();
+                        parser_.done();
+                        is_reading = false;
+                        check_destroy();
+                        // adaptor will close after write
                     }
                     else if (!need_to_call_after_handlers_)
                     {
