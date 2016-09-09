@@ -18,11 +18,27 @@ for i in xrange(10):
 Host: localhost\r\n\r\n''');
     assert 'Hello World!' in s.recv(1024)
 
+# test large
+s = socket.socket()
+s.connect(('localhost', 18080))
+s.send('''GET /large HTTP/1.1
+Host: localhost\r\nConnection: close\r\n\r\n''')
+r = ''
+while True:
+     d = s.recv(1024*1024)
+     if not d:
+         break;
+     r += d
+     print len(r), len(d)
+print len(r), r[:100]
+assert len(r) > 512*1024
+
 # test timeout
 s = socket.socket()
 s.connect(('localhost', 18080))
-print 'ERROR REQUEST'
+# invalid request, connection will be closed after timeout
 s.send('''GET / HTTP/1.1
 hHhHHefhwjkefhklwejfklwejf
 ''')
 print s.recv(1024)
+

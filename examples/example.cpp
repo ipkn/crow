@@ -150,6 +150,11 @@ int main()
         return crow::response{os.str()};
     });    
 
+    CROW_ROUTE(app, "/large")
+    ([]{
+        return std::string(512*1024, ' ');
+    });
+
     // ignore all log
     crow::logger::setLogLevel(crow::LogLevel::DEBUG);
     //crow::logger::setHandler(std::make_shared<ExampleLogHandler>());
