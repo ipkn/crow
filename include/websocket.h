@@ -22,6 +22,12 @@ namespace crow
             virtual void send_text(const std::string& msg) = 0;
             virtual void close(const std::string& msg = "quit") = 0;
             virtual ~connection(){}
+
+            void userdata(void* u) { userdata_ = u; }
+            void* userdata() { return userdata_; }
+
+        private:
+            void* userdata_;
 		};
 
 		template <typename Adaptor>
