@@ -555,6 +555,11 @@ namespace crow
             detail::get_loader_ref() = std::move(loader);
         }
 
+        inline std::string load_text(const std::string& filename)
+        {
+            return detail::get_loader_ref()(filename);
+        }
+
         inline template_t load(const std::string& filename)
         {
             return compile(detail::get_loader_ref()(filename));
