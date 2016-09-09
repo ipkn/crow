@@ -8,6 +8,8 @@
 #include <functional>
 #include <string>
 
+#include "settings.h"
+
 namespace crow
 {
     namespace black_magic
