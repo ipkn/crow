@@ -1,4 +1,5 @@
 #pragma once
+#include <boost/algorithm/string/predicate.hpp>
 #include "socket_adaptors.h"
 #include "http_request.h"
 #include "TinySHA1.hpp"
@@ -41,7 +42,7 @@ namespace crow
 						std::function<void(crow::websocket::connection&)> error_handler)
 					: adaptor_(std::move(adaptor)), open_handler_(std::move(open_handler)), message_handler_(std::move(message_handler)), close_handler_(std::move(close_handler)), error_handler_(std::move(error_handler))
 				{
-					if (req.get_header_value("upgrade") != "websocket")
+					if (!boost::iequals(req.get_header_value("upgrade"), "websocket"))
 					{
 						adaptor.close();
 						delete this;
@@ -131,13 +132,13 @@ namespace crow
                     else if (size < 0x10000)
                     {
                         buf[1] += 126;
-                        *(uint16_t*)(buf+2) = (uint16_t)size;
+                        *(uint16_t*)(buf+2) = htons((uint16_t)size);
                         return {buf, buf+4};
                     }
                     else
                     {
                         buf[1] += 127;
-                        *(uint64_t*)(buf+2) = (uint64_t)size;
+                        *(uint64_t*)(buf+2) = ((1==htonl(1)) ? (uint64_t)size : ((uint64_t)htonl((size) & 0xFFFFFFFF) << 32) | htonl((size) >> 32));
                         return {buf, buf+10};
                     }
                 }
