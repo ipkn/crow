@@ -1,8 +1,8 @@
 #pragma once
 #include <boost/algorithm/string/predicate.hpp>
-#include "socket_adaptors.h"
-#include "http_request.h"
-#include "TinySHA1.hpp"
+#include "crow/socket_adaptors.h"
+#include "crow/http_request.h"
+#include "crow/TinySHA1.hpp"
 
 namespace crow
 {

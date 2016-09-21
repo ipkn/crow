@@ -3,7 +3,7 @@
 #ifdef CROW_ENABLE_SSL
 #include <boost/asio/ssl.hpp>
 #endif
-#include "settings.h"
+#include "crow/settings.h"
 namespace crow
 {
     using namespace boost;

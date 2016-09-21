@@ -12,7 +12,7 @@
 #include <boost/operators.hpp>
 #include <vector>
 
-#include "settings.h"
+#include "crow/settings.h"
 
 #if defined(__GNUG__) || defined(__clang__)
 #define crow_json_likely(x) __builtin_expect(x, 1)

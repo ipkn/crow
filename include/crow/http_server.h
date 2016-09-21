@@ -13,9 +13,9 @@
 
 #include <memory>
 
-#include "http_connection.h"
-#include "logging.h"
-#include "dumb_timer_queue.h"
+#include "crow/http_connection.h"
+#include "crow/logging.h"
+#include "crow/dumb_timer_queue.h"
 
 namespace crow
 {

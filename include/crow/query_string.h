@@ -6,6 +6,8 @@
 #include <vector>
 #include <iostream>
 
+namespace crow
+{
 // ----------------------------------------------------------------------------
 // qs_parse (modified)
 // https://github.com/bartgrantham/qs_parse
@@ -230,6 +232,7 @@ inline char * qs_scanvalue(const char * key, const char * qs, char * val, size_t
     }
 
     return val;
+}
 }
 // ----------------------------------------------------------------------------
 

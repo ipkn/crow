@@ -3,16 +3,9 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
-#include "settings.h"
+#include "crow.h"
 #undef CROW_LOG_LEVEL
 #define CROW_LOG_LEVEL 0
-#include "routing.h"
-#include "utility.h"
-#include "crow.h"
-#include "json.h"
-#include "mustache.h"
-#include "middleware.h"
-#include "query_string.h"
 
 using namespace std;
 using namespace crow;

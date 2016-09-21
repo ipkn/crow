@@ -8,12 +8,12 @@
 #include <boost/lexical_cast.hpp>
 #include <vector>
 
-#include "common.h"
-#include "http_response.h"
-#include "http_request.h"
-#include "utility.h"
-#include "logging.h"
-#include "websocket.h"
+#include "crow/common.h"
+#include "crow/http_response.h"
+#include "crow/http_request.h"
+#include "crow/utility.h"
+#include "crow/logging.h"
+#include "crow/websocket.h"
 
 namespace crow
 {
