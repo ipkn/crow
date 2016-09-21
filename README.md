@@ -29,6 +29,7 @@ int main()
    - ![Benchmark Result in one chart](https://docs.google.com/spreadsheets/d/1KidO9XpuwCRZ2p_JRDJj2aep61H8Sh_KDOhApizv4LE/pubchart?oid=2041467789&format=image)
    - More data on [crow-benchmark](https://github.com/ipkn/crow-benchmark)
  - Fast built-in JSON parser (crow::json)
+   - You can also use [json11](https://github.com/dropbox/json11) or [rapidjson](https://github.com/miloyip/rapidjson) for better speed or readability
  - [Mustache](http://mustache.github.io/) based templating library (crow::mustache)
  - Header only
  - Provide an amalgamated header file `crow_all.h' with every features
