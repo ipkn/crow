@@ -216,7 +216,7 @@ namespace crow
                                     [this](const boost::system::error_code& ec, std::size_t bytes_transferred) 
                                     {
                                         is_reading = false;
-                                        remaining_length_ = ntohs(*(uint16_t*)&remaining_length_);
+                                        remaining_length_ = ntohs((uint16_t)remaining_length_);
 #ifdef CROW_ENABLE_DEBUG
                                         if (!ec && bytes_transferred != 2)
                                         {
