@@ -121,7 +121,7 @@ namespace crow
                             timer.async_wait(handler);
 
                             init_count ++;
-                            try 
+                            try
                             {
                                 io_service_pool_[i]->run();
                             } catch(std::exception& e)
@@ -130,7 +130,7 @@ namespace crow
                             }
                         }));
 
-            if (tick_function_ && tick_interval_.count() > 0) 
+            if (tick_function_ && tick_interval_.count() > 0)
             {
                 tick_timer_.expires_from_now(boost::posix_time::milliseconds(tick_interval_.count()));
                 tick_timer_.async_wait([this](const boost::system::error_code& ec)
@@ -179,7 +179,7 @@ namespace crow
         void do_accept()
         {
             asio::io_service& is = pick_io_service();
-            auto p = new Connection<Adaptor, Handler, Middlewares...>(
+            auto p = std::make_shared<Connection<Adaptor, Handler, Middlewares...>>(
                 is, handler_, server_name_, middlewares_,
                 get_cached_date_str_pool_[roundrobin_index_], *timer_queue_pool_[roundrobin_index_],
                 adaptor_ctx_);
