@@ -4698,6 +4698,24 @@ namespace crow
                 return (*o)[str];
             }
 
+            std::vector<std::string> keys() const {
+                std::vector<std::string> result;
+                switch (t_) {
+                  case type::Null: return result;
+                  case type::False: return result;
+                  case type::True: return result;
+                  case type::Number: return result;
+                  case type::String: return result;
+                  case type::List: return result;
+                  case type::Object: {
+                      for (auto& kv:*o) {
+                         result.push_back(kv.first);
+                      }
+                      return result;
+                  }
+                }
+            }
+
             size_t estimate_length() const
             {
                 switch(t_)
@@ -4737,7 +4755,6 @@ namespace crow
                 }
                 return 1;
             }
-
 
             friend void dump_internal(const wvalue& v, std::string& out);
             friend std::string dump(const wvalue& v);
