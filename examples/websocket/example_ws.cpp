@@ -6,6 +6,7 @@
 int main()
 {
     crow::SimpleApp app;
+    crow::mustache::set_base(".");
 
     std::mutex mtx;;
     std::unordered_set<crow::websocket::connection*> users;
@@ -33,8 +34,7 @@ int main()
 
     CROW_ROUTE(app, "/")
     ([]{
-        auto page = crow::mustache::load("ws.html");
-        return page.render();
+        return crow::mustache::load("ws.html").render();
      });
 
     app.port(40080)
