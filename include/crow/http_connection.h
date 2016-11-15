@@ -176,7 +176,7 @@ namespace crow
     }
 
 #ifdef CROW_ENABLE_DEBUG
-    static int connectionCount;
+    static std::atomic<int> connectionCount;
 #endif
     template <typename Adaptor, typename Handler, typename ... Middlewares>
     class Connection
