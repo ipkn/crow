@@ -5,7 +5,6 @@ class CrowConan(ConanFile):
     version = "0.1"
     url = "https://github.com/javierjeronimo/crow"
     license = "see https://github.com/ipkn/crow/blob/master/LICENSE"
-    settings = "os", "compiler", "build_type", "arch"
     generators = "cmake"
 
     requires = (("Boost/1.60.0@lasote/stable"),
