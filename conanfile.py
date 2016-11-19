@@ -3,6 +3,8 @@ from conans import ConanFile, CMake
 class CrowConan(ConanFile):
     name = "Crow"
     version = "0.1"
+    url = "https://github.com/javierjeronimo/crow"
+    license = "see https://github.com/ipkn/crow/blob/master/LICENSE"
     settings = "os", "compiler", "build_type", "arch"
     # No exports necessary
 
@@ -12,6 +14,7 @@ class CrowConan(ConanFile):
 
     def build(self):
         cmake = CMake(self.settings)
+	self.run('cmake %s %s' % (self.conanfile_directory, cmake.command_line))
         self.run("cmake . %s" % cmake.build_config)
 	self.run("make")
 
