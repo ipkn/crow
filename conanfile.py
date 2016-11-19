@@ -15,7 +15,7 @@ class CrowConan(ConanFile):
     def build(self):
         cmake = CMake(self.settings)
 	self.run('cmake %s/crow %s' % (self.conanfile_directory, cmake.command_line))
-        self.run("cmake . %s" % cmake.build_config)
+	self.run("cmake --build . %s" % cmake.build_config)
 	self.run("make")
 
     def package(self):
