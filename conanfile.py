@@ -6,6 +6,7 @@ class CrowConan(ConanFile):
     url = "https://github.com/javierjeronimo/crow"
     license = "see https://github.com/ipkn/crow/blob/master/LICENSE"
     settings = "os", "compiler", "build_type", "arch"
+    generators = "cmake"
     # No exports necessary
 
     def source(self):
