@@ -7,6 +7,9 @@ class CrowConan(ConanFile):
     license = "see https://github.com/ipkn/crow/blob/master/LICENSE"
     settings = "os", "compiler", "build_type", "arch"
     generators = "cmake"
+
+    requires = (("Boost/1.60.0@lasote/stable"),
+                ("OpenSSL/1.0.2i@lasote/stable"))
     # No exports necessary
 
     def source(self):
