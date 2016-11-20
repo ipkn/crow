@@ -24,6 +24,5 @@ class CrowConan(ConanFile):
         self.run("cmake --build . %s" % cmake.build_config)
         self.run("make")
 
-
-def package(self):
-    self.copy("*.h", dst="include", src="amalgamate")
+    def package(self):
+        self.copy("*.h", dst="include", src="amalgamate")
