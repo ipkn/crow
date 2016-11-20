@@ -1,5 +1,6 @@
 from conans import ConanFile, CMake
 
+
 class CrowConan(ConanFile):
     name = "Crow"
     version = "0.1"
@@ -10,6 +11,7 @@ class CrowConan(ConanFile):
 
     requires = (("Boost/1.60.0@lasote/stable"),
                 ("OpenSSL/1.0.2i@lasote/stable"))
+
     # No exports necessary
 
     def source(self):
@@ -18,9 +20,10 @@ class CrowConan(ConanFile):
 
     def build(self):
         cmake = CMake(self.settings)
-	    self.run('cmake %s/crow %s' % (self.conanfile_directory, cmake.command_line))
-	    self.run("cmake --build . %s" % cmake.build_config)
-	    self.run("make")
+        self.run('cmake %s/crow %s' % (self.conanfile_directory, cmake.command_line))
+        self.run("cmake --build . %s" % cmake.build_config)
+        self.run("make")
 
-    def package(self):
-        self.copy("*.h", dst="include", src="amalgamate")
+
+def package(self):
+    self.copy("*.h", dst="include", src="amalgamate")
