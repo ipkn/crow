@@ -1,348 +1,3 @@
-#pragma once
-
-#include <stdio.h>
-#include <string.h>
-#include <string>
-#include <vector>
-#include <iostream>
-
-// ----------------------------------------------------------------------------
-// qs_parse (modified)
-// https://github.com/bartgrantham/qs_parse
-// ----------------------------------------------------------------------------
-/*  Similar to strncmp, but handles URL-encoding for either string  */
-int qs_strncmp(const char * s, const char * qs, size_t n);
-
-
-/*  Finds the beginning of each key/value pair and stores a pointer in qs_kv.
- *  Also decodes the value portion of the k/v pair *in-place*.  In a future
- *  enhancement it will also have a compile-time option of sorting qs_kv
- *  alphabetically by key.  */
-int qs_parse(char * qs, char * qs_kv[], int qs_kv_size);
-
-
-/*  Used by qs_parse to decode the value portion of a k/v pair  */
-int qs_decode(char * qs);
-
-
-/*  Looks up the value according to the key on a pre-processed query string
- *  A future enhancement will be a compile-time option to look up the key
- *  in a pre-sorted qs_kv array via a binary search.  */
-//char * qs_k2v(const char * key, char * qs_kv[], int qs_kv_size);
- char * qs_k2v(const char * key, char * const * qs_kv, int qs_kv_size, int nth);
-
-
-/*  Non-destructive lookup of value, based on key.  User provides the
- *  destinaton string and length.  */
-char * qs_scanvalue(const char * key, const char * qs, char * val, size_t val_len);
-
-// TODO: implement sorting of the qs_kv array; for now ensure it's not compiled
-#undef _qsSORTING
-
-// isxdigit _is_ available in <ctype.h>, but let's avoid another header instead
-#define CROW_QS_ISHEX(x)    ((((x)>='0'&&(x)<='9') || ((x)>='A'&&(x)<='F') || ((x)>='a'&&(x)<='f')) ? 1 : 0)
-#define CROW_QS_HEX2DEC(x)  (((x)>='0'&&(x)<='9') ? (x)-48 : ((x)>='A'&&(x)<='F') ? (x)-55 : ((x)>='a'&&(x)<='f') ? (x)-87 : 0)
-#define CROW_QS_ISQSCHR(x) ((((x)=='=')||((x)=='#')||((x)=='&')||((x)=='\0')) ? 0 : 1)
-
-inline int qs_strncmp(const char * s, const char * qs, size_t n)
-{
-    int i=0;
-    unsigned char u1, u2, unyb, lnyb;
-
-    while(n-- > 0)
-    {
-        u1 = (unsigned char) *s++;
-        u2 = (unsigned char) *qs++;
-
-        if ( ! CROW_QS_ISQSCHR(u1) ) {  u1 = '\0';  }
-        if ( ! CROW_QS_ISQSCHR(u2) ) {  u2 = '\0';  }
-
-        if ( u1 == '+' ) {  u1 = ' ';  }
-        if ( u1 == '%' ) // easier/safer than scanf
-        {
-            unyb = (unsigned char) *s++;
-            lnyb = (unsigned char) *s++;
-            if ( CROW_QS_ISHEX(unyb) && CROW_QS_ISHEX(lnyb) )
-                u1 = (CROW_QS_HEX2DEC(unyb) * 16) + CROW_QS_HEX2DEC(lnyb);
-            else
-                u1 = '\0';
-        }
-
-        if ( u2 == '+' ) {  u2 = ' ';  }
-        if ( u2 == '%' ) // easier/safer than scanf
-        {
-            unyb = (unsigned char) *qs++;
-            lnyb = (unsigned char) *qs++;
-            if ( CROW_QS_ISHEX(unyb) && CROW_QS_ISHEX(lnyb) )
-                u2 = (CROW_QS_HEX2DEC(unyb) * 16) + CROW_QS_HEX2DEC(lnyb);
-            else
-                u2 = '\0';
-        }
-
-        if ( u1 != u2 )
-            return u1 - u2;
-        if ( u1 == '\0' )
-            return 0;
-        i++;
-    }
-    if ( CROW_QS_ISQSCHR(*qs) )
-        return -1;
-    else
-        return 0;
-}
-
-
-inline int qs_parse(char * qs, char * qs_kv[], int qs_kv_size)
-{
-    int i, j;
-    char * substr_ptr;
-
-    for(i=0; i<qs_kv_size; i++)  qs_kv[i] = NULL;
-
-    // find the beginning of the k/v substrings or the fragment
-    substr_ptr = qs + strcspn(qs, "?#");
-    if (substr_ptr[0] != '\0')
-        substr_ptr++;
-    else
-        return 0; // no query or fragment
-
-    i=0;
-    while(i<qs_kv_size)
-    {
-        qs_kv[i] = substr_ptr;
-        j = strcspn(substr_ptr, "&");
-        if ( substr_ptr[j] == '\0' ) {  break;  }
-        substr_ptr += j + 1;
-        i++;
-    }
-    i++;  // x &'s -> means x iterations of this loop -> means *x+1* k/v pairs
-
-    // we only decode the values in place, the keys could have '='s in them
-    // which will hose our ability to distinguish keys from values later
-    for(j=0; j<i; j++)
-    {
-        substr_ptr = qs_kv[j] + strcspn(qs_kv[j], "=&#");
-        if ( substr_ptr[0] == '&' || substr_ptr[0] == '\0')  // blank value: skip decoding
-            substr_ptr[0] = '\0';
-        else
-            qs_decode(++substr_ptr);
-    }
-
-#ifdef _qsSORTING
-// TODO: qsort qs_kv, using qs_strncmp() for the comparison
-#endif
-
-    return i;
-}
-
-
-inline int qs_decode(char * qs)
-{
-    int i=0, j=0;
-
-    while( CROW_QS_ISQSCHR(qs[j]) )
-    {
-        if ( qs[j] == '+' ) {  qs[i] = ' ';  }
-        else if ( qs[j] == '%' ) // easier/safer than scanf
-        {
-            if ( ! CROW_QS_ISHEX(qs[j+1]) || ! CROW_QS_ISHEX(qs[j+2]) )
-            {
-                qs[i] = '\0';
-                return i;
-            }
-            qs[i] = (CROW_QS_HEX2DEC(qs[j+1]) * 16) + CROW_QS_HEX2DEC(qs[j+2]);
-            j+=2;
-        }
-        else
-        {
-            qs[i] = qs[j];
-        }
-        i++;  j++;
-    }
-    qs[i] = '\0';
-
-    return i;
-}
-
-
-inline char * qs_k2v(const char * key, char * const * qs_kv, int qs_kv_size, int nth = 0)
-{
-    int i;
-    size_t key_len, skip;
-
-    key_len = strlen(key);
-
-#ifdef _qsSORTING
-// TODO: binary search for key in the sorted qs_kv
-#else  // _qsSORTING
-    for(i=0; i<qs_kv_size; i++)
-    {
-        // we rely on the unambiguous '=' to find the value in our k/v pair
-        if ( qs_strncmp(key, qs_kv[i], key_len) == 0 )
-        {
-            skip = strcspn(qs_kv[i], "=");
-            if ( qs_kv[i][skip] == '=' )
-                skip++;
-            // return (zero-char value) ? ptr to trailing '\0' : ptr to value
-            if(nth == 0)
-                return qs_kv[i] + skip;
-            else 
-                --nth;
-        }
-    }
-#endif  // _qsSORTING
-
-    return NULL;
-}
-
-
-inline char * qs_scanvalue(const char * key, const char * qs, char * val, size_t val_len)
-{
-    size_t i, key_len;
-    const char * tmp;
-
-    // find the beginning of the k/v substrings
-    if ( (tmp = strchr(qs, '?')) != NULL )
-        qs = tmp + 1;
-
-    key_len = strlen(key);
-    while(qs[0] != '#' && qs[0] != '\0')
-    {
-        if ( qs_strncmp(key, qs, key_len) == 0 )
-            break;
-        qs += strcspn(qs, "&") + 1;
-    }
-
-    if ( qs[0] == '\0' ) return NULL;
-
-    qs += strcspn(qs, "=&#");
-    if ( qs[0] == '=' )
-    {
-        qs++;
-        i = strcspn(qs, "&=#");
-        strncpy(val, qs, (val_len-1)<(i+1) ? (val_len-1) : (i+1));
-        qs_decode(val);
-    }
-    else
-    {
-        if ( val_len > 0 )
-            val[0] = '\0';
-    }
-
-    return val;
-}
-// ----------------------------------------------------------------------------
-
-
-namespace crow 
-{
-    class query_string
-    {
-    public:
-        static const int MAX_KEY_VALUE_PAIRS_COUNT = 256;
-
-        query_string()
-        {
-
-        }
-
-        query_string(const query_string& qs)
-            : url_(qs.url_)
-        {
-            for(auto p:qs.key_value_pairs_)
-            {
-                key_value_pairs_.push_back((char*)(p-qs.url_.c_str()+url_.c_str()));
-            }
-        }
-
-        query_string& operator = (const query_string& qs)
-        {
-            url_ = qs.url_;
-            key_value_pairs_.clear();
-            for(auto p:qs.key_value_pairs_)
-            {
-                key_value_pairs_.push_back((char*)(p-qs.url_.c_str()+url_.c_str()));
-            }
-            return *this;
-        }
-
-        query_string& operator = (query_string&& qs)
-        {
-            key_value_pairs_ = std::move(qs.key_value_pairs_);
-            char* old_data = (char*)qs.url_.c_str();
-            url_ = std::move(qs.url_);
-            for(auto& p:key_value_pairs_)
-            {
-                p += (char*)url_.c_str() - old_data;
-            }
-            return *this;
-        }
-
-
-        query_string(std::string url)
-            : url_(std::move(url))
-        {
-            if (url_.empty())
-                return;
-
-            key_value_pairs_.resize(MAX_KEY_VALUE_PAIRS_COUNT);
-
-            int count = qs_parse(&url_[0], &key_value_pairs_[0], MAX_KEY_VALUE_PAIRS_COUNT);
-            key_value_pairs_.resize(count);
-        }
-
-        void clear() 
-        {
-            key_value_pairs_.clear();
-            url_.clear();
-        }
-
-        friend std::ostream& operator<<(std::ostream& os, const query_string& qs)
-        {
-            os << "[ ";
-            for(size_t i = 0; i < qs.key_value_pairs_.size(); ++i) {
-                if (i)
-                    os << ", ";
-                os << qs.key_value_pairs_[i];
-            }
-            os << " ]";
-            return os;
-
-        }
-
-        char* get (const std::string& name) const
-        {
-            char* ret = qs_k2v(name.c_str(), key_value_pairs_.data(), key_value_pairs_.size());
-            return ret;
-        }
-
-        std::vector<char*> get_list (const std::string& name) const
-        {
-            std::vector<char*> ret;
-            std::string plus = name + "[]";            
-            char* element = nullptr;
-
-            int count = 0;
-            while(1)
-            {
-                element = qs_k2v(plus.c_str(), key_value_pairs_.data(), key_value_pairs_.size(), count++);
-                if (!element)
-                    break;
-                ret.push_back(element);
-            }
-            return ret;
-        }
-
-
-    private:
-        std::string url_;
-        std::vector<char*> key_value_pairs_;
-    };
-
-} // end namespace
-
-
-
 /* merged revision: 5b951d74bd66ec9d38448e0a85b1cf8b85d97db3 */
 /* Copyright Joyent, Inc. and other Node contributors. All rights reserved.
  *
@@ -3023,6 +2678,599 @@ namespace crow
 
 
 
+#pragma once
+// settings for crow
+// TODO - replace with runtime config. libucl?
+
+/* #ifdef - enables debug mode */
+#define CROW_ENABLE_DEBUG
+
+/* #ifdef - enables logging */
+#define CROW_ENABLE_LOGGING
+
+/* #ifdef - enables ssl */
+//#define CROW_ENABLE_SSL
+
+/* #define - specifies log level */
+/*
+    Debug       = 0
+    Info        = 1
+    Warning     = 2
+    Error       = 3
+    Critical    = 4
+
+    default to INFO
+*/
+#define CROW_LOG_LEVEL 1
+
+
+// compiler flags
+#if __cplusplus >= 201402L
+#define CROW_CAN_USE_CPP14
+#endif
+
+#if defined(_MSC_VER)
+#if _MSC_VER < 1900
+#define CROW_MSVC_WORKAROUND
+#define constexpr const
+#define noexcept throw()
+#endif
+#endif
+
+
+
+#pragma once
+
+#include <cstdint>
+#include <stdexcept>
+#include <tuple>
+#include <type_traits>
+#include <cstring>
+#include <functional>
+#include <string>
+
+
+
+
+namespace crow
+{
+    namespace black_magic
+    {
+#ifndef CROW_MSVC_WORKAROUND
+        struct OutOfRange
+        {
+            OutOfRange(unsigned /*pos*/, unsigned /*length*/) {}
+        };
+        constexpr unsigned requires_in_range( unsigned i, unsigned len )
+        {
+            return i >= len ? throw OutOfRange(i, len) : i;
+        }
+
+        class const_str
+        {
+            const char * const begin_;
+            unsigned size_;
+
+            public:
+            template< unsigned N >
+                constexpr const_str( const char(&arr)[N] ) : begin_(arr), size_(N - 1) {
+                    static_assert( N >= 1, "not a string literal");
+                }
+            constexpr char operator[]( unsigned i ) const { 
+                return requires_in_range(i, size_), begin_[i]; 
+            }
+
+            constexpr operator const char *() const { 
+                return begin_; 
+            }
+
+            constexpr const char* begin() const { return begin_; }
+            constexpr const char* end() const { return begin_ + size_; }
+
+            constexpr unsigned size() const { 
+                return size_; 
+            }
+        };
+
+        constexpr unsigned find_closing_tag(const_str s, unsigned p)
+        {
+            return s[p] == '>' ? p : find_closing_tag(s, p+1);
+        }
+
+        constexpr bool is_valid(const_str s, unsigned i = 0, int f = 0)
+        {
+            return 
+                i == s.size()
+                    ? f == 0 :
+                f < 0 || f >= 2
+                    ? false :
+                s[i] == '<'
+                    ? is_valid(s, i+1, f+1) :
+                s[i] == '>'
+                    ? is_valid(s, i+1, f-1) :
+                is_valid(s, i+1, f);
+        }
+
+        constexpr bool is_equ_p(const char* a, const char* b, unsigned n)
+        {
+            return
+                *a == 0 && *b == 0 && n == 0 
+                    ? true :
+                (*a == 0 || *b == 0)
+                    ? false :
+                n == 0
+                    ? true :
+                *a != *b
+                    ? false :
+                is_equ_p(a+1, b+1, n-1);
+        }
+
+        constexpr bool is_equ_n(const_str a, unsigned ai, const_str b, unsigned bi, unsigned n)
+        {
+            return 
+                ai + n > a.size() || bi + n > b.size() 
+                    ? false :
+                n == 0 
+                    ? true : 
+                a[ai] != b[bi] 
+                    ? false : 
+                is_equ_n(a,ai+1,b,bi+1,n-1);
+        }
+
+        constexpr bool is_int(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<int>", 0, 5);
+        }
+
+        constexpr bool is_uint(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<uint>", 0, 6);
+        }
+
+        constexpr bool is_float(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<float>", 0, 7) ||
+                is_equ_n(s, i, "<double>", 0, 8);
+        }
+
+        constexpr bool is_str(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<str>", 0, 5) ||
+                is_equ_n(s, i, "<string>", 0, 8);
+        }
+
+        constexpr bool is_path(const_str s, unsigned i)
+        {
+            return is_equ_n(s, i, "<path>", 0, 6);
+        }
+#endif
+        template <typename T> 
+        struct parameter_tag
+        {
+            static const int value = 0;
+        };
+#define CROW_INTERNAL_PARAMETER_TAG(t, i) \
+template <> \
+struct parameter_tag<t> \
+{ \
+    static const int value = i; \
+}
+        CROW_INTERNAL_PARAMETER_TAG(int, 1);
+        CROW_INTERNAL_PARAMETER_TAG(char, 1);
+        CROW_INTERNAL_PARAMETER_TAG(short, 1);
+        CROW_INTERNAL_PARAMETER_TAG(long, 1);
+        CROW_INTERNAL_PARAMETER_TAG(long long, 1);
+        CROW_INTERNAL_PARAMETER_TAG(unsigned int, 2);
+        CROW_INTERNAL_PARAMETER_TAG(unsigned char, 2);
+        CROW_INTERNAL_PARAMETER_TAG(unsigned short, 2);
+        CROW_INTERNAL_PARAMETER_TAG(unsigned long, 2);
+        CROW_INTERNAL_PARAMETER_TAG(unsigned long long, 2);
+        CROW_INTERNAL_PARAMETER_TAG(double, 3);
+        CROW_INTERNAL_PARAMETER_TAG(std::string, 4);
+#undef CROW_INTERNAL_PARAMETER_TAG
+        template <typename ... Args>
+        struct compute_parameter_tag_from_args_list;
+
+        template <>
+        struct compute_parameter_tag_from_args_list<>
+        {
+            static const int value = 0;
+        };
+
+        template <typename Arg, typename ... Args>
+        struct compute_parameter_tag_from_args_list<Arg, Args...>
+        {
+            static const int sub_value = 
+                compute_parameter_tag_from_args_list<Args...>::value;
+            static const int value = 
+                parameter_tag<typename std::decay<Arg>::type>::value
+                ? sub_value* 6 + parameter_tag<typename std::decay<Arg>::type>::value
+                : sub_value;
+        };
+
+        static inline bool is_parameter_tag_compatible(uint64_t a, uint64_t b)
+        {
+            if (a == 0)
+                return b == 0;
+            if (b == 0)
+                return a == 0;
+            int sa = a%6;
+            int sb = a%6;
+            if (sa == 5) sa = 4;
+            if (sb == 5) sb = 4;
+            if (sa != sb)
+                return false;
+            return is_parameter_tag_compatible(a/6, b/6);
+        }
+
+        static inline unsigned find_closing_tag_runtime(const char* s, unsigned p)
+        {
+            return
+                s[p] == 0
+                ? throw std::runtime_error("unmatched tag <") :
+                s[p] == '>'
+                ? p : find_closing_tag_runtime(s, p + 1);
+        }
+        
+        static inline uint64_t get_parameter_tag_runtime(const char* s, unsigned p = 0)
+        {
+            return
+                s[p] == 0
+                    ?  0 :
+                s[p] == '<' ? (
+                    std::strncmp(s+p, "<int>", 5) == 0
+                        ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 1 :
+                    std::strncmp(s+p, "<uint>", 6) == 0
+                        ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 2 :
+                    (std::strncmp(s+p, "<float>", 7) == 0 ||
+                    std::strncmp(s+p, "<double>", 8) == 0)
+                        ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 3 :
+                    (std::strncmp(s+p, "<str>", 5) == 0 ||
+                    std::strncmp(s+p, "<string>", 8) == 0)
+                        ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 4 :
+                    std::strncmp(s+p, "<path>", 6) == 0
+                        ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 5 :
+                    throw std::runtime_error("invalid parameter type")
+                    ) :
+                get_parameter_tag_runtime(s, p+1);
+        }
+#ifndef CROW_MSVC_WORKAROUND
+        constexpr uint64_t get_parameter_tag(const_str s, unsigned p = 0)
+        {
+            return
+                p == s.size() 
+                    ?  0 :
+                s[p] == '<' ? ( 
+                    is_int(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 1 :
+                    is_uint(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 2 :
+                    is_float(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 3 :
+                    is_str(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 4 :
+                    is_path(s, p)
+                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 5 :
+                    throw std::runtime_error("invalid parameter type")
+                    ) : 
+                get_parameter_tag(s, p+1);
+        }
+#endif
+
+        template <typename ... T>
+        struct S
+        {
+            template <typename U>
+            using push = S<U, T...>;
+            template <typename U>
+            using push_back = S<T..., U>;
+            template <template<typename ... Args> class U>
+            using rebind = U<T...>;
+        };
+template <typename F, typename Set>
+        struct CallHelper;
+        template <typename F, typename ...Args>
+        struct CallHelper<F, S<Args...>>
+        {
+            template <typename F1, typename ...Args1, typename = 
+                decltype(std::declval<F1>()(std::declval<Args1>()...))
+                >
+            static char __test(int);
+
+            template <typename ...>
+            static int __test(...);
+
+            static constexpr bool value = sizeof(__test<F, Args...>(0)) == sizeof(char);
+        };
+
+
+        template <int N>
+        struct single_tag_to_type
+        {
+        };
+
+        template <>
+        struct single_tag_to_type<1>
+        {
+            using type = int64_t;
+        };
+
+        template <>
+        struct single_tag_to_type<2>
+        {
+            using type = uint64_t;
+        };
+
+        template <>
+        struct single_tag_to_type<3>
+        {
+            using type = double;
+        };
+
+        template <>
+        struct single_tag_to_type<4>
+        {
+            using type = std::string;
+        };
+
+        template <>
+        struct single_tag_to_type<5>
+        {
+            using type = std::string;
+        };
+
+
+        template <uint64_t Tag> 
+        struct arguments
+        {
+            using subarguments = typename arguments<Tag/6>::type;
+            using type = 
+                typename subarguments::template push<typename single_tag_to_type<Tag%6>::type>;
+        };
+
+        template <> 
+        struct arguments<0>
+        {
+            using type = S<>;
+        };
+
+        template <typename ... T>
+        struct last_element_type
+        {
+            using type = typename std::tuple_element<sizeof...(T)-1, std::tuple<T...>>::type;
+        };
+
+
+        template <>
+        struct last_element_type<>
+        {
+        };
+
+
+        // from http://stackoverflow.com/questions/13072359/c11-compile-time-array-with-logarithmic-evaluation-depth
+        template<class T> using Invoke = typename T::type;
+
+        template<unsigned...> struct seq{ using type = seq; };
+
+        template<class S1, class S2> struct concat;
+
+        template<unsigned... I1, unsigned... I2>
+        struct concat<seq<I1...>, seq<I2...>>
+          : seq<I1..., (sizeof...(I1)+I2)...>{};
+
+        template<class S1, class S2>
+        using Concat = Invoke<concat<S1, S2>>;
+
+        template<unsigned N> struct gen_seq;
+        template<unsigned N> using GenSeq = Invoke<gen_seq<N>>;
+
+        template<unsigned N>
+        struct gen_seq : Concat<GenSeq<N/2>, GenSeq<N - N/2>>{};
+
+        template<> struct gen_seq<0> : seq<>{};
+        template<> struct gen_seq<1> : seq<0>{};
+
+        template <typename Seq, typename Tuple> 
+        struct pop_back_helper;
+
+        template <unsigned ... N, typename Tuple>
+        struct pop_back_helper<seq<N...>, Tuple>
+        {
+            template <template <typename ... Args> class U>
+            using rebind = U<typename std::tuple_element<N, Tuple>::type...>;
+        };
+
+        template <typename ... T>
+        struct pop_back //: public pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>
+        {
+            template <template <typename ... Args> class U>
+            using rebind = typename pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>::template rebind<U>;
+        };
+
+        template <>
+        struct pop_back<>
+        {
+            template <template <typename ... Args> class U>
+            using rebind = U<>;
+        };
+
+        // from http://stackoverflow.com/questions/2118541/check-if-c0x-parameter-pack-contains-a-type
+        template < typename Tp, typename... List >
+        struct contains : std::true_type {};
+
+        template < typename Tp, typename Head, typename... Rest >
+        struct contains<Tp, Head, Rest...>
+        : std::conditional< std::is_same<Tp, Head>::value,
+            std::true_type,
+            contains<Tp, Rest...>
+        >::type {};
+
+        template < typename Tp >
+        struct contains<Tp> : std::false_type {};
+
+        template <typename T>
+        struct empty_context
+        {
+        };
+
+        template <typename T>
+        struct promote
+        {
+            using type = T;
+        };
+
+#define CROW_INTERNAL_PROMOTE_TYPE(t1, t2) \
+        template<> \
+        struct promote<t1> \
+        {  \
+            using type = t2; \
+        }
+
+        CROW_INTERNAL_PROMOTE_TYPE(char, int64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(short, int64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(int, int64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(long, int64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(long long, int64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(unsigned char, uint64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(unsigned short, uint64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(unsigned int, uint64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(unsigned long, uint64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(unsigned long long, uint64_t);
+        CROW_INTERNAL_PROMOTE_TYPE(float, double);
+#undef CROW_INTERNAL_PROMOTE_TYPE
+
+        template <typename T>
+        using promote_t = typename promote<T>::type;
+
+    } // namespace black_magic
+
+    namespace detail
+    {
+
+        template <class T, std::size_t N, class... Args>
+        struct get_index_of_element_from_tuple_by_type_impl
+        {
+            static constexpr auto value = N;
+        };
+
+        template <class T, std::size_t N, class... Args>
+        struct get_index_of_element_from_tuple_by_type_impl<T, N, T, Args...>
+        {
+            static constexpr auto value = N;
+        };
+
+        template <class T, std::size_t N, class U, class... Args>
+        struct get_index_of_element_from_tuple_by_type_impl<T, N, U, Args...>
+        {
+            static constexpr auto value = get_index_of_element_from_tuple_by_type_impl<T, N + 1, Args...>::value;
+        };
+
+    } // namespace detail
+
+    namespace utility
+    {
+        template <class T, class... Args>
+        T& get_element_by_type(std::tuple<Args...>& t)
+        {
+            return std::get<detail::get_index_of_element_from_tuple_by_type_impl<T, 0, Args...>::value>(t);
+        }
+
+        template<typename T> 
+        struct function_traits;  
+
+#ifndef CROW_MSVC_WORKAROUND
+        template<typename T> 
+        struct function_traits : public function_traits<decltype(&T::operator())>
+        {
+            using parent_t = function_traits<decltype(&T::operator())>;
+            static const size_t arity = parent_t::arity;
+            using result_type = typename parent_t::result_type;
+            template <size_t i>
+            using arg = typename parent_t::template arg<i>;
+        
+        };  
+#endif
+
+        template<typename ClassType, typename R, typename ...Args> 
+        struct function_traits<R(ClassType::*)(Args...) const>
+        {
+            static const size_t arity = sizeof...(Args);
+
+            typedef R result_type;
+
+            template <size_t i>
+            using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
+        };
+
+        template<typename ClassType, typename R, typename ...Args> 
+        struct function_traits<R(ClassType::*)(Args...)>
+        {
+            static const size_t arity = sizeof...(Args);
+
+            typedef R result_type;
+
+            template <size_t i>
+            using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
+        };
+
+        template<typename R, typename ...Args> 
+        struct function_traits<std::function<R(Args...)>>
+        {
+            static const size_t arity = sizeof...(Args);
+
+            typedef R result_type;
+
+            template <size_t i>
+            using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
+        };
+
+        inline static std::string base64encode(const char* data, size_t size, const char* key = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
+        {
+            std::string ret;
+            ret.resize((size+2) / 3 * 4);
+            auto it = ret.begin();
+            while(size >= 3)
+            {
+                *it++ = key[(((unsigned char)*data)&0xFC)>>2];
+                unsigned char h = (((unsigned char)*data++) & 0x03) << 4;
+                *it++ = key[h|((((unsigned char)*data)&0xF0)>>4)];
+                h = (((unsigned char)*data++) & 0x0F) << 2;
+                *it++ = key[h|((((unsigned char)*data)&0xC0)>>6)];
+                *it++ = key[((unsigned char)*data++)&0x3F];
+
+                size -= 3;
+            }
+            if (size == 1)
+            {
+                *it++ = key[(((unsigned char)*data)&0xFC)>>2];
+                unsigned char h = (((unsigned char)*data++) & 0x03) << 4;
+                *it++ = key[h];
+                *it++ = '=';
+                *it++ = '=';
+            }
+            else if (size == 2)
+            {
+                *it++ = key[(((unsigned char)*data)&0xFC)>>2];
+                unsigned char h = (((unsigned char)*data++) & 0x03) << 4;
+                *it++ = key[h|((((unsigned char)*data)&0xF0)>>4)];
+                h = (((unsigned char)*data++) & 0x0F) << 2;
+                *it++ = key[h];
+                *it++ = '=';
+            }
+            return ret;
+        }
+
+        inline static std::string base64encode_urlsafe(const char* data, size_t size)
+        {
+            return base64encode(data, size, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_");
+        }
+
+
+    } // namespace utility
+}
+
+
+
 /* 
  *
  * TinySHA1 - a header only implementation of the SHA1 algorithm in C++. Based
@@ -3223,47 +3471,6 @@ namespace sha1
 
 
 #pragma once
-// settings for crow
-// TODO - replace with runtime config. libucl?
-
-/* #ifdef - enables debug mode */
-#define CROW_ENABLE_DEBUG
-
-/* #ifdef - enables logging */
-#define CROW_ENABLE_LOGGING
-
-/* #ifdef - enables ssl */
-//#define CROW_ENABLE_SSL
-
-/* #define - specifies log level */
-/*
-    Debug       = 0
-    Info        = 1
-    Warning     = 2
-    Error       = 3
-    Critical    = 4
-
-    default to INFO
-*/
-#define CROW_LOG_LEVEL 1
-
-
-// compiler flags
-#if __cplusplus >= 201402L
-#define CROW_CAN_USE_CPP14
-#endif
-
-#if defined(_MSC_VER)
-#if _MSC_VER < 1900
-#define CROW_MSVC_WORKAROUND
-#define constexpr const
-#define noexcept throw()
-#endif
-#endif
-
-
-
-#pragma once
 #include <boost/asio.hpp>
 #ifdef CROW_ENABLE_SSL
 #include <boost/asio/ssl.hpp>
@@ -3376,6 +3583,500 @@ namespace crow
     };
 #endif
 }
+
+
+
+#pragma once
+
+#include <stdio.h>
+#include <string.h>
+#include <string>
+#include <vector>
+#include <iostream>
+
+namespace crow
+{
+// ----------------------------------------------------------------------------
+// qs_parse (modified)
+// https://github.com/bartgrantham/qs_parse
+// ----------------------------------------------------------------------------
+/*  Similar to strncmp, but handles URL-encoding for either string  */
+int qs_strncmp(const char * s, const char * qs, size_t n);
+
+
+/*  Finds the beginning of each key/value pair and stores a pointer in qs_kv.
+ *  Also decodes the value portion of the k/v pair *in-place*.  In a future
+ *  enhancement it will also have a compile-time option of sorting qs_kv
+ *  alphabetically by key.  */
+int qs_parse(char * qs, char * qs_kv[], int qs_kv_size);
+
+
+/*  Used by qs_parse to decode the value portion of a k/v pair  */
+int qs_decode(char * qs);
+
+
+/*  Looks up the value according to the key on a pre-processed query string
+ *  A future enhancement will be a compile-time option to look up the key
+ *  in a pre-sorted qs_kv array via a binary search.  */
+//char * qs_k2v(const char * key, char * qs_kv[], int qs_kv_size);
+ char * qs_k2v(const char * key, char * const * qs_kv, int qs_kv_size, int nth);
+
+
+/*  Non-destructive lookup of value, based on key.  User provides the
+ *  destinaton string and length.  */
+char * qs_scanvalue(const char * key, const char * qs, char * val, size_t val_len);
+
+// TODO: implement sorting of the qs_kv array; for now ensure it's not compiled
+#undef _qsSORTING
+
+// isxdigit _is_ available in <ctype.h>, but let's avoid another header instead
+#define CROW_QS_ISHEX(x)    ((((x)>='0'&&(x)<='9') || ((x)>='A'&&(x)<='F') || ((x)>='a'&&(x)<='f')) ? 1 : 0)
+#define CROW_QS_HEX2DEC(x)  (((x)>='0'&&(x)<='9') ? (x)-48 : ((x)>='A'&&(x)<='F') ? (x)-55 : ((x)>='a'&&(x)<='f') ? (x)-87 : 0)
+#define CROW_QS_ISQSCHR(x) ((((x)=='=')||((x)=='#')||((x)=='&')||((x)=='\0')) ? 0 : 1)
+
+inline int qs_strncmp(const char * s, const char * qs, size_t n)
+{
+    int i=0;
+    unsigned char u1, u2, unyb, lnyb;
+
+    while(n-- > 0)
+    {
+        u1 = (unsigned char) *s++;
+        u2 = (unsigned char) *qs++;
+
+        if ( ! CROW_QS_ISQSCHR(u1) ) {  u1 = '\0';  }
+        if ( ! CROW_QS_ISQSCHR(u2) ) {  u2 = '\0';  }
+
+        if ( u1 == '+' ) {  u1 = ' ';  }
+        if ( u1 == '%' ) // easier/safer than scanf
+        {
+            unyb = (unsigned char) *s++;
+            lnyb = (unsigned char) *s++;
+            if ( CROW_QS_ISHEX(unyb) && CROW_QS_ISHEX(lnyb) )
+                u1 = (CROW_QS_HEX2DEC(unyb) * 16) + CROW_QS_HEX2DEC(lnyb);
+            else
+                u1 = '\0';
+        }
+
+        if ( u2 == '+' ) {  u2 = ' ';  }
+        if ( u2 == '%' ) // easier/safer than scanf
+        {
+            unyb = (unsigned char) *qs++;
+            lnyb = (unsigned char) *qs++;
+            if ( CROW_QS_ISHEX(unyb) && CROW_QS_ISHEX(lnyb) )
+                u2 = (CROW_QS_HEX2DEC(unyb) * 16) + CROW_QS_HEX2DEC(lnyb);
+            else
+                u2 = '\0';
+        }
+
+        if ( u1 != u2 )
+            return u1 - u2;
+        if ( u1 == '\0' )
+            return 0;
+        i++;
+    }
+    if ( CROW_QS_ISQSCHR(*qs) )
+        return -1;
+    else
+        return 0;
+}
+
+
+inline int qs_parse(char * qs, char * qs_kv[], int qs_kv_size)
+{
+    int i, j;
+    char * substr_ptr;
+
+    for(i=0; i<qs_kv_size; i++)  qs_kv[i] = NULL;
+
+    // find the beginning of the k/v substrings or the fragment
+    substr_ptr = qs + strcspn(qs, "?#");
+    if (substr_ptr[0] != '\0')
+        substr_ptr++;
+    else
+        return 0; // no query or fragment
+
+    i=0;
+    while(i<qs_kv_size)
+    {
+        qs_kv[i] = substr_ptr;
+        j = strcspn(substr_ptr, "&");
+        if ( substr_ptr[j] == '\0' ) {  break;  }
+        substr_ptr += j + 1;
+        i++;
+    }
+    i++;  // x &'s -> means x iterations of this loop -> means *x+1* k/v pairs
+
+    // we only decode the values in place, the keys could have '='s in them
+    // which will hose our ability to distinguish keys from values later
+    for(j=0; j<i; j++)
+    {
+        substr_ptr = qs_kv[j] + strcspn(qs_kv[j], "=&#");
+        if ( substr_ptr[0] == '&' || substr_ptr[0] == '\0')  // blank value: skip decoding
+            substr_ptr[0] = '\0';
+        else
+            qs_decode(++substr_ptr);
+    }
+
+#ifdef _qsSORTING
+// TODO: qsort qs_kv, using qs_strncmp() for the comparison
+#endif
+
+    return i;
+}
+
+
+inline int qs_decode(char * qs)
+{
+    int i=0, j=0;
+
+    while( CROW_QS_ISQSCHR(qs[j]) )
+    {
+        if ( qs[j] == '+' ) {  qs[i] = ' ';  }
+        else if ( qs[j] == '%' ) // easier/safer than scanf
+        {
+            if ( ! CROW_QS_ISHEX(qs[j+1]) || ! CROW_QS_ISHEX(qs[j+2]) )
+            {
+                qs[i] = '\0';
+                return i;
+            }
+            qs[i] = (CROW_QS_HEX2DEC(qs[j+1]) * 16) + CROW_QS_HEX2DEC(qs[j+2]);
+            j+=2;
+        }
+        else
+        {
+            qs[i] = qs[j];
+        }
+        i++;  j++;
+    }
+    qs[i] = '\0';
+
+    return i;
+}
+
+
+inline char * qs_k2v(const char * key, char * const * qs_kv, int qs_kv_size, int nth = 0)
+{
+    int i;
+    size_t key_len, skip;
+
+    key_len = strlen(key);
+
+#ifdef _qsSORTING
+// TODO: binary search for key in the sorted qs_kv
+#else  // _qsSORTING
+    for(i=0; i<qs_kv_size; i++)
+    {
+        // we rely on the unambiguous '=' to find the value in our k/v pair
+        if ( qs_strncmp(key, qs_kv[i], key_len) == 0 )
+        {
+            skip = strcspn(qs_kv[i], "=");
+            if ( qs_kv[i][skip] == '=' )
+                skip++;
+            // return (zero-char value) ? ptr to trailing '\0' : ptr to value
+            if(nth == 0)
+                return qs_kv[i] + skip;
+            else 
+                --nth;
+        }
+    }
+#endif  // _qsSORTING
+
+    return NULL;
+}
+
+
+inline char * qs_scanvalue(const char * key, const char * qs, char * val, size_t val_len)
+{
+    size_t i, key_len;
+    const char * tmp;
+
+    // find the beginning of the k/v substrings
+    if ( (tmp = strchr(qs, '?')) != NULL )
+        qs = tmp + 1;
+
+    key_len = strlen(key);
+    while(qs[0] != '#' && qs[0] != '\0')
+    {
+        if ( qs_strncmp(key, qs, key_len) == 0 )
+            break;
+        qs += strcspn(qs, "&") + 1;
+    }
+
+    if ( qs[0] == '\0' ) return NULL;
+
+    qs += strcspn(qs, "=&#");
+    if ( qs[0] == '=' )
+    {
+        qs++;
+        i = strcspn(qs, "&=#");
+        strncpy(val, qs, (val_len-1)<(i+1) ? (val_len-1) : (i+1));
+        qs_decode(val);
+    }
+    else
+    {
+        if ( val_len > 0 )
+            val[0] = '\0';
+    }
+
+    return val;
+}
+}
+// ----------------------------------------------------------------------------
+
+
+namespace crow 
+{
+    class query_string
+    {
+    public:
+        static const int MAX_KEY_VALUE_PAIRS_COUNT = 256;
+
+        query_string()
+        {
+
+        }
+
+        query_string(const query_string& qs)
+            : url_(qs.url_)
+        {
+            for(auto p:qs.key_value_pairs_)
+            {
+                key_value_pairs_.push_back((char*)(p-qs.url_.c_str()+url_.c_str()));
+            }
+        }
+
+        query_string& operator = (const query_string& qs)
+        {
+            url_ = qs.url_;
+            key_value_pairs_.clear();
+            for(auto p:qs.key_value_pairs_)
+            {
+                key_value_pairs_.push_back((char*)(p-qs.url_.c_str()+url_.c_str()));
+            }
+            return *this;
+        }
+
+        query_string& operator = (query_string&& qs)
+        {
+            key_value_pairs_ = std::move(qs.key_value_pairs_);
+            char* old_data = (char*)qs.url_.c_str();
+            url_ = std::move(qs.url_);
+            for(auto& p:key_value_pairs_)
+            {
+                p += (char*)url_.c_str() - old_data;
+            }
+            return *this;
+        }
+
+
+        query_string(std::string url)
+            : url_(std::move(url))
+        {
+            if (url_.empty())
+                return;
+
+            key_value_pairs_.resize(MAX_KEY_VALUE_PAIRS_COUNT);
+
+            int count = qs_parse(&url_[0], &key_value_pairs_[0], MAX_KEY_VALUE_PAIRS_COUNT);
+            key_value_pairs_.resize(count);
+        }
+
+        void clear() 
+        {
+            key_value_pairs_.clear();
+            url_.clear();
+        }
+
+        friend std::ostream& operator<<(std::ostream& os, const query_string& qs)
+        {
+            os << "[ ";
+            for(size_t i = 0; i < qs.key_value_pairs_.size(); ++i) {
+                if (i)
+                    os << ", ";
+                os << qs.key_value_pairs_[i];
+            }
+            os << " ]";
+            return os;
+
+        }
+
+        char* get (const std::string& name) const
+        {
+            char* ret = qs_k2v(name.c_str(), key_value_pairs_.data(), key_value_pairs_.size());
+            return ret;
+        }
+
+        std::vector<char*> get_list (const std::string& name) const
+        {
+            std::vector<char*> ret;
+            std::string plus = name + "[]";            
+            char* element = nullptr;
+
+            int count = 0;
+            while(1)
+            {
+                element = qs_k2v(plus.c_str(), key_value_pairs_.data(), key_value_pairs_.size(), count++);
+                if (!element)
+                    break;
+                ret.push_back(element);
+            }
+            return ret;
+        }
+
+
+    private:
+        std::string url_;
+        std::vector<char*> key_value_pairs_;
+    };
+
+} // end namespace
+
+
+
+#pragma once
+
+#include <string>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <iostream>
+#include <sstream>
+
+
+
+
+namespace crow
+{
+    enum class LogLevel
+    {
+#ifndef ERROR
+        DEBUG = 0,
+        INFO,
+        WARNING,
+        ERROR,
+        CRITICAL,
+#endif
+
+        Debug = 0,
+        Info,
+        Warning,
+        Error,
+        Critical,
+    };
+
+    class ILogHandler {
+        public:
+            virtual void log(std::string message, LogLevel level) = 0;
+    };
+
+    class CerrLogHandler : public ILogHandler {
+        public:
+            void log(std::string message, LogLevel /*level*/) override {
+                std::cerr << message;
+            }
+    };
+
+    class logger {
+
+        private:
+            //
+            static std::string timestamp()
+            {
+                char date[32];
+                time_t t = time(0);
+
+                tm my_tm;
+
+#ifdef _MSC_VER
+                gmtime_s(&my_tm, &t);
+#else
+                gmtime_r(&t, &my_tm);
+#endif
+
+                size_t sz = strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", &my_tm);
+                return std::string(date, date+sz);
+            }
+
+        public:
+
+
+            logger(std::string prefix, LogLevel level) : level_(level) {
+    #ifdef CROW_ENABLE_LOGGING
+                    stringstream_ << "(" << timestamp() << ") [" << prefix << "] ";
+    #endif
+
+            }
+            ~logger() {
+    #ifdef CROW_ENABLE_LOGGING
+                if(level_ >= get_current_log_level()) {
+                    stringstream_ << std::endl;
+                    get_handler_ref()->log(stringstream_.str(), level_);
+                }
+    #endif
+            }
+
+            //
+            template <typename T>
+            logger& operator<<(T const &value) {
+
+    #ifdef CROW_ENABLE_LOGGING
+                if(level_ >= get_current_log_level()) {
+                    stringstream_ << value;
+                }
+    #endif
+                return *this;
+            }
+
+            //
+            static void setLogLevel(LogLevel level) {
+                get_log_level_ref() = level;
+            }
+
+            static void setHandler(ILogHandler* handler) {
+                get_handler_ref() = handler;
+            }
+
+            static LogLevel get_current_log_level() {
+                return get_log_level_ref();
+            }
+
+        private:
+            //
+            static LogLevel& get_log_level_ref()
+            {
+                static LogLevel current_level = (LogLevel)CROW_LOG_LEVEL;
+                return current_level;
+            }
+            static ILogHandler*& get_handler_ref()
+            {
+                static CerrLogHandler default_handler;
+                static ILogHandler* current_handler = &default_handler;
+                return current_handler;
+            }
+
+            //
+            std::ostringstream stringstream_;
+            LogLevel level_;
+    };
+}
+
+#define CROW_LOG_CRITICAL   \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::Critical) \
+            crow::logger("CRITICAL", crow::LogLevel::Critical)
+#define CROW_LOG_ERROR      \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::Error) \
+            crow::logger("ERROR   ", crow::LogLevel::Error)
+#define CROW_LOG_WARNING    \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::Warning) \
+            crow::logger("WARNING ", crow::LogLevel::Warning)
+#define CROW_LOG_INFO       \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::Info) \
+            crow::logger("INFO    ", crow::LogLevel::Info)
+#define CROW_LOG_DEBUG      \
+        if (crow::logger::get_current_log_level() <= crow::LogLevel::Debug) \
+            crow::logger("DEBUG   ", crow::LogLevel::Debug)
+
 
 
 
@@ -5400,152 +6101,6 @@ namespace crow
 
 #pragma once
 
-#include <string>
-#include <cstdio>
-#include <cstdlib>
-#include <ctime>
-#include <iostream>
-#include <sstream>
-
-
-
-
-namespace crow
-{
-    enum class LogLevel
-    {
-#ifndef ERROR
-        DEBUG = 0,
-        INFO,
-        WARNING,
-        ERROR,
-        CRITICAL,
-#endif
-
-        Debug = 0,
-        Info,
-        Warning,
-        Error,
-        Critical,
-    };
-
-    class ILogHandler {
-        public:
-            virtual void log(std::string message, LogLevel level) = 0;
-    };
-
-    class CerrLogHandler : public ILogHandler {
-        public:
-            void log(std::string message, LogLevel /*level*/) override {
-                std::cerr << message;
-            }
-    };
-
-    class logger {
-
-        private:
-            //
-            static std::string timestamp()
-            {
-                char date[32];
-                time_t t = time(0);
-
-                tm my_tm;
-
-#ifdef _MSC_VER
-                gmtime_s(&my_tm, &t);
-#else
-                gmtime_r(&t, &my_tm);
-#endif
-
-                size_t sz = strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", &my_tm);
-                return std::string(date, date+sz);
-            }
-
-        public:
-
-
-            logger(std::string prefix, LogLevel level) : level_(level) {
-    #ifdef CROW_ENABLE_LOGGING
-                    stringstream_ << "(" << timestamp() << ") [" << prefix << "] ";
-    #endif
-
-            }
-            ~logger() {
-    #ifdef CROW_ENABLE_LOGGING
-                if(level_ >= get_current_log_level()) {
-                    stringstream_ << std::endl;
-                    get_handler_ref()->log(stringstream_.str(), level_);
-                }
-    #endif
-            }
-
-            //
-            template <typename T>
-            logger& operator<<(T const &value) {
-
-    #ifdef CROW_ENABLE_LOGGING
-                if(level_ >= get_current_log_level()) {
-                    stringstream_ << value;
-                }
-    #endif
-                return *this;
-            }
-
-            //
-            static void setLogLevel(LogLevel level) {
-                get_log_level_ref() = level;
-            }
-
-            static void setHandler(ILogHandler* handler) {
-                get_handler_ref() = handler;
-            }
-
-            static LogLevel get_current_log_level() {
-                return get_log_level_ref();
-            }
-
-        private:
-            //
-            static LogLevel& get_log_level_ref()
-            {
-                static LogLevel current_level = (LogLevel)CROW_LOG_LEVEL;
-                return current_level;
-            }
-            static ILogHandler*& get_handler_ref()
-            {
-                static CerrLogHandler default_handler;
-                static ILogHandler* current_handler = &default_handler;
-                return current_handler;
-            }
-
-            //
-            std::ostringstream stringstream_;
-            LogLevel level_;
-    };
-}
-
-#define CROW_LOG_CRITICAL   \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::Critical) \
-            crow::logger("CRITICAL", crow::LogLevel::Critical)
-#define CROW_LOG_ERROR      \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::Error) \
-            crow::logger("ERROR   ", crow::LogLevel::Error)
-#define CROW_LOG_WARNING    \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::Warning) \
-            crow::logger("WARNING ", crow::LogLevel::Warning)
-#define CROW_LOG_INFO       \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::Info) \
-            crow::logger("INFO    ", crow::LogLevel::Info)
-#define CROW_LOG_DEBUG      \
-        if (crow::logger::get_current_log_level() <= crow::LogLevel::Debug) \
-            crow::logger("DEBUG   ", crow::LogLevel::Debug)
-
-
-
-
-#pragma once
-
 #include <boost/asio.hpp>
 #include <deque>
 #include <functional>
@@ -5625,558 +6180,6 @@ namespace crow
             int step_{};
         };
     }
-}
-
-
-
-#pragma once
-
-#include <cstdint>
-#include <stdexcept>
-#include <tuple>
-#include <type_traits>
-#include <cstring>
-#include <functional>
-#include <string>
-
-
-
-
-namespace crow
-{
-    namespace black_magic
-    {
-#ifndef CROW_MSVC_WORKAROUND
-        struct OutOfRange
-        {
-            OutOfRange(unsigned /*pos*/, unsigned /*length*/) {}
-        };
-        constexpr unsigned requires_in_range( unsigned i, unsigned len )
-        {
-            return i >= len ? throw OutOfRange(i, len) : i;
-        }
-
-        class const_str
-        {
-            const char * const begin_;
-            unsigned size_;
-
-            public:
-            template< unsigned N >
-                constexpr const_str( const char(&arr)[N] ) : begin_(arr), size_(N - 1) {
-                    static_assert( N >= 1, "not a string literal");
-                }
-            constexpr char operator[]( unsigned i ) const { 
-                return requires_in_range(i, size_), begin_[i]; 
-            }
-
-            constexpr operator const char *() const { 
-                return begin_; 
-            }
-
-            constexpr const char* begin() const { return begin_; }
-            constexpr const char* end() const { return begin_ + size_; }
-
-            constexpr unsigned size() const { 
-                return size_; 
-            }
-        };
-
-        constexpr unsigned find_closing_tag(const_str s, unsigned p)
-        {
-            return s[p] == '>' ? p : find_closing_tag(s, p+1);
-        }
-
-        constexpr bool is_valid(const_str s, unsigned i = 0, int f = 0)
-        {
-            return 
-                i == s.size()
-                    ? f == 0 :
-                f < 0 || f >= 2
-                    ? false :
-                s[i] == '<'
-                    ? is_valid(s, i+1, f+1) :
-                s[i] == '>'
-                    ? is_valid(s, i+1, f-1) :
-                is_valid(s, i+1, f);
-        }
-
-        constexpr bool is_equ_p(const char* a, const char* b, unsigned n)
-        {
-            return
-                *a == 0 && *b == 0 && n == 0 
-                    ? true :
-                (*a == 0 || *b == 0)
-                    ? false :
-                n == 0
-                    ? true :
-                *a != *b
-                    ? false :
-                is_equ_p(a+1, b+1, n-1);
-        }
-
-        constexpr bool is_equ_n(const_str a, unsigned ai, const_str b, unsigned bi, unsigned n)
-        {
-            return 
-                ai + n > a.size() || bi + n > b.size() 
-                    ? false :
-                n == 0 
-                    ? true : 
-                a[ai] != b[bi] 
-                    ? false : 
-                is_equ_n(a,ai+1,b,bi+1,n-1);
-        }
-
-        constexpr bool is_int(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<int>", 0, 5);
-        }
-
-        constexpr bool is_uint(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<uint>", 0, 6);
-        }
-
-        constexpr bool is_float(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<float>", 0, 7) ||
-                is_equ_n(s, i, "<double>", 0, 8);
-        }
-
-        constexpr bool is_str(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<str>", 0, 5) ||
-                is_equ_n(s, i, "<string>", 0, 8);
-        }
-
-        constexpr bool is_path(const_str s, unsigned i)
-        {
-            return is_equ_n(s, i, "<path>", 0, 6);
-        }
-#endif
-        template <typename T> 
-        struct parameter_tag
-        {
-            static const int value = 0;
-        };
-#define CROW_INTERNAL_PARAMETER_TAG(t, i) \
-template <> \
-struct parameter_tag<t> \
-{ \
-    static const int value = i; \
-}
-        CROW_INTERNAL_PARAMETER_TAG(int, 1);
-        CROW_INTERNAL_PARAMETER_TAG(char, 1);
-        CROW_INTERNAL_PARAMETER_TAG(short, 1);
-        CROW_INTERNAL_PARAMETER_TAG(long, 1);
-        CROW_INTERNAL_PARAMETER_TAG(long long, 1);
-        CROW_INTERNAL_PARAMETER_TAG(unsigned int, 2);
-        CROW_INTERNAL_PARAMETER_TAG(unsigned char, 2);
-        CROW_INTERNAL_PARAMETER_TAG(unsigned short, 2);
-        CROW_INTERNAL_PARAMETER_TAG(unsigned long, 2);
-        CROW_INTERNAL_PARAMETER_TAG(unsigned long long, 2);
-        CROW_INTERNAL_PARAMETER_TAG(double, 3);
-        CROW_INTERNAL_PARAMETER_TAG(std::string, 4);
-#undef CROW_INTERNAL_PARAMETER_TAG
-        template <typename ... Args>
-        struct compute_parameter_tag_from_args_list;
-
-        template <>
-        struct compute_parameter_tag_from_args_list<>
-        {
-            static const int value = 0;
-        };
-
-        template <typename Arg, typename ... Args>
-        struct compute_parameter_tag_from_args_list<Arg, Args...>
-        {
-            static const int sub_value = 
-                compute_parameter_tag_from_args_list<Args...>::value;
-            static const int value = 
-                parameter_tag<typename std::decay<Arg>::type>::value
-                ? sub_value* 6 + parameter_tag<typename std::decay<Arg>::type>::value
-                : sub_value;
-        };
-
-        static inline bool is_parameter_tag_compatible(uint64_t a, uint64_t b)
-        {
-            if (a == 0)
-                return b == 0;
-            if (b == 0)
-                return a == 0;
-            int sa = a%6;
-            int sb = a%6;
-            if (sa == 5) sa = 4;
-            if (sb == 5) sb = 4;
-            if (sa != sb)
-                return false;
-            return is_parameter_tag_compatible(a/6, b/6);
-        }
-
-        static inline unsigned find_closing_tag_runtime(const char* s, unsigned p)
-        {
-            return
-                s[p] == 0
-                ? throw std::runtime_error("unmatched tag <") :
-                s[p] == '>'
-                ? p : find_closing_tag_runtime(s, p + 1);
-        }
-        
-        static inline uint64_t get_parameter_tag_runtime(const char* s, unsigned p = 0)
-        {
-            return
-                s[p] == 0
-                    ?  0 :
-                s[p] == '<' ? (
-                    std::strncmp(s+p, "<int>", 5) == 0
-                        ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 1 :
-                    std::strncmp(s+p, "<uint>", 6) == 0
-                        ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 2 :
-                    (std::strncmp(s+p, "<float>", 7) == 0 ||
-                    std::strncmp(s+p, "<double>", 8) == 0)
-                        ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 3 :
-                    (std::strncmp(s+p, "<str>", 5) == 0 ||
-                    std::strncmp(s+p, "<string>", 8) == 0)
-                        ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 4 :
-                    std::strncmp(s+p, "<path>", 6) == 0
-                        ? get_parameter_tag_runtime(s, find_closing_tag_runtime(s, p)) * 6 + 5 :
-                    throw std::runtime_error("invalid parameter type")
-                    ) :
-                get_parameter_tag_runtime(s, p+1);
-        }
-#ifndef CROW_MSVC_WORKAROUND
-        constexpr uint64_t get_parameter_tag(const_str s, unsigned p = 0)
-        {
-            return
-                p == s.size() 
-                    ?  0 :
-                s[p] == '<' ? ( 
-                    is_int(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 1 :
-                    is_uint(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 2 :
-                    is_float(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 3 :
-                    is_str(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 4 :
-                    is_path(s, p)
-                        ? get_parameter_tag(s, find_closing_tag(s, p)) * 6 + 5 :
-                    throw std::runtime_error("invalid parameter type")
-                    ) : 
-                get_parameter_tag(s, p+1);
-        }
-#endif
-
-        template <typename ... T>
-        struct S
-        {
-            template <typename U>
-            using push = S<U, T...>;
-            template <typename U>
-            using push_back = S<T..., U>;
-            template <template<typename ... Args> class U>
-            using rebind = U<T...>;
-        };
-template <typename F, typename Set>
-        struct CallHelper;
-        template <typename F, typename ...Args>
-        struct CallHelper<F, S<Args...>>
-        {
-            template <typename F1, typename ...Args1, typename = 
-                decltype(std::declval<F1>()(std::declval<Args1>()...))
-                >
-            static char __test(int);
-
-            template <typename ...>
-            static int __test(...);
-
-            static constexpr bool value = sizeof(__test<F, Args...>(0)) == sizeof(char);
-        };
-
-
-        template <int N>
-        struct single_tag_to_type
-        {
-        };
-
-        template <>
-        struct single_tag_to_type<1>
-        {
-            using type = int64_t;
-        };
-
-        template <>
-        struct single_tag_to_type<2>
-        {
-            using type = uint64_t;
-        };
-
-        template <>
-        struct single_tag_to_type<3>
-        {
-            using type = double;
-        };
-
-        template <>
-        struct single_tag_to_type<4>
-        {
-            using type = std::string;
-        };
-
-        template <>
-        struct single_tag_to_type<5>
-        {
-            using type = std::string;
-        };
-
-
-        template <uint64_t Tag> 
-        struct arguments
-        {
-            using subarguments = typename arguments<Tag/6>::type;
-            using type = 
-                typename subarguments::template push<typename single_tag_to_type<Tag%6>::type>;
-        };
-
-        template <> 
-        struct arguments<0>
-        {
-            using type = S<>;
-        };
-
-        template <typename ... T>
-        struct last_element_type
-        {
-            using type = typename std::tuple_element<sizeof...(T)-1, std::tuple<T...>>::type;
-        };
-
-
-        template <>
-        struct last_element_type<>
-        {
-        };
-
-
-        // from http://stackoverflow.com/questions/13072359/c11-compile-time-array-with-logarithmic-evaluation-depth
-        template<class T> using Invoke = typename T::type;
-
-        template<unsigned...> struct seq{ using type = seq; };
-
-        template<class S1, class S2> struct concat;
-
-        template<unsigned... I1, unsigned... I2>
-        struct concat<seq<I1...>, seq<I2...>>
-          : seq<I1..., (sizeof...(I1)+I2)...>{};
-
-        template<class S1, class S2>
-        using Concat = Invoke<concat<S1, S2>>;
-
-        template<unsigned N> struct gen_seq;
-        template<unsigned N> using GenSeq = Invoke<gen_seq<N>>;
-
-        template<unsigned N>
-        struct gen_seq : Concat<GenSeq<N/2>, GenSeq<N - N/2>>{};
-
-        template<> struct gen_seq<0> : seq<>{};
-        template<> struct gen_seq<1> : seq<0>{};
-
-        template <typename Seq, typename Tuple> 
-        struct pop_back_helper;
-
-        template <unsigned ... N, typename Tuple>
-        struct pop_back_helper<seq<N...>, Tuple>
-        {
-            template <template <typename ... Args> class U>
-            using rebind = U<typename std::tuple_element<N, Tuple>::type...>;
-        };
-
-        template <typename ... T>
-        struct pop_back //: public pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>
-        {
-            template <template <typename ... Args> class U>
-            using rebind = typename pop_back_helper<typename gen_seq<sizeof...(T)-1>::type, std::tuple<T...>>::template rebind<U>;
-        };
-
-        template <>
-        struct pop_back<>
-        {
-            template <template <typename ... Args> class U>
-            using rebind = U<>;
-        };
-
-        // from http://stackoverflow.com/questions/2118541/check-if-c0x-parameter-pack-contains-a-type
-        template < typename Tp, typename... List >
-        struct contains : std::true_type {};
-
-        template < typename Tp, typename Head, typename... Rest >
-        struct contains<Tp, Head, Rest...>
-        : std::conditional< std::is_same<Tp, Head>::value,
-            std::true_type,
-            contains<Tp, Rest...>
-        >::type {};
-
-        template < typename Tp >
-        struct contains<Tp> : std::false_type {};
-
-        template <typename T>
-        struct empty_context
-        {
-        };
-
-        template <typename T>
-        struct promote
-        {
-            using type = T;
-        };
-
-#define CROW_INTERNAL_PROMOTE_TYPE(t1, t2) \
-        template<> \
-        struct promote<t1> \
-        {  \
-            using type = t2; \
-        }
-
-        CROW_INTERNAL_PROMOTE_TYPE(char, int64_t);
-        CROW_INTERNAL_PROMOTE_TYPE(short, int64_t);
-        CROW_INTERNAL_PROMOTE_TYPE(int, int64_t);
-        CROW_INTERNAL_PROMOTE_TYPE(long, int64_t);
-        CROW_INTERNAL_PROMOTE_TYPE(long long, int64_t);
-        CROW_INTERNAL_PROMOTE_TYPE(unsigned char, uint64_t);
-        CROW_INTERNAL_PROMOTE_TYPE(unsigned short, uint64_t);
-        CROW_INTERNAL_PROMOTE_TYPE(unsigned int, uint64_t);
-        CROW_INTERNAL_PROMOTE_TYPE(unsigned long, uint64_t);
-        CROW_INTERNAL_PROMOTE_TYPE(unsigned long long, uint64_t);
-        CROW_INTERNAL_PROMOTE_TYPE(float, double);
-#undef CROW_INTERNAL_PROMOTE_TYPE
-
-        template <typename T>
-        using promote_t = typename promote<T>::type;
-
-    } // namespace black_magic
-
-    namespace detail
-    {
-
-        template <class T, std::size_t N, class... Args>
-        struct get_index_of_element_from_tuple_by_type_impl
-        {
-            static constexpr auto value = N;
-        };
-
-        template <class T, std::size_t N, class... Args>
-        struct get_index_of_element_from_tuple_by_type_impl<T, N, T, Args...>
-        {
-            static constexpr auto value = N;
-        };
-
-        template <class T, std::size_t N, class U, class... Args>
-        struct get_index_of_element_from_tuple_by_type_impl<T, N, U, Args...>
-        {
-            static constexpr auto value = get_index_of_element_from_tuple_by_type_impl<T, N + 1, Args...>::value;
-        };
-
-    } // namespace detail
-
-    namespace utility
-    {
-        template <class T, class... Args>
-        T& get_element_by_type(std::tuple<Args...>& t)
-        {
-            return std::get<detail::get_index_of_element_from_tuple_by_type_impl<T, 0, Args...>::value>(t);
-        }
-
-        template<typename T> 
-        struct function_traits;  
-
-#ifndef CROW_MSVC_WORKAROUND
-        template<typename T> 
-        struct function_traits : public function_traits<decltype(&T::operator())>
-        {
-            using parent_t = function_traits<decltype(&T::operator())>;
-            static const size_t arity = parent_t::arity;
-            using result_type = typename parent_t::result_type;
-            template <size_t i>
-            using arg = typename parent_t::template arg<i>;
-        
-        };  
-#endif
-
-        template<typename ClassType, typename R, typename ...Args> 
-        struct function_traits<R(ClassType::*)(Args...) const>
-        {
-            static const size_t arity = sizeof...(Args);
-
-            typedef R result_type;
-
-            template <size_t i>
-            using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
-        };
-
-        template<typename ClassType, typename R, typename ...Args> 
-        struct function_traits<R(ClassType::*)(Args...)>
-        {
-            static const size_t arity = sizeof...(Args);
-
-            typedef R result_type;
-
-            template <size_t i>
-            using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
-        };
-
-        template<typename R, typename ...Args> 
-        struct function_traits<std::function<R(Args...)>>
-        {
-            static const size_t arity = sizeof...(Args);
-
-            typedef R result_type;
-
-            template <size_t i>
-            using arg = typename std::tuple_element<i, std::tuple<Args...>>::type;
-        };
-
-        inline static std::string base64encode(const char* data, size_t size, const char* key = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
-        {
-            std::string ret;
-            ret.resize((size+2) / 3 * 4);
-            auto it = ret.begin();
-            while(size >= 3)
-            {
-                *it++ = key[(((unsigned char)*data)&0xFC)>>2];
-                unsigned char h = (((unsigned char)*data++) & 0x03) << 4;
-                *it++ = key[h|((((unsigned char)*data)&0xF0)>>4)];
-                h = (((unsigned char)*data++) & 0x0F) << 2;
-                *it++ = key[h|((((unsigned char)*data)&0xC0)>>6)];
-                *it++ = key[((unsigned char)*data++)&0x3F];
-
-                size -= 3;
-            }
-            if (size == 1)
-            {
-                *it++ = key[(((unsigned char)*data)&0xFC)>>2];
-                unsigned char h = (((unsigned char)*data++) & 0x03) << 4;
-                *it++ = key[h];
-                *it++ = '=';
-                *it++ = '=';
-            }
-            else if (size == 2)
-            {
-                *it++ = key[(((unsigned char)*data)&0xFC)>>2];
-                unsigned char h = (((unsigned char)*data++) & 0x03) << 4;
-                *it++ = key[h|((((unsigned char)*data)&0xF0)>>4)];
-                h = (((unsigned char)*data++) & 0x0F) << 2;
-                *it++ = key[h];
-                *it++ = '=';
-            }
-            return ret;
-        }
-
-        inline static std::string base64encode_urlsafe(const char* data, size_t size)
-        {
-            return base64encode(data, size, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_");
-        }
-
-
-    } // namespace utility
 }
 
 
@@ -6393,501 +6396,6 @@ namespace crow
         }
 
     };
-}
-
-
-
-#pragma once
-#include <boost/algorithm/string/predicate.hpp>
-
-
-
-
-
-
-
-namespace crow
-{
-    namespace websocket
-    {
-        enum class WebSocketReadState
-        {
-            MiniHeader,
-            Len16,
-            Len64,
-            Mask,
-            Payload,
-        };
-
-		struct connection
-		{
-            virtual void send_binary(const std::string& msg) = 0;
-            virtual void send_text(const std::string& msg) = 0;
-            virtual void close(const std::string& msg = "quit") = 0;
-            virtual ~connection(){}
-
-            void userdata(void* u) { userdata_ = u; }
-            void* userdata() { return userdata_; }
-
-        private:
-            void* userdata_;
-		};
-
-		template <typename Adaptor>
-        class Connection : public connection
-        {
-			public:
-				Connection(const crow::request& req, Adaptor&& adaptor, 
-						std::function<void(crow::websocket::connection&)> open_handler,
-						std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler,
-						std::function<void(crow::websocket::connection&, const std::string&)> close_handler,
-						std::function<void(crow::websocket::connection&)> error_handler)
-					: adaptor_(std::move(adaptor)), open_handler_(std::move(open_handler)), message_handler_(std::move(message_handler)), close_handler_(std::move(close_handler)), error_handler_(std::move(error_handler))
-				{
-					if (!boost::iequals(req.get_header_value("upgrade"), "websocket"))
-					{
-						adaptor.close();
-						delete this;
-						return;
-					}
-					// Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
-					// Sec-WebSocket-Version: 13
-                    std::string magic = req.get_header_value("Sec-WebSocket-Key") +  "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-                    sha1::SHA1 s;
-                    s.processBytes(magic.data(), magic.size());
-                    uint8_t digest[20];
-                    s.getDigestBytes(digest);   
-                    start(crow::utility::base64encode((char*)digest, 20));
-				}
-
-                template<typename CompletionHandler>
-                void dispatch(CompletionHandler handler)
-                {
-                    adaptor_.get_io_service().dispatch(handler);
-                }
-
-                template<typename CompletionHandler>
-                void post(CompletionHandler handler)
-                {
-                    adaptor_.get_io_service().post(handler);
-                }
-
-                void send_pong(const std::string& msg)
-                {
-                    dispatch([this, msg]{
-                        char buf[3] = "\x8A\x00";
-                        buf[1] += msg.size();
-                        write_buffers_.emplace_back(buf, buf+2);
-                        write_buffers_.emplace_back(msg);
-                        do_write();
-                    });
-                }
-
-                void send_binary(const std::string& msg) override
-                {
-                    dispatch([this, msg]{
-                        auto header = build_header(2, msg.size());
-                        write_buffers_.emplace_back(std::move(header));
-                        write_buffers_.emplace_back(msg);
-                        do_write();
-                    });
-                }
-
-                void send_text(const std::string& msg) override
-                {
-                    dispatch([this, msg]{
-                        auto header = build_header(1, msg.size());
-                        write_buffers_.emplace_back(std::move(header));
-                        write_buffers_.emplace_back(msg);
-                        do_write();
-                    });
-                }
-
-                void close(const std::string& msg) override
-                {
-                    dispatch([this, msg]{
-                        has_sent_close_ = true;
-                        if (has_recv_close_ && !is_close_handler_called_)
-                        {
-                            is_close_handler_called_ = true;
-                            if (close_handler_)
-                                close_handler_(*this, msg);
-                        }
-                        auto header = build_header(0x8, msg.size());
-                        write_buffers_.emplace_back(std::move(header));
-                        write_buffers_.emplace_back(msg);
-                        do_write();
-                    });
-                }
-
-            protected:
-
-                std::string build_header(int opcode, size_t size)
-                {
-                    char buf[2+8] = "\x80\x00";
-                    buf[0] += opcode;
-                    if (size < 126)
-                    {
-                        buf[1] += size;
-                        return {buf, buf+2};
-                    }
-                    else if (size < 0x10000)
-                    {
-                        buf[1] += 126;
-                        *(uint16_t*)(buf+2) = htons((uint16_t)size);
-                        return {buf, buf+4};
-                    }
-                    else
-                    {
-                        buf[1] += 127;
-                        *(uint64_t*)(buf+2) = ((1==htonl(1)) ? (uint64_t)size : ((uint64_t)htonl((size) & 0xFFFFFFFF) << 32) | htonl((size) >> 32));
-                        return {buf, buf+10};
-                    }
-                }
-
-                void start(std::string&& hello)
-                {
-                    static std::string header = "HTTP/1.1 101 Switching Protocols\r\n"
-                        "Upgrade: websocket\r\n"
-                        "Connection: Upgrade\r\n"
-                        "Sec-WebSocket-Accept: ";
-                    static std::string crlf = "\r\n";
-                    write_buffers_.emplace_back(header);
-                    write_buffers_.emplace_back(std::move(hello));
-                    write_buffers_.emplace_back(crlf);
-                    write_buffers_.emplace_back(crlf);
-                    do_write();
-                    if (open_handler_)
-                        open_handler_(*this);
-                    do_read();
-                }
-
-                void do_read()
-                {
-                    is_reading = true;
-                    switch(state_)
-                    {
-                        case WebSocketReadState::MiniHeader:
-                            {
-                                //boost::asio::async_read(adaptor_.socket(), boost::asio::buffer(&mini_header_, 1), 
-                                adaptor_.socket().async_read_some(boost::asio::buffer(&mini_header_, 2), 
-                                    [this](const boost::system::error_code& ec, std::size_t bytes_transferred) 
-                                    {
-                                        is_reading = false;
-                                        mini_header_ = htons(mini_header_);
-#ifdef CROW_ENABLE_DEBUG
-                                        
-                                        if (!ec && bytes_transferred != 2)
-                                        {
-                                            throw std::runtime_error("WebSocket:MiniHeader:async_read fail:asio bug?");
-                                        }
-#endif
-
-                                        if (!ec && ((mini_header_ & 0x80) == 0x80))
-                                        {
-                                            if ((mini_header_ & 0x7f) == 127)
-                                            {
-                                                state_ = WebSocketReadState::Len64;
-                                            }
-                                            else if ((mini_header_ & 0x7f) == 126)
-                                            {
-                                                state_ = WebSocketReadState::Len16;
-                                            }
-                                            else
-                                            {
-                                                remaining_length_ = mini_header_ & 0x7f;
-                                                state_ = WebSocketReadState::Mask;
-                                            }
-                                            do_read();
-                                        }
-                                        else
-                                        {
-                                            close_connection_ = true;
-                                            adaptor_.close();
-                                            if (error_handler_)
-                                                error_handler_(*this);
-                                            check_destroy();
-                                        }
-                                    });
-                            }
-                            break;
-                        case WebSocketReadState::Len16:
-                            {
-                                remaining_length_ = 0;
-                                boost::asio::async_read(adaptor_.socket(), boost::asio::buffer(&remaining_length_, 2), 
-                                    [this](const boost::system::error_code& ec, std::size_t bytes_transferred) 
-                                    {
-                                        is_reading = false;
-                                        remaining_length_ = ntohs(*(uint16_t*)&remaining_length_);
-#ifdef CROW_ENABLE_DEBUG
-                                        if (!ec && bytes_transferred != 2)
-                                        {
-                                            throw std::runtime_error("WebSocket:Len16:async_read fail:asio bug?");
-                                        }
-#endif
-
-                                        if (!ec)
-                                        {
-                                            state_ = WebSocketReadState::Mask;
-                                            do_read();
-                                        }
-                                        else
-                                        {
-                                            close_connection_ = true;
-                                            adaptor_.close();
-                                            if (error_handler_)
-                                                error_handler_(*this);
-                                            check_destroy();
-                                        }
-                                    });
-                            }
-                            break;
-                        case WebSocketReadState::Len64:
-                            {
-                                boost::asio::async_read(adaptor_.socket(), boost::asio::buffer(&remaining_length_, 8), 
-                                    [this](const boost::system::error_code& ec, std::size_t bytes_transferred) 
-                                    {
-                                        is_reading = false;
-                                        remaining_length_ = ((1==ntohl(1)) ? (remaining_length_) : ((uint64_t)ntohl((remaining_length_) & 0xFFFFFFFF) << 32) | ntohl((remaining_length_) >> 32));
-#ifdef CROW_ENABLE_DEBUG
-                                        if (!ec && bytes_transferred != 8)
-                                        {
-                                            throw std::runtime_error("WebSocket:Len16:async_read fail:asio bug?");
-                                        }
-#endif
-
-                                        if (!ec)
-                                        {
-                                            state_ = WebSocketReadState::Mask;
-                                            do_read();
-                                        }
-                                        else
-                                        {
-                                            close_connection_ = true;
-                                            adaptor_.close();
-                                            if (error_handler_)
-                                                error_handler_(*this);
-                                            check_destroy();
-                                        }
-                                    });
-                            }
-                            break;
-                        case WebSocketReadState::Mask:
-                                boost::asio::async_read(adaptor_.socket(), boost::asio::buffer((char*)&mask_, 4), 
-                                    [this](const boost::system::error_code& ec, std::size_t bytes_transferred)
-                                    {
-                                        is_reading = false;
-#ifdef CROW_ENABLE_DEBUG
-                                        if (!ec && bytes_transferred != 4)
-                                        {
-                                            throw std::runtime_error("WebSocket:Mask:async_read fail:asio bug?");
-                                        }
-#endif
-
-                                        if (!ec)
-                                        {
-                                            state_ = WebSocketReadState::Payload;
-                                            do_read();
-                                        }
-                                        else
-                                        {
-                                            close_connection_ = true;
-                                            if (error_handler_)
-                                                error_handler_(*this);
-                                            adaptor_.close();
-                                        }
-                                    });
-                            break;
-                        case WebSocketReadState::Payload:
-                            {
-                                size_t to_read = buffer_.size();
-                                if (remaining_length_ < to_read)
-                                    to_read = remaining_length_;
-                                adaptor_.socket().async_read_some( boost::asio::buffer(buffer_, to_read), 
-                                    [this](const boost::system::error_code& ec, std::size_t bytes_transferred)
-                                    {
-                                        is_reading = false;
-
-                                        if (!ec)
-                                        {
-                                            fragment_.insert(fragment_.end(), buffer_.begin(), buffer_.begin() + bytes_transferred);
-                                            remaining_length_ -= bytes_transferred;
-                                            if (remaining_length_ == 0)
-                                            {
-                                                handle_fragment();
-                                                state_ = WebSocketReadState::MiniHeader;
-                                                do_read();
-                                            }
-                                        }
-                                        else
-                                        {
-                                            close_connection_ = true;
-                                            if (error_handler_)
-                                                error_handler_(*this);
-                                            adaptor_.close();
-                                        }
-                                    });
-                            }
-                            break;
-                    }
-                }
-
-                bool is_FIN()
-                {
-                    return mini_header_ & 0x8000;
-                }
-
-                int opcode()
-                {
-                    return (mini_header_ & 0x0f00) >> 8;
-                }
-
-                void handle_fragment()
-                {
-                    for(decltype(fragment_.length()) i = 0; i < fragment_.length(); i ++)
-                    {
-                        fragment_[i] ^= ((char*)&mask_)[i%4];
-                    }
-                    switch(opcode())
-                    {
-                        case 0: // Continuation
-                            {
-                                message_ += fragment_;
-                                if (is_FIN())
-                                {
-                                    if (message_handler_)
-                                        message_handler_(*this, message_, is_binary_);
-                                    message_.clear();
-                                }
-                            }
-                        case 1: // Text
-                            {
-                                is_binary_ = false;
-                                message_ += fragment_;
-                                if (is_FIN())
-                                {
-                                    if (message_handler_)
-                                        message_handler_(*this, message_, is_binary_);
-                                    message_.clear();
-                                }
-                            }
-                            break;
-                        case 2: // Binary
-                            {
-                                is_binary_ = true;
-                                message_ += fragment_;
-                                if (is_FIN())
-                                {
-                                    if (message_handler_)
-                                        message_handler_(*this, message_, is_binary_);
-                                    message_.clear();
-                                }
-                            }
-                            break;
-                        case 0x8: // Close
-                            {
-                                has_recv_close_ = true;
-                                if (!has_sent_close_)
-                                {
-                                    close(fragment_);
-                                }
-                                else
-                                {
-                                    adaptor_.close();
-                                    close_connection_ = true;
-                                    if (!is_close_handler_called_)
-                                    {
-                                        if (close_handler_)
-                                            close_handler_(*this, fragment_);
-                                        is_close_handler_called_ = true;
-                                    }
-                                    check_destroy();
-                                }
-                            }
-                            break;
-                        case 0x9: // Ping
-                            {
-                                send_pong(fragment_);
-                            }
-                            break;
-                        case 0xA: // Pong
-                            {
-                                pong_received_ = true;
-                            }
-                            break;
-                    }
-
-                    fragment_.clear();
-                }
-
-                void do_write()
-                {
-                    if (sending_buffers_.empty())
-                    {
-                        sending_buffers_.swap(write_buffers_);
-                        std::vector<boost::asio::const_buffer> buffers;
-                        buffers.reserve(sending_buffers_.size());
-                        for(auto& s:sending_buffers_)
-                        {
-                            buffers.emplace_back(boost::asio::buffer(s));
-                        }
-                        boost::asio::async_write(adaptor_.socket(), buffers, 
-                            [&](const boost::system::error_code& ec, std::size_t /*bytes_transferred*/)
-                            {
-                                sending_buffers_.clear();
-                                if (!ec && !close_connection_)
-                                {
-                                    if (!write_buffers_.empty())
-                                        do_write();
-                                    if (has_sent_close_)
-                                        close_connection_ = true;
-                                }
-                                else
-                                {
-                                    close_connection_ = true;
-                                    check_destroy();
-                                }
-                            });
-                    }
-                }
-
-                void check_destroy()
-                {
-                    //if (has_sent_close_ && has_recv_close_)
-                    if (!is_close_handler_called_)
-                        if (close_handler_)
-                            close_handler_(*this, "uncleanly");
-                    if (sending_buffers_.empty() && !is_reading)
-                        delete this;
-                }
-			private:
-				Adaptor adaptor_;
-
-                std::vector<std::string> sending_buffers_;
-                std::vector<std::string> write_buffers_;
-
-                boost::array<char, 4096> buffer_;
-                bool is_binary_;
-                std::string message_;
-                std::string fragment_;
-                WebSocketReadState state_{WebSocketReadState::MiniHeader};
-                uint64_t remaining_length_{0};
-                bool close_connection_{false};
-                bool is_reading{false};
-                uint32_t mask_;
-                uint16_t mini_header_;
-                bool has_sent_close_{false};
-                bool has_recv_close_{false};
-                bool error_occured_{false};
-                bool pong_received_{false};
-                bool is_close_handler_called_{false};
-
-				std::function<void(crow::websocket::connection&)> open_handler_;
-				std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler_;
-				std::function<void(crow::websocket::connection&, const std::string&)> close_handler_;
-				std::function<void(crow::websocket::connection&)> error_handler_;
-        };
-    }
 }
 
 
@@ -7196,6 +6704,1413 @@ namespace crow
                 set_header("Content-Type", "application/json");
             }
     };
+}
+
+
+
+#pragma once
+
+
+
+
+
+
+
+
+namespace crow
+{
+    namespace detail
+    {
+        template <typename ... Middlewares>
+        struct partial_context
+            : public black_magic::pop_back<Middlewares...>::template rebind<partial_context>
+            , public black_magic::last_element_type<Middlewares...>::type::context
+        {
+            using parent_context = typename black_magic::pop_back<Middlewares...>::template rebind<::crow::detail::partial_context>;
+            template <int N>
+            using partial = typename std::conditional<N == sizeof...(Middlewares)-1, partial_context, typename parent_context::template partial<N>>::type;
+
+            template <typename T> 
+            typename T::context& get()
+            {
+                return static_cast<typename T::context&>(*this);
+            }
+        };
+
+        template <>
+        struct partial_context<>
+        {
+            template <int>
+            using partial = partial_context;
+        };
+
+        template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares>
+        bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx);
+
+        template <typename ... Middlewares>
+        struct context : private partial_context<Middlewares...>
+        //struct context : private Middlewares::context... // simple but less type-safe
+        {
+            template <int N, typename Context, typename Container>
+            friend typename std::enable_if<(N==0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, request& req, response& res);
+            template <int N, typename Context, typename Container>
+            friend typename std::enable_if<(N>0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, request& req, response& res);
+
+            template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares2>
+            friend bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx);
+
+            template <typename T> 
+            typename T::context& get()
+            {
+                return static_cast<typename T::context&>(*this);
+            }
+
+            template <int N>
+            using partial = typename partial_context<Middlewares...>::template partial<N>;
+        };
+    }
+}
+
+
+
+#pragma once
+#include <boost/asio.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/array.hpp>
+#include <atomic>
+#include <chrono>
+#include <vector>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+namespace crow
+{
+    using namespace boost;
+    using tcp = asio::ip::tcp;
+
+    namespace detail
+    {
+        template <typename MW>
+        struct check_before_handle_arity_3_const
+        {
+            template <typename T,
+                void (T::*)(request&, response&, typename MW::context&) const = &T::before_handle
+            >
+            struct get
+            { };
+        };
+
+        template <typename MW>
+        struct check_before_handle_arity_3
+        {
+            template <typename T,
+                void (T::*)(request&, response&, typename MW::context&) = &T::before_handle
+            >
+            struct get
+            { };
+        };
+
+        template <typename MW>
+        struct check_after_handle_arity_3_const
+        {
+            template <typename T,
+                void (T::*)(request&, response&, typename MW::context&) const = &T::after_handle
+            >
+            struct get
+            { };
+        };
+
+        template <typename MW>
+        struct check_after_handle_arity_3
+        {
+            template <typename T,
+                void (T::*)(request&, response&, typename MW::context&) = &T::after_handle
+            >
+            struct get
+            { };
+        };
+
+        template <typename T>
+        struct is_before_handle_arity_3_impl
+        {
+            template <typename C>
+            static std::true_type f(typename check_before_handle_arity_3_const<T>::template get<C>*);
+
+            template <typename C>
+            static std::true_type f(typename check_before_handle_arity_3<T>::template get<C>*);
+
+            template <typename C>
+            static std::false_type f(...);
+
+        public:
+            static const bool value = decltype(f<T>(nullptr))::value;
+        };
+
+        template <typename T>
+        struct is_after_handle_arity_3_impl
+        {
+            template <typename C>
+            static std::true_type f(typename check_after_handle_arity_3_const<T>::template get<C>*);
+
+            template <typename C>
+            static std::true_type f(typename check_after_handle_arity_3<T>::template get<C>*);
+
+            template <typename C>
+            static std::false_type f(...);
+
+        public:
+            static const bool value = decltype(f<T>(nullptr))::value;
+        };
+
+        template <typename MW, typename Context, typename ParentContext>
+        typename std::enable_if<!is_before_handle_arity_3_impl<MW>::value>::type
+        before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& /*parent_ctx*/)
+        {
+            mw.before_handle(req, res, ctx.template get<MW>(), ctx);
+        }
+
+        template <typename MW, typename Context, typename ParentContext>
+        typename std::enable_if<is_before_handle_arity_3_impl<MW>::value>::type
+        before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& /*parent_ctx*/)
+        {
+            mw.before_handle(req, res, ctx.template get<MW>());
+        }
+
+        template <typename MW, typename Context, typename ParentContext>
+        typename std::enable_if<!is_after_handle_arity_3_impl<MW>::value>::type
+        after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& /*parent_ctx*/)
+        {
+            mw.after_handle(req, res, ctx.template get<MW>(), ctx);
+        }
+
+        template <typename MW, typename Context, typename ParentContext>
+        typename std::enable_if<is_after_handle_arity_3_impl<MW>::value>::type
+        after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& /*parent_ctx*/)
+        {
+            mw.after_handle(req, res, ctx.template get<MW>());
+        }
+
+        template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares>
+        bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx)
+        {
+            using parent_context_t = typename Context::template partial<N-1>;
+            before_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx, static_cast<parent_context_t&>(ctx));
+
+            if (res.is_completed())
+            {
+                after_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx, static_cast<parent_context_t&>(ctx));
+                return true;
+            }
+
+            if (middleware_call_helper<N+1, Context, Container, Middlewares...>(middlewares, req, res, ctx))
+            {
+                after_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx, static_cast<parent_context_t&>(ctx));
+                return true;
+            }
+
+            return false;
+        }
+
+        template <int N, typename Context, typename Container>
+        bool middleware_call_helper(Container& /*middlewares*/, request& /*req*/, response& /*res*/, Context& /*ctx*/)
+        {
+            return false;
+        }
+
+        template <int N, typename Context, typename Container>
+        typename std::enable_if<(N<0)>::type 
+        after_handlers_call_helper(Container& /*middlewares*/, Context& /*context*/, request& /*req*/, response& /*res*/)
+        {
+        }
+
+        template <int N, typename Context, typename Container>
+        typename std::enable_if<(N==0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, request& req, response& res)
+        {
+            using parent_context_t = typename Context::template partial<N-1>;
+            using CurrentMW = typename std::tuple_element<N, typename std::remove_reference<Container>::type>::type;
+            after_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx, static_cast<parent_context_t&>(ctx));
+        }
+
+        template <int N, typename Context, typename Container>
+        typename std::enable_if<(N>0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, request& req, response& res)
+        {
+            using parent_context_t = typename Context::template partial<N-1>;
+            using CurrentMW = typename std::tuple_element<N, typename std::remove_reference<Container>::type>::type;
+            after_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx, static_cast<parent_context_t&>(ctx));
+            after_handlers_call_helper<N-1, Context, Container>(middlewares, ctx, req, res);
+        }
+    }
+
+#ifdef CROW_ENABLE_DEBUG
+    static int connectionCount;
+#endif
+    template <typename Adaptor, typename Handler, typename ... Middlewares>
+    class Connection
+    {
+    public:
+        Connection(
+            boost::asio::io_service& io_service, 
+            Handler* handler, 
+            const std::string& server_name,
+            std::tuple<Middlewares...>* middlewares,
+            std::function<std::string()>& get_cached_date_str_f,
+            detail::dumb_timer_queue& timer_queue,
+            typename Adaptor::context* adaptor_ctx_
+            ) 
+            : adaptor_(io_service, adaptor_ctx_), 
+            handler_(handler), 
+            parser_(this), 
+            server_name_(server_name),
+            middlewares_(middlewares),
+            get_cached_date_str(get_cached_date_str_f),
+            timer_queue(timer_queue)
+        {
+#ifdef CROW_ENABLE_DEBUG
+            connectionCount ++;
+            CROW_LOG_DEBUG << "Connection open, total " << connectionCount << ", " << this;
+#endif
+        }
+        
+        ~Connection()
+        {
+            res.complete_request_handler_ = nullptr;
+            cancel_deadline_timer();
+#ifdef CROW_ENABLE_DEBUG
+            connectionCount --;
+            CROW_LOG_DEBUG << "Connection closed, total " << connectionCount << ", " << this;
+#endif
+        }
+
+        decltype(std::declval<Adaptor>().raw_socket())& socket()
+        {
+            return adaptor_.raw_socket();
+        }
+
+        void start()
+        {
+            adaptor_.start([this](const boost::system::error_code& ec) {
+                if (!ec)
+                {
+                    start_deadline();
+
+                    do_read();
+                }
+                else
+                {
+                    check_destroy();
+                }
+            });
+        }
+
+        void handle_header()
+        {
+            // HTTP 1.1 Expect: 100-continue
+            if (parser_.check_version(1, 1) && parser_.headers.count("expect") && get_header_value(parser_.headers, "expect") == "100-continue")
+            {
+                buffers_.clear();
+                static std::string expect_100_continue = "HTTP/1.1 100 Continue\r\n\r\n";
+                buffers_.emplace_back(expect_100_continue.data(), expect_100_continue.size());
+                do_write();
+            }
+        }
+
+        void handle()
+        {
+            cancel_deadline_timer();
+            bool is_invalid_request = false;
+            add_keep_alive_ = false;
+
+            req_ = std::move(parser_.to_request());
+            request& req = req_;
+
+            if (parser_.check_version(1, 0))
+            {
+                // HTTP/1.0
+                if (req.headers.count("connection"))
+                {
+                    if (boost::iequals(req.get_header_value("connection"),"Keep-Alive"))
+                        add_keep_alive_ = true;
+                }
+                else
+                    close_connection_ = true;
+            }
+            else if (parser_.check_version(1, 1))
+            {
+                // HTTP/1.1
+                if (req.headers.count("connection"))
+                {
+                    if (req.get_header_value("connection") == "close")
+                        close_connection_ = true;
+                    else if (boost::iequals(req.get_header_value("connection"),"Keep-Alive"))
+                        add_keep_alive_ = true;
+                }
+                if (!req.headers.count("host"))
+                {
+                    is_invalid_request = true;
+                    res = response(400);
+                }
+				if (parser_.is_upgrade())
+				{
+					if (req.get_header_value("upgrade") == "h2c")
+					{
+						// TODO HTTP/2
+                        // currently, ignore upgrade header
+					}
+                    else
+                    {
+                        close_connection_ = true;
+                        handler_->handle_upgrade(req, res, std::move(adaptor_));
+                        return;
+                    }
+				}
+            }
+
+            CROW_LOG_INFO << "Request: " << boost::lexical_cast<std::string>(adaptor_.remote_endpoint()) << " " << this << " HTTP/" << parser_.http_major << "." << parser_.http_minor << ' '
+             << method_name(req.method) << " " << req.url;
+
+
+            need_to_call_after_handlers_ = false;
+            if (!is_invalid_request)
+            {
+                res.complete_request_handler_ = []{};
+                res.is_alive_helper_ = [this]()->bool{ return adaptor_.is_open(); };
+
+                ctx_ = detail::context<Middlewares...>();
+                req.middleware_context = (void*)&ctx_;
+                req.io_service = &adaptor_.get_io_service();
+                detail::middleware_call_helper<0, decltype(ctx_), decltype(*middlewares_), Middlewares...>(*middlewares_, req, res, ctx_);
+
+                if (!res.completed_)
+                {
+                    res.complete_request_handler_ = [this]{ this->complete_request(); };
+                    need_to_call_after_handlers_ = true;
+                    handler_->handle(req, res);
+                    if (add_keep_alive_)
+                        res.set_header("connection", "Keep-Alive");
+                }
+                else
+                {
+                    complete_request();
+                }
+            }
+            else
+            {
+                complete_request();
+            }
+        }
+
+        void complete_request()
+        {
+            CROW_LOG_INFO << "Response: " << this << ' ' << req_.raw_url << ' ' << res.code << ' ' << close_connection_;
+
+            if (need_to_call_after_handlers_)
+            {
+                need_to_call_after_handlers_ = false;
+
+                // call all after_handler of middlewares
+                detail::after_handlers_call_helper<
+                    ((int)sizeof...(Middlewares)-1),
+                    decltype(ctx_),
+                    decltype(*middlewares_)> 
+                (*middlewares_, ctx_, req_, res);
+            }
+
+            //auto self = this->shared_from_this();
+            res.complete_request_handler_ = nullptr;
+            
+            if (!adaptor_.is_open())
+            {
+                //CROW_LOG_DEBUG << this << " delete (socket is closed) " << is_reading << ' ' << is_writing;
+                //delete this;
+                return;
+            }
+
+            static std::unordered_map<int, std::string> statusCodes = {
+                {200, "HTTP/1.1 200 OK\r\n"},
+                {201, "HTTP/1.1 201 Created\r\n"},
+                {202, "HTTP/1.1 202 Accepted\r\n"},
+                {204, "HTTP/1.1 204 No Content\r\n"},
+
+                {300, "HTTP/1.1 300 Multiple Choices\r\n"},
+                {301, "HTTP/1.1 301 Moved Permanently\r\n"},
+                {302, "HTTP/1.1 302 Moved Temporarily\r\n"},
+                {304, "HTTP/1.1 304 Not Modified\r\n"},
+
+                {400, "HTTP/1.1 400 Bad Request\r\n"},
+                {401, "HTTP/1.1 401 Unauthorized\r\n"},
+                {403, "HTTP/1.1 403 Forbidden\r\n"},
+                {404, "HTTP/1.1 404 Not Found\r\n"},
+
+                {500, "HTTP/1.1 500 Internal Server Error\r\n"},
+                {501, "HTTP/1.1 501 Not Implemented\r\n"},
+                {502, "HTTP/1.1 502 Bad Gateway\r\n"},
+                {503, "HTTP/1.1 503 Service Unavailable\r\n"},
+            };
+
+            static std::string seperator = ": ";
+            static std::string crlf = "\r\n";
+
+            buffers_.clear();
+            buffers_.reserve(4*(res.headers.size()+5)+3);
+
+            if (res.body.empty() && res.json_value.t() == json::type::Object)
+            {
+                res.body = json::dump(res.json_value);
+            }
+
+            if (!statusCodes.count(res.code))
+                res.code = 500;
+            {
+                auto& status = statusCodes.find(res.code)->second;
+                buffers_.emplace_back(status.data(), status.size());
+            }
+
+            if (res.code >= 400 && res.body.empty())
+                res.body = statusCodes[res.code].substr(9);
+
+            for(auto& kv : res.headers)
+            {
+                buffers_.emplace_back(kv.first.data(), kv.first.size());
+                buffers_.emplace_back(seperator.data(), seperator.size());
+                buffers_.emplace_back(kv.second.data(), kv.second.size());
+                buffers_.emplace_back(crlf.data(), crlf.size());
+
+            }
+
+            if (!res.headers.count("content-length"))
+            {
+                content_length_ = std::to_string(res.body.size());
+                static std::string content_length_tag = "Content-Length: ";
+                buffers_.emplace_back(content_length_tag.data(), content_length_tag.size());
+                buffers_.emplace_back(content_length_.data(), content_length_.size());
+                buffers_.emplace_back(crlf.data(), crlf.size());
+            }
+            if (!res.headers.count("server"))
+            {
+                static std::string server_tag = "Server: ";
+                buffers_.emplace_back(server_tag.data(), server_tag.size());
+                buffers_.emplace_back(server_name_.data(), server_name_.size());
+                buffers_.emplace_back(crlf.data(), crlf.size());
+            }
+            if (!res.headers.count("date"))
+            {
+                static std::string date_tag = "Date: ";
+                date_str_ = get_cached_date_str();
+                buffers_.emplace_back(date_tag.data(), date_tag.size());
+                buffers_.emplace_back(date_str_.data(), date_str_.size());
+                buffers_.emplace_back(crlf.data(), crlf.size());
+            }
+            if (add_keep_alive_)
+            {
+                static std::string keep_alive_tag = "Connection: Keep-Alive";
+                buffers_.emplace_back(keep_alive_tag.data(), keep_alive_tag.size());
+                buffers_.emplace_back(crlf.data(), crlf.size());
+            }
+
+            buffers_.emplace_back(crlf.data(), crlf.size());
+            res_body_copy_.swap(res.body);
+            buffers_.emplace_back(res_body_copy_.data(), res_body_copy_.size());
+
+            do_write();
+
+            if (need_to_start_read_after_complete_)
+            {
+                need_to_start_read_after_complete_ = false;
+                start_deadline();
+                do_read();
+            }
+        }
+
+    private:
+        void do_read()
+        {
+            //auto self = this->shared_from_this();
+            is_reading = true;
+            adaptor_.socket().async_read_some(boost::asio::buffer(buffer_), 
+                [this](const boost::system::error_code& ec, std::size_t bytes_transferred)
+                {
+                    bool error_while_reading = true;
+                    if (!ec)
+                    {
+                        bool ret = parser_.feed(buffer_.data(), bytes_transferred);
+                        if (ret && adaptor_.is_open())
+                        {
+                            error_while_reading = false;
+                        }
+                    }
+
+                    if (error_while_reading)
+                    {
+                        cancel_deadline_timer();
+                        parser_.done();
+                        adaptor_.close();
+                        is_reading = false;
+                        CROW_LOG_DEBUG << this << " from read(1)";
+                        check_destroy();
+                    }
+                    else if (close_connection_)
+                    {
+                        cancel_deadline_timer();
+                        parser_.done();
+                        is_reading = false;
+                        check_destroy();
+                        // adaptor will close after write
+                    }
+                    else if (!need_to_call_after_handlers_)
+                    {
+                        start_deadline();
+                        do_read();
+                    }
+                    else
+                    {
+                        // res will be completed later by user
+                        need_to_start_read_after_complete_ = true;
+                    }
+                });
+        }
+
+        void do_write()
+        {
+            //auto self = this->shared_from_this();
+            is_writing = true;
+            boost::asio::async_write(adaptor_.socket(), buffers_, 
+                [&](const boost::system::error_code& ec, std::size_t /*bytes_transferred*/)
+                {
+                    is_writing = false;
+                    res.clear();
+                    res_body_copy_.clear();
+                    if (!ec)
+                    {
+                        if (close_connection_)
+                        {
+                            adaptor_.close();
+                            CROW_LOG_DEBUG << this << " from write(1)";
+                            check_destroy();
+                        }
+                    }
+                    else
+                    {
+                        CROW_LOG_DEBUG << this << " from write(2)";
+                        check_destroy();
+                    }
+                });
+        }
+
+        void check_destroy()
+        {
+            CROW_LOG_DEBUG << this << " is_reading " << is_reading << " is_writing " << is_writing;
+            if (!is_reading && !is_writing)
+            {
+                CROW_LOG_DEBUG << this << " delete (idle) ";
+                delete this;
+            }
+        }
+
+        void cancel_deadline_timer()
+        {
+            CROW_LOG_DEBUG << this << " timer cancelled: " << timer_cancel_key_.first << ' ' << timer_cancel_key_.second;
+            timer_queue.cancel(timer_cancel_key_);
+        }
+
+        void start_deadline(/*int timeout = 5*/)
+        {
+            cancel_deadline_timer();
+            
+            timer_cancel_key_ = timer_queue.add([this]
+            {
+                if (!adaptor_.is_open())
+                {
+                    return;
+                }
+                adaptor_.close();
+            });
+            CROW_LOG_DEBUG << this << " timer added: " << timer_cancel_key_.first << ' ' << timer_cancel_key_.second;
+        }
+
+    private:
+        Adaptor adaptor_;
+        Handler* handler_;
+
+        boost::array<char, 4096> buffer_;
+
+        HTTPParser<Connection> parser_;
+        request req_;
+        response res;
+
+        bool close_connection_ = false;
+
+        const std::string& server_name_;
+        std::vector<boost::asio::const_buffer> buffers_;
+
+        std::string content_length_;
+        std::string date_str_;
+        std::string res_body_copy_;
+
+        //boost::asio::deadline_timer deadline_;
+        detail::dumb_timer_queue::key timer_cancel_key_;
+
+        bool is_reading{};
+        bool is_writing{};
+        bool need_to_call_after_handlers_{};
+        bool need_to_start_read_after_complete_{};
+        bool add_keep_alive_{};
+
+        std::tuple<Middlewares...>* middlewares_;
+        detail::context<Middlewares...> ctx_;
+
+        std::function<std::string()>& get_cached_date_str;
+        detail::dumb_timer_queue& timer_queue;
+    };
+
+}
+
+
+
+#pragma once
+
+#include <chrono>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/asio.hpp>
+#ifdef CROW_ENABLE_SSL
+#include <boost/asio/ssl.hpp>
+#endif
+#include <cstdint>
+#include <atomic>
+#include <future>
+#include <vector>
+
+#include <memory>
+
+
+
+
+
+
+
+
+namespace crow
+{
+    using namespace boost;
+    using tcp = asio::ip::tcp;
+
+    template <typename Handler, typename Adaptor = SocketAdaptor, typename ... Middlewares>
+    class Server
+    {
+    public:
+    Server(Handler* handler, std::string bindaddr, uint16_t port, std::tuple<Middlewares...>* middlewares = nullptr, uint16_t concurrency = 1, typename Adaptor::context* adaptor_ctx = nullptr)
+            : acceptor_(io_service_, tcp::endpoint(boost::asio::ip::address::from_string(bindaddr), port)),
+            signals_(io_service_, SIGINT, SIGTERM),
+            tick_timer_(io_service_),
+            handler_(handler),
+            concurrency_(concurrency),
+            port_(port),
+            bindaddr_(bindaddr),
+            middlewares_(middlewares),
+            adaptor_ctx_(adaptor_ctx)
+        {
+        }
+
+        void set_tick_function(std::chrono::milliseconds d, std::function<void()> f)
+        {
+            tick_interval_ = d;
+            tick_function_ = f;
+        }
+
+        void on_tick()
+        {
+            tick_function_();
+            tick_timer_.expires_from_now(boost::posix_time::milliseconds(tick_interval_.count()));
+            tick_timer_.async_wait([this](const boost::system::error_code& ec)
+                    {
+                        if (ec)
+                            return;
+                        on_tick();
+                    });
+        }
+
+        void run()
+        {
+            if (concurrency_ < 0)
+                concurrency_ = 1;
+
+            for(int i = 0; i < concurrency_;  i++)
+                io_service_pool_.emplace_back(new boost::asio::io_service());
+            get_cached_date_str_pool_.resize(concurrency_);
+            timer_queue_pool_.resize(concurrency_);
+
+            std::vector<std::future<void>> v;
+            std::atomic<int> init_count(0);
+            for(uint16_t i = 0; i < concurrency_; i ++)
+                v.push_back(
+                        std::async(std::launch::async, [this, i, &init_count]{
+
+                            // thread local date string get function
+                            auto last = std::chrono::steady_clock::now();
+
+                            std::string date_str;
+                            auto update_date_str = [&]
+                            {
+                                auto last_time_t = time(0);
+                                tm my_tm;
+
+#ifdef _MSC_VER
+                                gmtime_s(&my_tm, &last_time_t);
+#else
+                                gmtime_r(&last_time_t, &my_tm);
+#endif
+                                date_str.resize(100);
+                                size_t date_str_sz = strftime(&date_str[0], 99, "%a, %d %b %Y %H:%M:%S GMT", &my_tm);
+                                date_str.resize(date_str_sz);
+                            };
+                            update_date_str();
+                            get_cached_date_str_pool_[i] = [&]()->std::string
+                            {
+                                if (std::chrono::steady_clock::now() - last >= std::chrono::seconds(1))
+                                {
+                                    last = std::chrono::steady_clock::now();
+                                    update_date_str();
+                                }
+                                return date_str;
+                            };
+
+                            // initializing timer queue
+                            detail::dumb_timer_queue timer_queue;
+                            timer_queue_pool_[i] = &timer_queue;
+
+                            timer_queue.set_io_service(*io_service_pool_[i]);
+                            boost::asio::deadline_timer timer(*io_service_pool_[i]);
+                            timer.expires_from_now(boost::posix_time::seconds(1));
+
+                            std::function<void(const boost::system::error_code& ec)> handler;
+                            handler = [&](const boost::system::error_code& ec){
+                                if (ec)
+                                    return;
+                                timer_queue.process();
+                                timer.expires_from_now(boost::posix_time::seconds(1));
+                                timer.async_wait(handler);
+                            };
+                            timer.async_wait(handler);
+
+                            init_count ++;
+                            try 
+                            {
+                                io_service_pool_[i]->run();
+                            } catch(std::exception& e)
+                            {
+                                CROW_LOG_ERROR << "Worker Crash: An uncaught exception occurred: " << e.what();
+                            }
+                        }));
+
+            if (tick_function_ && tick_interval_.count() > 0) 
+            {
+                tick_timer_.expires_from_now(boost::posix_time::milliseconds(tick_interval_.count()));
+                tick_timer_.async_wait([this](const boost::system::error_code& ec)
+                        {
+                            if (ec)
+                                return;
+                            on_tick();
+                        });
+            }
+
+            CROW_LOG_INFO << server_name_ << " server is running, local port " << port_;
+
+            signals_.async_wait(
+                [&](const boost::system::error_code& /*error*/, int /*signal_number*/){
+                    stop();
+                });
+
+            while(concurrency_ != init_count)
+                std::this_thread::yield();
+
+            do_accept();
+
+            std::thread([this]{
+                io_service_.run();
+                CROW_LOG_INFO << "Exiting.";
+            }).join();
+        }
+
+        void stop()
+        {
+            io_service_.stop();
+            for(auto& io_service:io_service_pool_)
+                io_service->stop();
+        }
+
+    private:
+        asio::io_service& pick_io_service()
+        {
+            // TODO load balancing
+            roundrobin_index_++;
+            if (roundrobin_index_ >= io_service_pool_.size())
+                roundrobin_index_ = 0;
+            return *io_service_pool_[roundrobin_index_];
+        }
+
+        void do_accept()
+        {
+            asio::io_service& is = pick_io_service();
+            auto p = new Connection<Adaptor, Handler, Middlewares...>(
+                is, handler_, server_name_, middlewares_,
+                get_cached_date_str_pool_[roundrobin_index_], *timer_queue_pool_[roundrobin_index_],
+                adaptor_ctx_);
+            acceptor_.async_accept(p->socket(),
+                [this, p, &is](boost::system::error_code ec)
+                {
+                    if (!ec)
+                    {
+                        is.post([p]
+                        {
+                            p->start();
+                        });
+                    }
+                    do_accept();
+                });
+        }
+
+    private:
+        asio::io_service io_service_;
+        std::vector<std::unique_ptr<asio::io_service>> io_service_pool_;
+        std::vector<detail::dumb_timer_queue*> timer_queue_pool_;
+        std::vector<std::function<std::string()>> get_cached_date_str_pool_;
+        tcp::acceptor acceptor_;
+        boost::asio::signal_set signals_;
+        boost::asio::deadline_timer tick_timer_;
+
+        Handler* handler_;
+        uint16_t concurrency_{1};
+        std::string server_name_ = "Crow/0.1";
+        uint16_t port_;
+        std::string bindaddr_;
+        unsigned int roundrobin_index_{};
+
+        std::chrono::milliseconds tick_interval_;
+        std::function<void()> tick_function_;
+
+        std::tuple<Middlewares...>* middlewares_;
+
+#ifdef CROW_ENABLE_SSL
+        bool use_ssl_{false};
+        boost::asio::ssl::context ssl_context_{boost::asio::ssl::context::sslv23};
+#endif
+        typename Adaptor::context* adaptor_ctx_;
+    };
+}
+
+
+
+#pragma once
+#include <boost/algorithm/string/predicate.hpp>
+
+
+
+
+
+
+
+namespace crow
+{
+    namespace websocket
+    {
+        enum class WebSocketReadState
+        {
+            MiniHeader,
+            Len16,
+            Len64,
+            Mask,
+            Payload,
+        };
+
+		struct connection
+		{
+            virtual void send_binary(const std::string& msg) = 0;
+            virtual void send_text(const std::string& msg) = 0;
+            virtual void close(const std::string& msg = "quit") = 0;
+            virtual ~connection(){}
+
+            void userdata(void* u) { userdata_ = u; }
+            void* userdata() { return userdata_; }
+
+        private:
+            void* userdata_;
+		};
+
+		template <typename Adaptor>
+        class Connection : public connection
+        {
+			public:
+				Connection(const crow::request& req, Adaptor&& adaptor, 
+						std::function<void(crow::websocket::connection&)> open_handler,
+						std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler,
+						std::function<void(crow::websocket::connection&, const std::string&)> close_handler,
+						std::function<void(crow::websocket::connection&)> error_handler)
+					: adaptor_(std::move(adaptor)), open_handler_(std::move(open_handler)), message_handler_(std::move(message_handler)), close_handler_(std::move(close_handler)), error_handler_(std::move(error_handler))
+				{
+					if (!boost::iequals(req.get_header_value("upgrade"), "websocket"))
+					{
+						adaptor.close();
+						delete this;
+						return;
+					}
+					// Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
+					// Sec-WebSocket-Version: 13
+                    std::string magic = req.get_header_value("Sec-WebSocket-Key") +  "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+                    sha1::SHA1 s;
+                    s.processBytes(magic.data(), magic.size());
+                    uint8_t digest[20];
+                    s.getDigestBytes(digest);   
+                    start(crow::utility::base64encode((char*)digest, 20));
+				}
+
+                template<typename CompletionHandler>
+                void dispatch(CompletionHandler handler)
+                {
+                    adaptor_.get_io_service().dispatch(handler);
+                }
+
+                template<typename CompletionHandler>
+                void post(CompletionHandler handler)
+                {
+                    adaptor_.get_io_service().post(handler);
+                }
+
+                void send_pong(const std::string& msg)
+                {
+                    dispatch([this, msg]{
+                        char buf[3] = "\x8A\x00";
+                        buf[1] += msg.size();
+                        write_buffers_.emplace_back(buf, buf+2);
+                        write_buffers_.emplace_back(msg);
+                        do_write();
+                    });
+                }
+
+                void send_binary(const std::string& msg) override
+                {
+                    dispatch([this, msg]{
+                        auto header = build_header(2, msg.size());
+                        write_buffers_.emplace_back(std::move(header));
+                        write_buffers_.emplace_back(msg);
+                        do_write();
+                    });
+                }
+
+                void send_text(const std::string& msg) override
+                {
+                    dispatch([this, msg]{
+                        auto header = build_header(1, msg.size());
+                        write_buffers_.emplace_back(std::move(header));
+                        write_buffers_.emplace_back(msg);
+                        do_write();
+                    });
+                }
+
+                void close(const std::string& msg) override
+                {
+                    dispatch([this, msg]{
+                        has_sent_close_ = true;
+                        if (has_recv_close_ && !is_close_handler_called_)
+                        {
+                            is_close_handler_called_ = true;
+                            if (close_handler_)
+                                close_handler_(*this, msg);
+                        }
+                        auto header = build_header(0x8, msg.size());
+                        write_buffers_.emplace_back(std::move(header));
+                        write_buffers_.emplace_back(msg);
+                        do_write();
+                    });
+                }
+
+            protected:
+
+                std::string build_header(int opcode, size_t size)
+                {
+                    char buf[2+8] = "\x80\x00";
+                    buf[0] += opcode;
+                    if (size < 126)
+                    {
+                        buf[1] += size;
+                        return {buf, buf+2};
+                    }
+                    else if (size < 0x10000)
+                    {
+                        buf[1] += 126;
+                        *(uint16_t*)(buf+2) = htons((uint16_t)size);
+                        return {buf, buf+4};
+                    }
+                    else
+                    {
+                        buf[1] += 127;
+                        *(uint64_t*)(buf+2) = ((1==htonl(1)) ? (uint64_t)size : ((uint64_t)htonl((size) & 0xFFFFFFFF) << 32) | htonl((size) >> 32));
+                        return {buf, buf+10};
+                    }
+                }
+
+                void start(std::string&& hello)
+                {
+                    static std::string header = "HTTP/1.1 101 Switching Protocols\r\n"
+                        "Upgrade: websocket\r\n"
+                        "Connection: Upgrade\r\n"
+                        "Sec-WebSocket-Accept: ";
+                    static std::string crlf = "\r\n";
+                    write_buffers_.emplace_back(header);
+                    write_buffers_.emplace_back(std::move(hello));
+                    write_buffers_.emplace_back(crlf);
+                    write_buffers_.emplace_back(crlf);
+                    do_write();
+                    if (open_handler_)
+                        open_handler_(*this);
+                    do_read();
+                }
+
+                void do_read()
+                {
+                    is_reading = true;
+                    switch(state_)
+                    {
+                        case WebSocketReadState::MiniHeader:
+                            {
+                                //boost::asio::async_read(adaptor_.socket(), boost::asio::buffer(&mini_header_, 1), 
+                                adaptor_.socket().async_read_some(boost::asio::buffer(&mini_header_, 2), 
+                                    [this](const boost::system::error_code& ec, std::size_t bytes_transferred) 
+                                    {
+                                        is_reading = false;
+                                        mini_header_ = htons(mini_header_);
+#ifdef CROW_ENABLE_DEBUG
+                                        
+                                        if (!ec && bytes_transferred != 2)
+                                        {
+                                            throw std::runtime_error("WebSocket:MiniHeader:async_read fail:asio bug?");
+                                        }
+#endif
+
+                                        if (!ec && ((mini_header_ & 0x80) == 0x80))
+                                        {
+                                            if ((mini_header_ & 0x7f) == 127)
+                                            {
+                                                state_ = WebSocketReadState::Len64;
+                                            }
+                                            else if ((mini_header_ & 0x7f) == 126)
+                                            {
+                                                state_ = WebSocketReadState::Len16;
+                                            }
+                                            else
+                                            {
+                                                remaining_length_ = mini_header_ & 0x7f;
+                                                state_ = WebSocketReadState::Mask;
+                                            }
+                                            do_read();
+                                        }
+                                        else
+                                        {
+                                            close_connection_ = true;
+                                            adaptor_.close();
+                                            if (error_handler_)
+                                                error_handler_(*this);
+                                            check_destroy();
+                                        }
+                                    });
+                            }
+                            break;
+                        case WebSocketReadState::Len16:
+                            {
+                                remaining_length_ = 0;
+				uint16_t remaining_length16_ = 0;
+                                boost::asio::async_read(adaptor_.socket(), boost::asio::buffer(&remaining_length16_, 2), 
+                                    [this,&remaining_length16_](const boost::system::error_code& ec, std::size_t bytes_transferred) 
+                                    {
+                                        is_reading = false;
+                                        remaining_length16_ = ntohs(remaining_length16_);
+                                        remaining_length_ = remaining_length16_;
+
+                                        remaining_length_ = ntohs(*(uint16_t*)&remaining_length_);
+#ifdef CROW_ENABLE_DEBUG
+                                        if (!ec && bytes_transferred != 2)
+                                        {
+                                            throw std::runtime_error("WebSocket:Len16:async_read fail:asio bug?");
+                                        }
+#endif
+
+                                        if (!ec)
+                                        {
+                                            state_ = WebSocketReadState::Mask;
+                                            do_read();
+                                        }
+                                        else
+                                        {
+                                            close_connection_ = true;
+                                            adaptor_.close();
+                                            if (error_handler_)
+                                                error_handler_(*this);
+                                            check_destroy();
+                                        }
+                                    });
+                            }
+                            break;
+                        case WebSocketReadState::Len64:
+                            {
+                                boost::asio::async_read(adaptor_.socket(), boost::asio::buffer(&remaining_length_, 8), 
+                                    [this](const boost::system::error_code& ec, std::size_t bytes_transferred) 
+                                    {
+                                        is_reading = false;
+                                        remaining_length_ = ((1==ntohl(1)) ? (remaining_length_) : ((uint64_t)ntohl((remaining_length_) & 0xFFFFFFFF) << 32) | ntohl((remaining_length_) >> 32));
+#ifdef CROW_ENABLE_DEBUG
+                                        if (!ec && bytes_transferred != 8)
+                                        {
+                                            throw std::runtime_error("WebSocket:Len16:async_read fail:asio bug?");
+                                        }
+#endif
+
+                                        if (!ec)
+                                        {
+                                            state_ = WebSocketReadState::Mask;
+                                            do_read();
+                                        }
+                                        else
+                                        {
+                                            close_connection_ = true;
+                                            adaptor_.close();
+                                            if (error_handler_)
+                                                error_handler_(*this);
+                                            check_destroy();
+                                        }
+                                    });
+                            }
+                            break;
+                        case WebSocketReadState::Mask:
+                                boost::asio::async_read(adaptor_.socket(), boost::asio::buffer((char*)&mask_, 4), 
+                                    [this](const boost::system::error_code& ec, std::size_t bytes_transferred)
+                                    {
+                                        is_reading = false;
+#ifdef CROW_ENABLE_DEBUG
+                                        if (!ec && bytes_transferred != 4)
+                                        {
+                                            throw std::runtime_error("WebSocket:Mask:async_read fail:asio bug?");
+                                        }
+#endif
+
+                                        if (!ec)
+                                        {
+                                            state_ = WebSocketReadState::Payload;
+                                            do_read();
+                                        }
+                                        else
+                                        {
+                                            close_connection_ = true;
+                                            if (error_handler_)
+                                                error_handler_(*this);
+                                            adaptor_.close();
+                                        }
+                                    });
+                            break;
+                        case WebSocketReadState::Payload:
+                            {
+                                size_t to_read = buffer_.size();
+                                if (remaining_length_ < to_read)
+                                    to_read = remaining_length_;
+                                adaptor_.socket().async_read_some( boost::asio::buffer(buffer_, to_read), 
+                                    [this](const boost::system::error_code& ec, std::size_t bytes_transferred)
+                                    {
+                                        is_reading = false;
+
+                                        if (!ec)
+                                        {
+                                            fragment_.insert(fragment_.end(), buffer_.begin(), buffer_.begin() + bytes_transferred);
+                                            remaining_length_ -= bytes_transferred;
+                                            if (remaining_length_ == 0)
+                                            {
+                                                handle_fragment();
+                                                state_ = WebSocketReadState::MiniHeader;
+                                                do_read();
+                                            }
+                                        }
+                                        else
+                                        {
+                                            close_connection_ = true;
+                                            if (error_handler_)
+                                                error_handler_(*this);
+                                            adaptor_.close();
+                                        }
+                                    });
+                            }
+                            break;
+                    }
+                }
+
+                bool is_FIN()
+                {
+                    return mini_header_ & 0x8000;
+                }
+
+                int opcode()
+                {
+                    return (mini_header_ & 0x0f00) >> 8;
+                }
+
+                void handle_fragment()
+                {
+                    for(decltype(fragment_.length()) i = 0; i < fragment_.length(); i ++)
+                    {
+                        fragment_[i] ^= ((char*)&mask_)[i%4];
+                    }
+                    switch(opcode())
+                    {
+                        case 0: // Continuation
+                            {
+                                message_ += fragment_;
+                                if (is_FIN())
+                                {
+                                    if (message_handler_)
+                                        message_handler_(*this, message_, is_binary_);
+                                    message_.clear();
+                                }
+                            }
+                        case 1: // Text
+                            {
+                                is_binary_ = false;
+                                message_ += fragment_;
+                                if (is_FIN())
+                                {
+                                    if (message_handler_)
+                                        message_handler_(*this, message_, is_binary_);
+                                    message_.clear();
+                                }
+                            }
+                            break;
+                        case 2: // Binary
+                            {
+                                is_binary_ = true;
+                                message_ += fragment_;
+                                if (is_FIN())
+                                {
+                                    if (message_handler_)
+                                        message_handler_(*this, message_, is_binary_);
+                                    message_.clear();
+                                }
+                            }
+                            break;
+                        case 0x8: // Close
+                            {
+                                has_recv_close_ = true;
+                                if (!has_sent_close_)
+                                {
+                                    close(fragment_);
+                                }
+                                else
+                                {
+                                    adaptor_.close();
+                                    close_connection_ = true;
+                                    if (!is_close_handler_called_)
+                                    {
+                                        if (close_handler_)
+                                            close_handler_(*this, fragment_);
+                                        is_close_handler_called_ = true;
+                                    }
+                                    check_destroy();
+                                }
+                            }
+                            break;
+                        case 0x9: // Ping
+                            {
+                                send_pong(fragment_);
+                            }
+                            break;
+                        case 0xA: // Pong
+                            {
+                                pong_received_ = true;
+                            }
+                            break;
+                    }
+
+                    fragment_.clear();
+                }
+
+                void do_write()
+                {
+                    if (sending_buffers_.empty())
+                    {
+                        sending_buffers_.swap(write_buffers_);
+                        std::vector<boost::asio::const_buffer> buffers;
+                        buffers.reserve(sending_buffers_.size());
+                        for(auto& s:sending_buffers_)
+                        {
+                            buffers.emplace_back(boost::asio::buffer(s));
+                        }
+                        boost::asio::async_write(adaptor_.socket(), buffers, 
+                            [&](const boost::system::error_code& ec, std::size_t /*bytes_transferred*/)
+                            {
+                                sending_buffers_.clear();
+                                if (!ec && !close_connection_)
+                                {
+                                    if (!write_buffers_.empty())
+                                        do_write();
+                                    if (has_sent_close_)
+                                        close_connection_ = true;
+                                }
+                                else
+                                {
+                                    close_connection_ = true;
+                                    check_destroy();
+                                }
+                            });
+                    }
+                }
+
+                void check_destroy()
+                {
+                    //if (has_sent_close_ && has_recv_close_)
+                    if (!is_close_handler_called_)
+                        if (close_handler_)
+                            close_handler_(*this, "uncleanly");
+                    if (sending_buffers_.empty() && !is_reading)
+                        delete this;
+                }
+			private:
+				Adaptor adaptor_;
+
+                std::vector<std::string> sending_buffers_;
+                std::vector<std::string> write_buffers_;
+
+                boost::array<char, 4096> buffer_;
+                bool is_binary_;
+                std::string message_;
+                std::string fragment_;
+                WebSocketReadState state_{WebSocketReadState::MiniHeader};
+                uint64_t remaining_length_{0};
+                bool close_connection_{false};
+                bool is_reading{false};
+                uint32_t mask_;
+                uint16_t mini_header_;
+                bool has_sent_close_{false};
+                bool has_recv_close_{false};
+                bool error_occured_{false};
+                bool pong_received_{false};
+                bool is_close_handler_called_{false};
+
+				std::function<void(crow::websocket::connection&)> open_handler_;
+				std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler_;
+				std::function<void(crow::websocket::connection&, const std::string&)> close_handler_;
+				std::function<void(crow::websocket::connection&)> error_handler_;
+        };
+    }
 }
 
 
@@ -8439,914 +9354,6 @@ public:
     private:
         std::vector<std::unique_ptr<BaseRule>> rules_;
         Trie trie_;
-    };
-}
-
-
-
-#pragma once
-
-
-
-
-
-
-
-
-namespace crow
-{
-    namespace detail
-    {
-        template <typename ... Middlewares>
-        struct partial_context
-            : public black_magic::pop_back<Middlewares...>::template rebind<partial_context>
-            , public black_magic::last_element_type<Middlewares...>::type::context
-        {
-            using parent_context = typename black_magic::pop_back<Middlewares...>::template rebind<::crow::detail::partial_context>;
-            template <int N>
-            using partial = typename std::conditional<N == sizeof...(Middlewares)-1, partial_context, typename parent_context::template partial<N>>::type;
-
-            template <typename T> 
-            typename T::context& get()
-            {
-                return static_cast<typename T::context&>(*this);
-            }
-        };
-
-        template <>
-        struct partial_context<>
-        {
-            template <int>
-            using partial = partial_context;
-        };
-
-        template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares>
-        bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx);
-
-        template <typename ... Middlewares>
-        struct context : private partial_context<Middlewares...>
-        //struct context : private Middlewares::context... // simple but less type-safe
-        {
-            template <int N, typename Context, typename Container>
-            friend typename std::enable_if<(N==0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, request& req, response& res);
-            template <int N, typename Context, typename Container>
-            friend typename std::enable_if<(N>0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, request& req, response& res);
-
-            template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares2>
-            friend bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx);
-
-            template <typename T> 
-            typename T::context& get()
-            {
-                return static_cast<typename T::context&>(*this);
-            }
-
-            template <int N>
-            using partial = typename partial_context<Middlewares...>::template partial<N>;
-        };
-    }
-}
-
-
-
-#pragma once
-#include <boost/asio.hpp>
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/array.hpp>
-#include <atomic>
-#include <chrono>
-#include <vector>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-namespace crow
-{
-    using namespace boost;
-    using tcp = asio::ip::tcp;
-
-    namespace detail
-    {
-        template <typename MW>
-        struct check_before_handle_arity_3_const
-        {
-            template <typename T,
-                void (T::*)(request&, response&, typename MW::context&) const = &T::before_handle
-            >
-            struct get
-            { };
-        };
-
-        template <typename MW>
-        struct check_before_handle_arity_3
-        {
-            template <typename T,
-                void (T::*)(request&, response&, typename MW::context&) = &T::before_handle
-            >
-            struct get
-            { };
-        };
-
-        template <typename MW>
-        struct check_after_handle_arity_3_const
-        {
-            template <typename T,
-                void (T::*)(request&, response&, typename MW::context&) const = &T::after_handle
-            >
-            struct get
-            { };
-        };
-
-        template <typename MW>
-        struct check_after_handle_arity_3
-        {
-            template <typename T,
-                void (T::*)(request&, response&, typename MW::context&) = &T::after_handle
-            >
-            struct get
-            { };
-        };
-
-        template <typename T>
-        struct is_before_handle_arity_3_impl
-        {
-            template <typename C>
-            static std::true_type f(typename check_before_handle_arity_3_const<T>::template get<C>*);
-
-            template <typename C>
-            static std::true_type f(typename check_before_handle_arity_3<T>::template get<C>*);
-
-            template <typename C>
-            static std::false_type f(...);
-
-        public:
-            static const bool value = decltype(f<T>(nullptr))::value;
-        };
-
-        template <typename T>
-        struct is_after_handle_arity_3_impl
-        {
-            template <typename C>
-            static std::true_type f(typename check_after_handle_arity_3_const<T>::template get<C>*);
-
-            template <typename C>
-            static std::true_type f(typename check_after_handle_arity_3<T>::template get<C>*);
-
-            template <typename C>
-            static std::false_type f(...);
-
-        public:
-            static const bool value = decltype(f<T>(nullptr))::value;
-        };
-
-        template <typename MW, typename Context, typename ParentContext>
-        typename std::enable_if<!is_before_handle_arity_3_impl<MW>::value>::type
-        before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& /*parent_ctx*/)
-        {
-            mw.before_handle(req, res, ctx.template get<MW>(), ctx);
-        }
-
-        template <typename MW, typename Context, typename ParentContext>
-        typename std::enable_if<is_before_handle_arity_3_impl<MW>::value>::type
-        before_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& /*parent_ctx*/)
-        {
-            mw.before_handle(req, res, ctx.template get<MW>());
-        }
-
-        template <typename MW, typename Context, typename ParentContext>
-        typename std::enable_if<!is_after_handle_arity_3_impl<MW>::value>::type
-        after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& /*parent_ctx*/)
-        {
-            mw.after_handle(req, res, ctx.template get<MW>(), ctx);
-        }
-
-        template <typename MW, typename Context, typename ParentContext>
-        typename std::enable_if<is_after_handle_arity_3_impl<MW>::value>::type
-        after_handler_call(MW& mw, request& req, response& res, Context& ctx, ParentContext& /*parent_ctx*/)
-        {
-            mw.after_handle(req, res, ctx.template get<MW>());
-        }
-
-        template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares>
-        bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx)
-        {
-            using parent_context_t = typename Context::template partial<N-1>;
-            before_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx, static_cast<parent_context_t&>(ctx));
-
-            if (res.is_completed())
-            {
-                after_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx, static_cast<parent_context_t&>(ctx));
-                return true;
-            }
-
-            if (middleware_call_helper<N+1, Context, Container, Middlewares...>(middlewares, req, res, ctx))
-            {
-                after_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx, static_cast<parent_context_t&>(ctx));
-                return true;
-            }
-
-            return false;
-        }
-
-        template <int N, typename Context, typename Container>
-        bool middleware_call_helper(Container& /*middlewares*/, request& /*req*/, response& /*res*/, Context& /*ctx*/)
-        {
-            return false;
-        }
-
-        template <int N, typename Context, typename Container>
-        typename std::enable_if<(N<0)>::type 
-        after_handlers_call_helper(Container& /*middlewares*/, Context& /*context*/, request& /*req*/, response& /*res*/)
-        {
-        }
-
-        template <int N, typename Context, typename Container>
-        typename std::enable_if<(N==0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, request& req, response& res)
-        {
-            using parent_context_t = typename Context::template partial<N-1>;
-            using CurrentMW = typename std::tuple_element<N, typename std::remove_reference<Container>::type>::type;
-            after_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx, static_cast<parent_context_t&>(ctx));
-        }
-
-        template <int N, typename Context, typename Container>
-        typename std::enable_if<(N>0)>::type after_handlers_call_helper(Container& middlewares, Context& ctx, request& req, response& res)
-        {
-            using parent_context_t = typename Context::template partial<N-1>;
-            using CurrentMW = typename std::tuple_element<N, typename std::remove_reference<Container>::type>::type;
-            after_handler_call<CurrentMW, Context, parent_context_t>(std::get<N>(middlewares), req, res, ctx, static_cast<parent_context_t&>(ctx));
-            after_handlers_call_helper<N-1, Context, Container>(middlewares, ctx, req, res);
-        }
-    }
-
-#ifdef CROW_ENABLE_DEBUG
-    static int connectionCount;
-#endif
-    template <typename Adaptor, typename Handler, typename ... Middlewares>
-    class Connection
-    {
-    public:
-        Connection(
-            boost::asio::io_service& io_service, 
-            Handler* handler, 
-            const std::string& server_name,
-            std::tuple<Middlewares...>* middlewares,
-            std::function<std::string()>& get_cached_date_str_f,
-            detail::dumb_timer_queue& timer_queue,
-            typename Adaptor::context* adaptor_ctx_
-            ) 
-            : adaptor_(io_service, adaptor_ctx_), 
-            handler_(handler), 
-            parser_(this), 
-            server_name_(server_name),
-            middlewares_(middlewares),
-            get_cached_date_str(get_cached_date_str_f),
-            timer_queue(timer_queue)
-        {
-#ifdef CROW_ENABLE_DEBUG
-            connectionCount ++;
-            CROW_LOG_DEBUG << "Connection open, total " << connectionCount << ", " << this;
-#endif
-        }
-        
-        ~Connection()
-        {
-            res.complete_request_handler_ = nullptr;
-            cancel_deadline_timer();
-#ifdef CROW_ENABLE_DEBUG
-            connectionCount --;
-            CROW_LOG_DEBUG << "Connection closed, total " << connectionCount << ", " << this;
-#endif
-        }
-
-        decltype(std::declval<Adaptor>().raw_socket())& socket()
-        {
-            return adaptor_.raw_socket();
-        }
-
-        void start()
-        {
-            adaptor_.start([this](const boost::system::error_code& ec) {
-                if (!ec)
-                {
-                    start_deadline();
-
-                    do_read();
-                }
-                else
-                {
-                    check_destroy();
-                }
-            });
-        }
-
-        void handle_header()
-        {
-            // HTTP 1.1 Expect: 100-continue
-            if (parser_.check_version(1, 1) && parser_.headers.count("expect") && get_header_value(parser_.headers, "expect") == "100-continue")
-            {
-                buffers_.clear();
-                static std::string expect_100_continue = "HTTP/1.1 100 Continue\r\n\r\n";
-                buffers_.emplace_back(expect_100_continue.data(), expect_100_continue.size());
-                do_write();
-            }
-        }
-
-        void handle()
-        {
-            cancel_deadline_timer();
-            bool is_invalid_request = false;
-            add_keep_alive_ = false;
-
-            req_ = std::move(parser_.to_request());
-            request& req = req_;
-
-            if (parser_.check_version(1, 0))
-            {
-                // HTTP/1.0
-                if (req.headers.count("connection"))
-                {
-                    if (boost::iequals(req.get_header_value("connection"),"Keep-Alive"))
-                        add_keep_alive_ = true;
-                }
-                else
-                    close_connection_ = true;
-            }
-            else if (parser_.check_version(1, 1))
-            {
-                // HTTP/1.1
-                if (req.headers.count("connection"))
-                {
-                    if (req.get_header_value("connection") == "close")
-                        close_connection_ = true;
-                    else if (boost::iequals(req.get_header_value("connection"),"Keep-Alive"))
-                        add_keep_alive_ = true;
-                }
-                if (!req.headers.count("host"))
-                {
-                    is_invalid_request = true;
-                    res = response(400);
-                }
-				if (parser_.is_upgrade())
-				{
-					if (req.get_header_value("upgrade") == "h2c")
-					{
-						// TODO HTTP/2
-                        // currently, ignore upgrade header
-					}
-                    else
-                    {
-                        close_connection_ = true;
-                        handler_->handle_upgrade(req, res, std::move(adaptor_));
-                        return;
-                    }
-				}
-            }
-
-            CROW_LOG_INFO << "Request: " << boost::lexical_cast<std::string>(adaptor_.remote_endpoint()) << " " << this << " HTTP/" << parser_.http_major << "." << parser_.http_minor << ' '
-             << method_name(req.method) << " " << req.url;
-
-
-            need_to_call_after_handlers_ = false;
-            if (!is_invalid_request)
-            {
-                res.complete_request_handler_ = []{};
-                res.is_alive_helper_ = [this]()->bool{ return adaptor_.is_open(); };
-
-                ctx_ = detail::context<Middlewares...>();
-                req.middleware_context = (void*)&ctx_;
-                req.io_service = &adaptor_.get_io_service();
-                detail::middleware_call_helper<0, decltype(ctx_), decltype(*middlewares_), Middlewares...>(*middlewares_, req, res, ctx_);
-
-                if (!res.completed_)
-                {
-                    res.complete_request_handler_ = [this]{ this->complete_request(); };
-                    need_to_call_after_handlers_ = true;
-                    handler_->handle(req, res);
-                    if (add_keep_alive_)
-                        res.set_header("connection", "Keep-Alive");
-                }
-                else
-                {
-                    complete_request();
-                }
-            }
-            else
-            {
-                complete_request();
-            }
-        }
-
-        void complete_request()
-        {
-            CROW_LOG_INFO << "Response: " << this << ' ' << req_.raw_url << ' ' << res.code << ' ' << close_connection_;
-
-            if (need_to_call_after_handlers_)
-            {
-                need_to_call_after_handlers_ = false;
-
-                // call all after_handler of middlewares
-                detail::after_handlers_call_helper<
-                    ((int)sizeof...(Middlewares)-1),
-                    decltype(ctx_),
-                    decltype(*middlewares_)> 
-                (*middlewares_, ctx_, req_, res);
-            }
-
-            //auto self = this->shared_from_this();
-            res.complete_request_handler_ = nullptr;
-            
-            if (!adaptor_.is_open())
-            {
-                //CROW_LOG_DEBUG << this << " delete (socket is closed) " << is_reading << ' ' << is_writing;
-                //delete this;
-                return;
-            }
-
-            static std::unordered_map<int, std::string> statusCodes = {
-                {200, "HTTP/1.1 200 OK\r\n"},
-                {201, "HTTP/1.1 201 Created\r\n"},
-                {202, "HTTP/1.1 202 Accepted\r\n"},
-                {204, "HTTP/1.1 204 No Content\r\n"},
-
-                {300, "HTTP/1.1 300 Multiple Choices\r\n"},
-                {301, "HTTP/1.1 301 Moved Permanently\r\n"},
-                {302, "HTTP/1.1 302 Moved Temporarily\r\n"},
-                {304, "HTTP/1.1 304 Not Modified\r\n"},
-
-                {400, "HTTP/1.1 400 Bad Request\r\n"},
-                {401, "HTTP/1.1 401 Unauthorized\r\n"},
-                {403, "HTTP/1.1 403 Forbidden\r\n"},
-                {404, "HTTP/1.1 404 Not Found\r\n"},
-
-                {500, "HTTP/1.1 500 Internal Server Error\r\n"},
-                {501, "HTTP/1.1 501 Not Implemented\r\n"},
-                {502, "HTTP/1.1 502 Bad Gateway\r\n"},
-                {503, "HTTP/1.1 503 Service Unavailable\r\n"},
-            };
-
-            static std::string seperator = ": ";
-            static std::string crlf = "\r\n";
-
-            buffers_.clear();
-            buffers_.reserve(4*(res.headers.size()+5)+3);
-
-            if (res.body.empty() && res.json_value.t() == json::type::Object)
-            {
-                res.body = json::dump(res.json_value);
-            }
-
-            if (!statusCodes.count(res.code))
-                res.code = 500;
-            {
-                auto& status = statusCodes.find(res.code)->second;
-                buffers_.emplace_back(status.data(), status.size());
-            }
-
-            if (res.code >= 400 && res.body.empty())
-                res.body = statusCodes[res.code].substr(9);
-
-            for(auto& kv : res.headers)
-            {
-                buffers_.emplace_back(kv.first.data(), kv.first.size());
-                buffers_.emplace_back(seperator.data(), seperator.size());
-                buffers_.emplace_back(kv.second.data(), kv.second.size());
-                buffers_.emplace_back(crlf.data(), crlf.size());
-
-            }
-
-            if (!res.headers.count("content-length"))
-            {
-                content_length_ = std::to_string(res.body.size());
-                static std::string content_length_tag = "Content-Length: ";
-                buffers_.emplace_back(content_length_tag.data(), content_length_tag.size());
-                buffers_.emplace_back(content_length_.data(), content_length_.size());
-                buffers_.emplace_back(crlf.data(), crlf.size());
-            }
-            if (!res.headers.count("server"))
-            {
-                static std::string server_tag = "Server: ";
-                buffers_.emplace_back(server_tag.data(), server_tag.size());
-                buffers_.emplace_back(server_name_.data(), server_name_.size());
-                buffers_.emplace_back(crlf.data(), crlf.size());
-            }
-            if (!res.headers.count("date"))
-            {
-                static std::string date_tag = "Date: ";
-                date_str_ = get_cached_date_str();
-                buffers_.emplace_back(date_tag.data(), date_tag.size());
-                buffers_.emplace_back(date_str_.data(), date_str_.size());
-                buffers_.emplace_back(crlf.data(), crlf.size());
-            }
-            if (add_keep_alive_)
-            {
-                static std::string keep_alive_tag = "Connection: Keep-Alive";
-                buffers_.emplace_back(keep_alive_tag.data(), keep_alive_tag.size());
-                buffers_.emplace_back(crlf.data(), crlf.size());
-            }
-
-            buffers_.emplace_back(crlf.data(), crlf.size());
-            res_body_copy_.swap(res.body);
-            buffers_.emplace_back(res_body_copy_.data(), res_body_copy_.size());
-
-            do_write();
-
-            if (need_to_start_read_after_complete_)
-            {
-                need_to_start_read_after_complete_ = false;
-                start_deadline();
-                do_read();
-            }
-        }
-
-    private:
-        void do_read()
-        {
-            //auto self = this->shared_from_this();
-            is_reading = true;
-            adaptor_.socket().async_read_some(boost::asio::buffer(buffer_), 
-                [this](const boost::system::error_code& ec, std::size_t bytes_transferred)
-                {
-                    bool error_while_reading = true;
-                    if (!ec)
-                    {
-                        bool ret = parser_.feed(buffer_.data(), bytes_transferred);
-                        if (ret && adaptor_.is_open())
-                        {
-                            error_while_reading = false;
-                        }
-                    }
-
-                    if (error_while_reading)
-                    {
-                        cancel_deadline_timer();
-                        parser_.done();
-                        adaptor_.close();
-                        is_reading = false;
-                        CROW_LOG_DEBUG << this << " from read(1)";
-                        check_destroy();
-                    }
-                    else if (close_connection_)
-                    {
-                        cancel_deadline_timer();
-                        parser_.done();
-                        is_reading = false;
-                        check_destroy();
-                        // adaptor will close after write
-                    }
-                    else if (!need_to_call_after_handlers_)
-                    {
-                        start_deadline();
-                        do_read();
-                    }
-                    else
-                    {
-                        // res will be completed later by user
-                        need_to_start_read_after_complete_ = true;
-                    }
-                });
-        }
-
-        void do_write()
-        {
-            //auto self = this->shared_from_this();
-            is_writing = true;
-            boost::asio::async_write(adaptor_.socket(), buffers_, 
-                [&](const boost::system::error_code& ec, std::size_t /*bytes_transferred*/)
-                {
-                    is_writing = false;
-                    res.clear();
-                    res_body_copy_.clear();
-                    if (!ec)
-                    {
-                        if (close_connection_)
-                        {
-                            adaptor_.close();
-                            CROW_LOG_DEBUG << this << " from write(1)";
-                            check_destroy();
-                        }
-                    }
-                    else
-                    {
-                        CROW_LOG_DEBUG << this << " from write(2)";
-                        check_destroy();
-                    }
-                });
-        }
-
-        void check_destroy()
-        {
-            CROW_LOG_DEBUG << this << " is_reading " << is_reading << " is_writing " << is_writing;
-            if (!is_reading && !is_writing)
-            {
-                CROW_LOG_DEBUG << this << " delete (idle) ";
-                delete this;
-            }
-        }
-
-        void cancel_deadline_timer()
-        {
-            CROW_LOG_DEBUG << this << " timer cancelled: " << timer_cancel_key_.first << ' ' << timer_cancel_key_.second;
-            timer_queue.cancel(timer_cancel_key_);
-        }
-
-        void start_deadline(/*int timeout = 5*/)
-        {
-            cancel_deadline_timer();
-            
-            timer_cancel_key_ = timer_queue.add([this]
-            {
-                if (!adaptor_.is_open())
-                {
-                    return;
-                }
-                adaptor_.close();
-            });
-            CROW_LOG_DEBUG << this << " timer added: " << timer_cancel_key_.first << ' ' << timer_cancel_key_.second;
-        }
-
-    private:
-        Adaptor adaptor_;
-        Handler* handler_;
-
-        boost::array<char, 4096> buffer_;
-
-        HTTPParser<Connection> parser_;
-        request req_;
-        response res;
-
-        bool close_connection_ = false;
-
-        const std::string& server_name_;
-        std::vector<boost::asio::const_buffer> buffers_;
-
-        std::string content_length_;
-        std::string date_str_;
-        std::string res_body_copy_;
-
-        //boost::asio::deadline_timer deadline_;
-        detail::dumb_timer_queue::key timer_cancel_key_;
-
-        bool is_reading{};
-        bool is_writing{};
-        bool need_to_call_after_handlers_{};
-        bool need_to_start_read_after_complete_{};
-        bool add_keep_alive_{};
-
-        std::tuple<Middlewares...>* middlewares_;
-        detail::context<Middlewares...> ctx_;
-
-        std::function<std::string()>& get_cached_date_str;
-        detail::dumb_timer_queue& timer_queue;
-    };
-
-}
-
-
-
-#pragma once
-
-#include <chrono>
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/asio.hpp>
-#ifdef CROW_ENABLE_SSL
-#include <boost/asio/ssl.hpp>
-#endif
-#include <cstdint>
-#include <atomic>
-#include <future>
-#include <vector>
-
-#include <memory>
-
-
-
-
-
-
-
-
-namespace crow
-{
-    using namespace boost;
-    using tcp = asio::ip::tcp;
-
-    template <typename Handler, typename Adaptor = SocketAdaptor, typename ... Middlewares>
-    class Server
-    {
-    public:
-    Server(Handler* handler, std::string bindaddr, uint16_t port, std::tuple<Middlewares...>* middlewares = nullptr, uint16_t concurrency = 1, typename Adaptor::context* adaptor_ctx = nullptr)
-            : acceptor_(io_service_, tcp::endpoint(boost::asio::ip::address::from_string(bindaddr), port)),
-            signals_(io_service_, SIGINT, SIGTERM),
-            tick_timer_(io_service_),
-            handler_(handler),
-            concurrency_(concurrency),
-            port_(port),
-            bindaddr_(bindaddr),
-            middlewares_(middlewares),
-            adaptor_ctx_(adaptor_ctx)
-        {
-        }
-
-        void set_tick_function(std::chrono::milliseconds d, std::function<void()> f)
-        {
-            tick_interval_ = d;
-            tick_function_ = f;
-        }
-
-        void on_tick()
-        {
-            tick_function_();
-            tick_timer_.expires_from_now(boost::posix_time::milliseconds(tick_interval_.count()));
-            tick_timer_.async_wait([this](const boost::system::error_code& ec)
-                    {
-                        if (ec)
-                            return;
-                        on_tick();
-                    });
-        }
-
-        void run()
-        {
-            if (concurrency_ < 0)
-                concurrency_ = 1;
-
-            for(int i = 0; i < concurrency_;  i++)
-                io_service_pool_.emplace_back(new boost::asio::io_service());
-            get_cached_date_str_pool_.resize(concurrency_);
-            timer_queue_pool_.resize(concurrency_);
-
-            std::vector<std::future<void>> v;
-            std::atomic<int> init_count(0);
-            for(uint16_t i = 0; i < concurrency_; i ++)
-                v.push_back(
-                        std::async(std::launch::async, [this, i, &init_count]{
-
-                            // thread local date string get function
-                            auto last = std::chrono::steady_clock::now();
-
-                            std::string date_str;
-                            auto update_date_str = [&]
-                            {
-                                auto last_time_t = time(0);
-                                tm my_tm;
-
-#ifdef _MSC_VER
-                                gmtime_s(&my_tm, &last_time_t);
-#else
-                                gmtime_r(&last_time_t, &my_tm);
-#endif
-                                date_str.resize(100);
-                                size_t date_str_sz = strftime(&date_str[0], 99, "%a, %d %b %Y %H:%M:%S GMT", &my_tm);
-                                date_str.resize(date_str_sz);
-                            };
-                            update_date_str();
-                            get_cached_date_str_pool_[i] = [&]()->std::string
-                            {
-                                if (std::chrono::steady_clock::now() - last >= std::chrono::seconds(1))
-                                {
-                                    last = std::chrono::steady_clock::now();
-                                    update_date_str();
-                                }
-                                return date_str;
-                            };
-
-                            // initializing timer queue
-                            detail::dumb_timer_queue timer_queue;
-                            timer_queue_pool_[i] = &timer_queue;
-
-                            timer_queue.set_io_service(*io_service_pool_[i]);
-                            boost::asio::deadline_timer timer(*io_service_pool_[i]);
-                            timer.expires_from_now(boost::posix_time::seconds(1));
-
-                            std::function<void(const boost::system::error_code& ec)> handler;
-                            handler = [&](const boost::system::error_code& ec){
-                                if (ec)
-                                    return;
-                                timer_queue.process();
-                                timer.expires_from_now(boost::posix_time::seconds(1));
-                                timer.async_wait(handler);
-                            };
-                            timer.async_wait(handler);
-
-                            init_count ++;
-                            try 
-                            {
-                                io_service_pool_[i]->run();
-                            } catch(std::exception& e)
-                            {
-                                CROW_LOG_ERROR << "Worker Crash: An uncaught exception occurred: " << e.what();
-                            }
-                        }));
-
-            if (tick_function_ && tick_interval_.count() > 0) 
-            {
-                tick_timer_.expires_from_now(boost::posix_time::milliseconds(tick_interval_.count()));
-                tick_timer_.async_wait([this](const boost::system::error_code& ec)
-                        {
-                            if (ec)
-                                return;
-                            on_tick();
-                        });
-            }
-
-            CROW_LOG_INFO << server_name_ << " server is running, local port " << port_;
-
-            signals_.async_wait(
-                [&](const boost::system::error_code& /*error*/, int /*signal_number*/){
-                    stop();
-                });
-
-            while(concurrency_ != init_count)
-                std::this_thread::yield();
-
-            do_accept();
-
-            std::thread([this]{
-                io_service_.run();
-                CROW_LOG_INFO << "Exiting.";
-            }).join();
-        }
-
-        void stop()
-        {
-            io_service_.stop();
-            for(auto& io_service:io_service_pool_)
-                io_service->stop();
-        }
-
-    private:
-        asio::io_service& pick_io_service()
-        {
-            // TODO load balancing
-            roundrobin_index_++;
-            if (roundrobin_index_ >= io_service_pool_.size())
-                roundrobin_index_ = 0;
-            return *io_service_pool_[roundrobin_index_];
-        }
-
-        void do_accept()
-        {
-            asio::io_service& is = pick_io_service();
-            auto p = new Connection<Adaptor, Handler, Middlewares...>(
-                is, handler_, server_name_, middlewares_,
-                get_cached_date_str_pool_[roundrobin_index_], *timer_queue_pool_[roundrobin_index_],
-                adaptor_ctx_);
-            acceptor_.async_accept(p->socket(),
-                [this, p, &is](boost::system::error_code ec)
-                {
-                    if (!ec)
-                    {
-                        is.post([p]
-                        {
-                            p->start();
-                        });
-                    }
-                    do_accept();
-                });
-        }
-
-    private:
-        asio::io_service io_service_;
-        std::vector<std::unique_ptr<asio::io_service>> io_service_pool_;
-        std::vector<detail::dumb_timer_queue*> timer_queue_pool_;
-        std::vector<std::function<std::string()>> get_cached_date_str_pool_;
-        tcp::acceptor acceptor_;
-        boost::asio::signal_set signals_;
-        boost::asio::deadline_timer tick_timer_;
-
-        Handler* handler_;
-        uint16_t concurrency_{1};
-        std::string server_name_ = "Crow/0.1";
-        uint16_t port_;
-        std::string bindaddr_;
-        unsigned int roundrobin_index_{};
-
-        std::chrono::milliseconds tick_interval_;
-        std::function<void()> tick_function_;
-
-        std::tuple<Middlewares...>* middlewares_;
-
-#ifdef CROW_ENABLE_SSL
-        bool use_ssl_{false};
-        boost::asio::ssl::context ssl_context_{boost::asio::ssl::context::sslv23};
-#endif
-        typename Adaptor::context* adaptor_ctx_;
     };
 }
 
