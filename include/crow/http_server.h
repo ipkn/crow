@@ -121,16 +121,21 @@ namespace crow
                             timer.async_wait(handler);
 
                             init_count ++;
-                            try 
+
+                            for (;;)
                             {
-                                io_service_pool_[i]->run();
-                            } catch(std::exception& e)
-                            {
-                                CROW_LOG_ERROR << "Worker Crash: An uncaught exception occurred: " << e.what();
+                                try
+                                {
+                                    io_service_pool_[i]->run();
+                                    break;
+                                } catch(std::exception& e)
+                                {
+                                    CROW_LOG_ERROR << "Worker Crash: An uncaught exception occurred: " << e.what();
+                                }
                             }
                         }));
 
-            if (tick_function_ && tick_interval_.count() > 0) 
+            if (tick_function_ && tick_interval_.count() > 0)
             {
                 tick_timer_.expires_from_now(boost::posix_time::milliseconds(tick_interval_.count()));
                 tick_timer_.async_wait([this](const boost::system::error_code& ec)
@@ -192,6 +197,9 @@ namespace crow
                         {
                             p->start();
                         });
+                    }
+                    else {
+                        delete p;
                     }
                     do_accept();
                 });
