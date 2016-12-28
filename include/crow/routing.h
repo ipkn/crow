@@ -276,12 +276,12 @@ namespace crow
 
         void handle_upgrade(const request& req, response&, SocketAdaptor&& adaptor) override 
 		{
-			new crow::websocket::Connection<SocketAdaptor>(req, std::move(adaptor), open_handler_, message_handler_, close_handler_, error_handler_);
+			new crow::websocket::Connection<SocketAdaptor>(req, std::move(adaptor), open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
 		}
 #ifdef CROW_ENABLE_SSL
         void handle_upgrade(const request& req, response&, SSLAdaptor&& adaptor) override
 		{
-			new crow::websocket::Connection<SSLAdaptor>(req, std::move(adaptor), open_handler_, message_handler_, close_handler_, error_handler_);
+			new crow::websocket::Connection<SSLAdaptor>(req, std::move(adaptor), open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
 		}
 #endif
 
@@ -313,11 +313,19 @@ namespace crow
 			return *this;
 		}
 
+		template <typename Func>
+		self_t& onaccept(Func f)
+		{
+		    accept_handler_ = f;
+		    return *this;
+		}
+
 	protected:
 		std::function<void(crow::websocket::connection&)> open_handler_;
 		std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler_;
 		std::function<void(crow::websocket::connection&, const std::string&)> close_handler_;
 		std::function<void(crow::websocket::connection&)> error_handler_;
+		std::function<bool(const crow::request&)> accept_handler_;
 	};
 
     template <typename T>
