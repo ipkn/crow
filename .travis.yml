@@ -36,4 +36,4 @@ script: make && ctest
 
 after_success:
   - cd ..
-  - if [ "PUSH_COVERAGE" == "ON" ]; then coveralls --gcov gcov-4.8 -i include --gcov-options '\-lp'; fi
+  - if [ "$PUSH_COVERAGE" == "ON" ]; then coveralls --gcov gcov-4.8 -i include --gcov-options '\-lp'; fi
