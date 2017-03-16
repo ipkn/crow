@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <boost/optional.hpp>
 
 namespace crow
 {
@@ -197,6 +198,50 @@ inline char * qs_k2v(const char * key, char * const * qs_kv, int qs_kv_size, int
     return NULL;
 }
 
+inline boost::optional<std::pair<std::string, std::string>> qs_dict_name2kv(const char * dict_name, char * const * qs_kv, int qs_kv_size, int nth = 0)
+{
+    int i;
+    size_t name_len, skip_to_eq, skip_to_brace_open, skip_to_brace_close;
+
+    name_len = strlen(dict_name);
+
+#ifdef _qsSORTING
+// TODO: binary search for key in the sorted qs_kv
+#else  // _qsSORTING
+    for(i=0; i<qs_kv_size; i++)
+    {
+        if ( strncmp(dict_name, qs_kv[i], name_len) == 0 )
+        {
+            skip_to_eq = strcspn(qs_kv[i], "=");
+            if ( qs_kv[i][skip_to_eq] == '=' )
+                skip_to_eq++;
+            skip_to_brace_open = strcspn(qs_kv[i], "[");
+            if ( qs_kv[i][skip_to_brace_open] == '[' )
+                skip_to_brace_open++;
+            skip_to_brace_close = strcspn(qs_kv[i], "]");
+
+            std::cout << skip_to_brace_open << " FUFUU " << skip_to_brace_close << std::endl;
+
+            if ( skip_to_brace_open <= skip_to_brace_close &&
+                 skip_to_brace_open > 0 &&
+                 skip_to_brace_close > 0 &&
+                 nth == 0 )
+            {
+                auto key = std::string(qs_kv[i] + skip_to_brace_open, skip_to_brace_close - skip_to_brace_open);
+                auto value = std::string(qs_kv[i] + skip_to_eq);
+                return boost::make_optional(std::make_pair(key, value));
+            }
+            else
+            {
+                --nth;
+            }
+        }
+    }
+#endif  // _qsSORTING
+
+    return boost::none;
+}
+
 
 inline char * qs_scanvalue(const char * key, const char * qs, char * val, size_t val_len)
 {
@@ -336,6 +381,21 @@ namespace crow
             return ret;
         }
 
+        std::vector<std::pair<std::string, std::string>> get_dict (const std::string& name) const
+        {
+            std::vector<std::pair<std::string, std::string>> ret;
+            std::string plus = name;            
+
+            int count = 0;
+            while(1)
+            {
+                if (auto element = qs_dict_name2kv(plus.c_str(), key_value_pairs_.data(), key_value_pairs_.size(), count++))
+                    ret.push_back(*element);
+                else
+                    break;
+            }
+            return ret;
+        }
 
     private:
         std::string url_;
