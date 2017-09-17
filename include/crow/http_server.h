@@ -121,12 +121,19 @@ namespace crow
                             timer.async_wait(handler);
 
                             init_count ++;
-                            try 
+                            while(1)
                             {
-                                io_service_pool_[i]->run();
-                            } catch(std::exception& e)
-                            {
-                                CROW_LOG_ERROR << "Worker Crash: An uncaught exception occurred: " << e.what();
+                                try 
+                                {
+                                    if (io_service_pool_[i]->run() == 0)
+                                    {
+                                        // when io_service.run returns 0, there are no more works to do.
+                                        break;
+                                    }
+                                } catch(std::exception& e)
+                                {
+                                    CROW_LOG_ERROR << "Worker Crash: An uncaught exception occurred: " << e.what();
+                                }
                             }
                         }));
 
