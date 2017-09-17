@@ -226,11 +226,13 @@ namespace crow
                         case WebSocketReadState::Len16:
                             {
                                 remaining_length_ = 0;
-                                boost::asio::async_read(adaptor_.socket(), boost::asio::buffer(&remaining_length_, 2), 
-                                    [this](const boost::system::error_code& ec, std::size_t bytes_transferred) 
+				uint16_t remaining_length16_ = 0;
+                                boost::asio::async_read(adaptor_.socket(), boost::asio::buffer(&remaining_length16_, 2), 
+                                    [this,&remaining_length16_](const boost::system::error_code& ec, std::size_t bytes_transferred) 
                                     {
                                         is_reading = false;
-                                        remaining_length_ = ntohs(*(uint16_t*)&remaining_length_);
+                                        remaining_length16_ = ntohs(remaining_length16_);
+                                        remaining_length_ = remaining_length16_;
 #ifdef CROW_ENABLE_DEBUG
                                         if (!ec && bytes_transferred != 2)
                                         {
