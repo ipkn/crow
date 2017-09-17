@@ -266,8 +266,12 @@ inline char * qs_scanvalue(const char * key, const char * qs, char * val, size_t
     {
         qs++;
         i = strcspn(qs, "&=#");
-        strncpy(val, qs, (val_len-1)<(i+1) ? (val_len-1) : (i+1));
-        qs_decode(val);
+#ifdef _MSC_VER
+        strncpy_s(val, val_len, qs, (val_len - 1)<(i + 1) ? (val_len - 1) : (i + 1));
+#else
+        strncpy(val, qs, (val_len - 1)<(i + 1) ? (val_len - 1) : (i + 1));
+#endif
+		qs_decode(val);
     }
     else
     {

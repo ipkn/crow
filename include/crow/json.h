@@ -1394,7 +1394,12 @@ namespace crow
                 case type::Number: 
                     {
                         char outbuf[128];
+#ifdef _MSC_VER
+                        sprintf_s(outbuf, 128, "%g", v.d);
+#else
                         sprintf(outbuf, "%g", v.d);
+#endif
+
                         out += outbuf;
                     }
                     break;
