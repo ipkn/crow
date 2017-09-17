@@ -156,7 +156,7 @@ namespace crow
             struct Wrapped
             {
                 template <typename ... Args>
-                void set(Func f, typename std::enable_if<
+                void set_(Func f, typename std::enable_if<
                     !std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request&>::value
                 , int>::type = 0)
                 {
@@ -190,7 +190,7 @@ namespace crow
                 };
 
                 template <typename ... Args>
-                void set(Func f, typename std::enable_if<
+                void set_(Func f, typename std::enable_if<
                         std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request&>::value &&
                         !std::is_same<typename std::tuple_element<1, std::tuple<Args..., void, void>>::type, response&>::value
                         , int>::type = 0)
@@ -205,7 +205,7 @@ namespace crow
                 }
 
                 template <typename ... Args>
-                void set(Func f, typename std::enable_if<
+                void set_(Func f, typename std::enable_if<
                         std::is_same<typename std::tuple_element<0, std::tuple<Args..., void>>::type, const request&>::value &&
                         std::is_same<typename std::tuple_element<1, std::tuple<Args..., void, void>>::type, response&>::value
                         , int>::type = 0)
@@ -410,7 +410,7 @@ namespace crow
                 throw std::runtime_error("route_dynamic: Handler type is mismatched with URL parameters: " + rule_);
             }
             auto ret = detail::routing_handler_call_helper::Wrapped<Func, typename function_t::template arg<Indices>...>();
-            ret.template set<
+            ret.template set_<
                 typename function_t::template arg<Indices>...
             >(std::move(f));
             return ret;
