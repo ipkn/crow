@@ -36,6 +36,7 @@ if (Tcmalloc_FOUND)
 endif(Tcmalloc_FOUND)
 
 add_executable(example_with_all example_with_all.cpp)
+add_dependencies(example_with_all amalgamation)
 #target_link_libraries(example crow)
 target_link_libraries(example_with_all ${Boost_LIBRARIES})
 target_link_libraries(example_with_all ${CMAKE_THREAD_LIBS_INIT})
