@@ -4,8 +4,8 @@ from conans import ConanFile, CMake
 class CrowConan(ConanFile):
     name = "Crow"
     version = "0.1"
-    url = "https://github.com/javierjeronimo/crow"
-    license = "see https://github.com/ipkn/crow/blob/master/LICENSE"
+    url = "https://github.com/ipkn/crow"
+    license = "MIT; see https://github.com/ipkn/crow/blob/master/LICENSE"
     generators = "cmake"
     settings = "os", "compiler", "build_type", "arch"
 
@@ -16,7 +16,7 @@ class CrowConan(ConanFile):
 
     def source(self):
         # this will create a hello subfolder, take it into account
-        self.run("git clone https://github.com/javierjeronimo/crow.git")
+        self.run("git clone https://github.com/ipkn/crow.git")
 
     def build(self):
         cmake = CMake(self.settings)
