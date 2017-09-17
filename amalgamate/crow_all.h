@@ -6399,7 +6399,7 @@ namespace crow
 
 #pragma once
 #include <boost/algorithm/string/predicate.hpp>
-
+#include <boost/array.hpp>
 
 
 
