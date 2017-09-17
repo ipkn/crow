@@ -33,3 +33,6 @@ build
 
 .directory
 crow_all.h
+
+# conan.io
+build/

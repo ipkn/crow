@@ -19,7 +19,13 @@ endif()
 
 add_executable(example_websocket websocket/example_ws.cpp)
 target_link_libraries(example_websocket ${Boost_LIBRARIES})
-target_link_libraries(example_websocket ${CMAKE_THREAD_LIBS_INIT} ssl crypto)
+target_link_libraries(example_websocket ${CMAKE_THREAD_LIBS_INIT} ${OPENSSL_LIBRARIES})
+add_custom_command(OUTPUT ws.html
+        COMMAND ${CMAKE_COMMAND} -E
+        copy ${PROJECT_SOURCE_DIR}/websocket/templates/ws.html ${CMAKE_CURRENT_BINARY_DIR}/templates/ws.html
+        DEPENDS ${PROJECT_SOURCE_DIR}/websocket/templates/ws.html
+        )
+add_custom_target(example_ws_copy ALL DEPENDS ws.html)
 
 add_executable(example example.cpp)
 #target_link_libraries(example crow)
