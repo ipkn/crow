@@ -41,7 +41,7 @@ before_script:
   - cmake --version
   - cmake ..
 
-script: make && ctest
+script: make -j2 && ctest -j2
 
 after_success:
   - cd ..
