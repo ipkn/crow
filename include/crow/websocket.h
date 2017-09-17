@@ -1,5 +1,6 @@
 #pragma once
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/array.hpp>
 #include "crow/socket_adaptors.h"
 #include "crow/http_request.h"
 #include "crow/TinySHA1.hpp"
