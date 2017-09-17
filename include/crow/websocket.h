@@ -40,8 +40,10 @@ namespace crow
 						std::function<void(crow::websocket::connection&)> open_handler,
 						std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler,
 						std::function<void(crow::websocket::connection&, const std::string&)> close_handler,
-						std::function<void(crow::websocket::connection&)> error_handler)
+						std::function<void(crow::websocket::connection&)> error_handler,
+						std::function<bool(const crow::request&)> accept_handler)
 					: adaptor_(std::move(adaptor)), open_handler_(std::move(open_handler)), message_handler_(std::move(message_handler)), close_handler_(std::move(close_handler)), error_handler_(std::move(error_handler))
+					, accept_handler_(std::move(accept_handler))
 				{
 					if (!boost::iequals(req.get_header_value("upgrade"), "websocket"))
 					{
@@ -49,6 +51,17 @@ namespace crow
 						delete this;
 						return;
 					}
+
+					if (accept_handler_)
+					{
+						if (!accept_handler_(req))
+						{
+							adaptor.close();
+							delete this;
+							return;
+						}
+					}
+
 					// Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
 					// Sec-WebSocket-Version: 13
                     std::string magic = req.get_header_value("Sec-WebSocket-Key") +  "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -485,6 +498,7 @@ namespace crow
 				std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler_;
 				std::function<void(crow::websocket::connection&, const std::string&)> close_handler_;
 				std::function<void(crow::websocket::connection&)> error_handler_;
+				std::function<bool(const crow::request&)> accept_handler_;
         };
     }
 }
