@@ -183,7 +183,12 @@ namespace crow
                             {
                                 //boost::asio::async_read(adaptor_.socket(), boost::asio::buffer(&mini_header_, 1), 
                                 adaptor_.socket().async_read_some(boost::asio::buffer(&mini_header_, 2), 
-                                    [this](const boost::system::error_code& ec, std::size_t bytes_transferred) 
+                                    [this](const boost::system::error_code& ec, std::size_t 
+#ifdef CROW_ENABLE_DEBUG
+                                        bytes_transferred
+#endif
+                                        )
+
                                     {
                                         is_reading = false;
                                         mini_header_ = htons(mini_header_);
@@ -228,7 +233,11 @@ namespace crow
                                 remaining_length_ = 0;
                 				uint16_t remaining_length16_ = 0;
                                 boost::asio::async_read(adaptor_.socket(), boost::asio::buffer(&remaining_length16_, 2), 
-                                    [this,&remaining_length16_](const boost::system::error_code& ec, std::size_t bytes_transferred) 
+                                    [this,&remaining_length16_](const boost::system::error_code& ec, std::size_t 
+#ifdef CROW_ENABLE_DEBUG
+                                        bytes_transferred
+#endif
+                                        ) 
                                     {
                                         is_reading = false;
                                         remaining_length16_ = ntohs(remaining_length16_);
@@ -259,7 +268,11 @@ namespace crow
                         case WebSocketReadState::Len64:
                             {
                                 boost::asio::async_read(adaptor_.socket(), boost::asio::buffer(&remaining_length_, 8), 
-                                    [this](const boost::system::error_code& ec, std::size_t bytes_transferred) 
+                                    [this](const boost::system::error_code& ec, std::size_t 
+#ifdef CROW_ENABLE_DEBUG
+                                        bytes_transferred
+#endif
+                                        ) 
                                     {
                                         is_reading = false;
                                         remaining_length_ = ((1==ntohl(1)) ? (remaining_length_) : ((uint64_t)ntohl((remaining_length_) & 0xFFFFFFFF) << 32) | ntohl((remaining_length_) >> 32));
@@ -288,7 +301,11 @@ namespace crow
                             break;
                         case WebSocketReadState::Mask:
                                 boost::asio::async_read(adaptor_.socket(), boost::asio::buffer((char*)&mask_, 4), 
-                                    [this](const boost::system::error_code& ec, std::size_t bytes_transferred)
+                                    [this](const boost::system::error_code& ec, std::size_t 
+#ifdef CROW_ENABLE_DEBUG 
+                                        bytes_transferred
+#endif
+                                    )
                                     {
                                         is_reading = false;
 #ifdef CROW_ENABLE_DEBUG

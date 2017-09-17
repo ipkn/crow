@@ -150,6 +150,7 @@ namespace crow
 
             CROW_LOG_INFO << server_name_ << " server is running at " << bindaddr_ <<":" << port_
                           << " using " << concurrency_ << " threads";
+            CROW_LOG_INFO << "Call `app.loglevel(crow::LogLevel::Warning)` to hide Info level logs.";
 
             signals_.async_wait(
                 [&](const boost::system::error_code& /*error*/, int /*signal_number*/){

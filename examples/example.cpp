@@ -163,8 +163,8 @@ int main()
         return std::string(512*1024, ' ');
     });
 
-    // ignore all log
-    crow::logger::setLogLevel(crow::LogLevel::DEBUG);
+    // enables all log
+    app.loglevel(crow::LogLevel::DEBUG);
     //crow::logger::setHandler(std::make_shared<ExampleLogHandler>());
 
     app.port(18080)
