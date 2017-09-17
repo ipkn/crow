@@ -86,6 +86,12 @@ namespace crow
             completed_ = false;
         }
 
+        void redirect(const std::string& location)
+        {
+            code = 301;
+            set_header("Location", location);
+        }
+
         void write(const std::string& body_part)
         {
             body += body_part;

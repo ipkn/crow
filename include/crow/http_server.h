@@ -148,7 +148,7 @@ namespace crow
                         });
             }
 
-            CROW_LOG_INFO << server_name_ << " server is running on port " << port_
+            CROW_LOG_INFO << server_name_ << " server is running at " << bindaddr_ <<":" << port_
                           << " using " << concurrency_ << " threads";
 
             signals_.async_wait(
