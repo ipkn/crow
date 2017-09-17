@@ -4,6 +4,7 @@
 #include <string.h>
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <iostream>
 #include <boost/optional.hpp>
 
@@ -220,8 +221,6 @@ inline boost::optional<std::pair<std::string, std::string>> qs_dict_name2kv(cons
                 skip_to_brace_open++;
             skip_to_brace_close = strcspn(qs_kv[i], "]");
 
-            std::cout << skip_to_brace_open << " FUFUU " << skip_to_brace_close << std::endl;
-
             if ( skip_to_brace_open <= skip_to_brace_close &&
                  skip_to_brace_open > 0 &&
                  skip_to_brace_close > 0 &&
@@ -381,16 +380,15 @@ namespace crow
             return ret;
         }
 
-        std::vector<std::pair<std::string, std::string>> get_dict (const std::string& name) const
+        std::unordered_map<std::string, std::string> get_dict (const std::string& name) const
         {
-            std::vector<std::pair<std::string, std::string>> ret;
-            std::string plus = name;            
+            std::unordered_map<std::string, std::string> ret;
 
             int count = 0;
             while(1)
             {
-                if (auto element = qs_dict_name2kv(plus.c_str(), key_value_pairs_.data(), key_value_pairs_.size(), count++))
-                    ret.push_back(*element);
+                if (auto element = qs_dict_name2kv(name.c_str(), key_value_pairs_.data(), key_value_pairs_.size(), count++))
+                    ret.insert(*element);
                 else
                     break;
             }
