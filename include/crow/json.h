@@ -1333,22 +1333,16 @@ namespace crow
                 return (*o)[str];
             }
 
-            std::vector<std::string> keys() const {
+            std::vector<std::string> keys() const 
+            {
+                if (t_ != type::Object) 
+                    return {};
                 std::vector<std::string> result;
-                switch (t_) {
-                  case type::Null: return result;
-                  case type::False: return result;
-                  case type::True: return result;
-                  case type::Number: return result;
-                  case type::String: return result;
-                  case type::List: return result;
-                  case type::Object: {
-                      for (auto& kv:*o) {
-                         result.push_back(kv.first);
-                      }
-                      return result;
-                  }
+                for (auto& kv:*o) 
+                {
+                    result.push_back(kv.first);
                 }
+                return result;
             }
 
             size_t estimate_length() const
