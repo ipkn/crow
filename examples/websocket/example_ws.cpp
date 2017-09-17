@@ -33,10 +33,10 @@ int main()
 
     CROW_ROUTE(app, "/")
     ([]{
-	char name[256];
-	gethostname(name, 256);
-	crow::mustache::context x;
-	x["servername"] = name;
+        char name[256];
+        gethostname(name, 256);
+        crow::mustache::context x;
+        x["servername"] = name;
 	
         auto page = crow::mustache::load("ws.html");
         return page.render(x);

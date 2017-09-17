@@ -12,6 +12,7 @@
     </textarea>
     <script>
 var sock = new WebSocket("ws://{{servername}}:40080/ws");
+
 sock.onopen = ()=>{
     console.log('open')
 }
