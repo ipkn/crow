@@ -11,14 +11,22 @@ compiler:
 env:
   matrix:
     - COMPILER=g++-4.8 CCOMPILER=gcc-4.8 PUSH_COVERAGE=ON
+    - COMPILER=g++-4.9 CCOMPILER=gcc-4.9
+    - COMPILER=g++-5 CCOMPILER=gcc-5
+    - COMPILER=clang++-3.6 CCOMPILER=clang-3.6
 
 addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
       - boost-latest
+      - llvm-toolchain-precise
+      - llvm-toolchain-precise-3.6
     packages:
       - g++-4.8
+      - g++-4.9
+      - g++-5
+      - clang-3.6
       - libboost1.55-all-dev
       - python-pip
 
@@ -36,4 +44,4 @@ script: make && ctest
 
 after_success:
   - cd ..
-  - if [ "PUSH_COVERAGE" == "ON" ]; then coveralls --gcov gcov-4.8 -i include --gcov-options '\-lp'; fi
+  - if [ "$PUSH_COVERAGE" == "ON" ]; then coveralls --gcov gcov-4.8 -i include --gcov-options '\-lp'; fi
