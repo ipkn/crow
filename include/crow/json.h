@@ -1264,6 +1264,23 @@ namespace crow
                 return *this;
             }
 
+            wvalue& operator=(std::vector<wvalue>&& v)
+            {
+                if (t_ != type::List)
+                    reset();
+                t_ = type::List;
+                if (!l)
+                    l = std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{});
+                l->clear();
+                l->resize(v.size());
+                size_t idx = 0;
+                for(auto& x:v)
+                {
+                    (*l)[idx++] = std::move(x);
+                }
+                return *this;
+            }
+
             template <typename T>
             wvalue& operator=(const std::vector<T>& v)
             {
@@ -1316,6 +1333,24 @@ namespace crow
                 return (*o)[str];
             }
 
+            std::vector<std::string> keys() const {
+                std::vector<std::string> result;
+                switch (t_) {
+                  case type::Null: return result;
+                  case type::False: return result;
+                  case type::True: return result;
+                  case type::Number: return result;
+                  case type::String: return result;
+                  case type::List: return result;
+                  case type::Object: {
+                      for (auto& kv:*o) {
+                         result.push_back(kv.first);
+                      }
+                      return result;
+                  }
+                }
+            }
+
             size_t estimate_length() const
             {
                 switch(t_)
@@ -1356,7 +1391,6 @@ namespace crow
                 return 1;
             }
 
-
             friend void dump_internal(const wvalue& v, std::string& out);
             friend std::string dump(const wvalue& v);
         };
@@ -1377,7 +1411,12 @@ namespace crow
                 case type::Number: 
                     {
                         char outbuf[128];
+#ifdef _MSC_VER
+                        sprintf_s(outbuf, 128, "%g", v.d);
+#else
                         sprintf(outbuf, "%g", v.d);
+#endif
+
                         out += outbuf;
                     }
                     break;

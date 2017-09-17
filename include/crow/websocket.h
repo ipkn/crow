@@ -1,5 +1,6 @@
 #pragma once
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/array.hpp>
 #include "crow/socket_adaptors.h"
 #include "crow/http_request.h"
 #include "crow/TinySHA1.hpp"
@@ -39,8 +40,10 @@ namespace crow
 						std::function<void(crow::websocket::connection&)> open_handler,
 						std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler,
 						std::function<void(crow::websocket::connection&, const std::string&)> close_handler,
-						std::function<void(crow::websocket::connection&)> error_handler)
+						std::function<void(crow::websocket::connection&)> error_handler,
+						std::function<bool(const crow::request&)> accept_handler)
 					: adaptor_(std::move(adaptor)), open_handler_(std::move(open_handler)), message_handler_(std::move(message_handler)), close_handler_(std::move(close_handler)), error_handler_(std::move(error_handler))
+					, accept_handler_(std::move(accept_handler))
 				{
 					if (!boost::iequals(req.get_header_value("upgrade"), "websocket"))
 					{
@@ -48,6 +51,17 @@ namespace crow
 						delete this;
 						return;
 					}
+
+					if (accept_handler_)
+					{
+						if (!accept_handler_(req))
+						{
+							adaptor.close();
+							delete this;
+							return;
+						}
+					}
+
 					// Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
 					// Sec-WebSocket-Version: 13
                     std::string magic = req.get_header_value("Sec-WebSocket-Key") +  "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -212,11 +226,13 @@ namespace crow
                         case WebSocketReadState::Len16:
                             {
                                 remaining_length_ = 0;
-                                boost::asio::async_read(adaptor_.socket(), boost::asio::buffer(&remaining_length_, 2), 
-                                    [this](const boost::system::error_code& ec, std::size_t bytes_transferred) 
+                				uint16_t remaining_length16_ = 0;
+                                boost::asio::async_read(adaptor_.socket(), boost::asio::buffer(&remaining_length16_, 2), 
+                                    [this,&remaining_length16_](const boost::system::error_code& ec, std::size_t bytes_transferred) 
                                     {
                                         is_reading = false;
-                                        remaining_length_ = ntohs((uint16_t)remaining_length_);
+                                        remaining_length16_ = ntohs(remaining_length16_);
+                                        remaining_length_ = remaining_length16_;
 #ifdef CROW_ENABLE_DEBUG
                                         if (!ec && bytes_transferred != 2)
                                         {
@@ -484,6 +500,7 @@ namespace crow
 				std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler_;
 				std::function<void(crow::websocket::connection&, const std::string&)> close_handler_;
 				std::function<void(crow::websocket::connection&)> error_handler_;
+				std::function<bool(const crow::request&)> accept_handler_;
         };
     }
 }

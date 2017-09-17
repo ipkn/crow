@@ -11,7 +11,8 @@
     <textarea id="log" cols=100 rows=50>
     </textarea>
     <script>
-var sock = new WebSocket("ws://i.ipkn.me:40080/ws");
+var sock = new WebSocket("ws://{{servername}}:40080/ws");
+
 sock.onopen = ()=>{
     console.log('open')
 }

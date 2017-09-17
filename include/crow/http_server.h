@@ -121,12 +121,19 @@ namespace crow
                             timer.async_wait(handler);
 
                             init_count ++;
-                            try 
+                            while(1)
                             {
-                                io_service_pool_[i]->run();
-                            } catch(std::exception& e)
-                            {
-                                CROW_LOG_ERROR << "Worker Crash: An uncaught exception occurred: " << e.what();
+                                try 
+                                {
+                                    if (io_service_pool_[i]->run() == 0)
+                                    {
+                                        // when io_service.run returns 0, there are no more works to do.
+                                        break;
+                                    }
+                                } catch(std::exception& e)
+                                {
+                                    CROW_LOG_ERROR << "Worker Crash: An uncaught exception occurred: " << e.what();
+                                }
                             }
                         }));
 
@@ -141,7 +148,8 @@ namespace crow
                         });
             }
 
-            CROW_LOG_INFO << server_name_ << " server is running at " << bindaddr_ <<":" << port_;
+            CROW_LOG_INFO << server_name_ << " server is running at " << bindaddr_ <<":" << port_
+                          << " using " << concurrency_ << " threads";
 
             signals_.async_wait(
                 [&](const boost::system::error_code& /*error*/, int /*signal_number*/){
@@ -192,6 +200,10 @@ namespace crow
                         {
                             p->start();
                         });
+                    }
+                    else
+                    {
+                        delete p;
                     }
                     do_accept();
                 });
