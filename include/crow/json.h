@@ -1264,6 +1264,23 @@ namespace crow
                 return *this;
             }
 
+            wvalue& operator=(std::vector<wvalue>&& v)
+            {
+                if (t_ != type::List)
+                    reset();
+                t_ = type::List;
+                if (!l)
+                    l = std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{});
+                l->clear();
+                l->resize(v.size());
+                size_t idx = 0;
+                for(auto& x:v)
+                {
+                    (*l)[idx++] = std::move(x);
+                }
+                return *this;
+            }
+
             template <typename T>
             wvalue& operator=(const std::vector<T>& v)
             {
