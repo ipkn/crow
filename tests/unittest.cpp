@@ -856,12 +856,16 @@ TEST(middleware_cookieparser)
 
     std::string value1;
     std::string value2;
+    std::string value3;
+    std::string value4;
 
     CROW_ROUTE(app, "/")([&](const request& req){
         {
             auto& ctx = app.get_context<CookieParser>(req);
             value1 = ctx.get_cookie("key1");
             value2 = ctx.get_cookie("key2");
+            value3 = ctx.get_cookie("key3");
+            value4 = ctx.get_cookie("key4");
         }
 
         return "";
@@ -869,7 +873,7 @@ TEST(middleware_cookieparser)
 
     decltype(app)::server_t server(&app, LOCALHOST_ADDRESS, 45451);
     auto _ = async(launch::async, [&]{server.run();});
-    std::string sendmsg = "GET /\r\nCookie: key1=value1; key2=\"val\\\"ue2\"\r\n\r\n";
+    std::string sendmsg = "GET /\r\nCookie: key1=value1; key2=\"val=ue2\"; key3=\"val\"ue3\"; key4=\"val\"ue4\"\r\n\r\n";
     asio::io_service is;
     {
         asio::ip::tcp::socket c(is);
@@ -882,7 +886,9 @@ TEST(middleware_cookieparser)
     }
     {
         ASSERT_EQUAL("value1", value1);
-        ASSERT_EQUAL("val\"ue2", value2);
+        ASSERT_EQUAL("val=ue2", value2);
+        ASSERT_EQUAL("val\"ue3", value3);
+        ASSERT_EQUAL("val\"ue4", value4);
     }
     server.stop();
 }
