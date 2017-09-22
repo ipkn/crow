@@ -41,6 +41,9 @@ namespace crow
         response() {}
         explicit response(int code) : code(code) {}
         response(std::string body) : body(std::move(body)) {}
+        response(std::string body, bool is_json) : body(std::move(body)) {
+            if(is_json) { json_mode(); }
+        }
         response(json::wvalue&& json_value) : json_value(std::move(json_value))
         {
             json_mode();
