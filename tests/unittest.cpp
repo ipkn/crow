@@ -324,6 +324,11 @@ TEST(http_method)
     ([](const request& /*req*/){
         return "post";
     });
+    CROW_ROUTE(app, "/patch_only")
+        .methods("PATCH"_method)
+    ([](const request& /*req*/){
+        return "patch";
+    });
 
 
     // cannot have multiple handlers for the same url
@@ -359,6 +364,17 @@ TEST(http_method)
         app.handle(req, res);
 
         ASSERT_EQUAL("get", res.body);
+    }
+
+    {
+        request req;
+        response res;
+
+        req.url = "/patch_only";
+        req.method = "PATCH"_method;
+        app.handle(req, res);
+
+        ASSERT_EQUAL("patch", res.body);
     }
 
     {
