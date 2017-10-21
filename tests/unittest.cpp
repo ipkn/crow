@@ -329,6 +329,11 @@ TEST(http_method)
     ([](const request& /*req*/){
         return "patch";
     });
+    CROW_ROUTE(app, "/purge_only")
+        .methods("PURGE"_method)
+    ([](const request& /*req*/){
+        return "purge";
+    });
 
 
     // cannot have multiple handlers for the same url
@@ -375,6 +380,17 @@ TEST(http_method)
         app.handle(req, res);
 
         ASSERT_EQUAL("patch", res.body);
+    }
+
+    {
+        request req;
+        response res;
+
+        req.url = "/purge_only";
+        req.method = "PURGE"_method;
+        app.handle(req, res);
+
+        ASSERT_EQUAL("purge", res.body);
     }
 
     {

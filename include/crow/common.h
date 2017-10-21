@@ -19,7 +19,8 @@ namespace crow
         CONNECT,
         OPTIONS,
         TRACE,
-        PATCH = 24,
+        PATCH,
+        PURGE,
 #endif
 
         Delete = 0,
@@ -30,7 +31,12 @@ namespace crow
         Connect,
         Options,
         Trace,
-        Patch = 24,
+        Patch,
+        Purge,
+
+
+        InternalMethodCount,
+        // should not add an item below this line: used for array count
     };
 
     inline std::string method_name(HTTPMethod method)
@@ -55,6 +61,10 @@ namespace crow
                 return "TRACE";
             case HTTPMethod::Patch:
                 return "PATCH";
+            case HTTPMethod::Purge:
+                return "PURGE";
+            default:
+                return "invalid";
         }
         return "invalid";
     }
@@ -137,6 +147,7 @@ constexpr crow::HTTPMethod operator "" _method(const char* str, size_t /*len*/)
         crow::black_magic::is_equ_p(str, "CONNECT", 7) ? crow::HTTPMethod::Connect :
         crow::black_magic::is_equ_p(str, "TRACE", 5) ? crow::HTTPMethod::Trace :
         crow::black_magic::is_equ_p(str, "PATCH", 5) ? crow::HTTPMethod::Patch :
+        crow::black_magic::is_equ_p(str, "PURGE", 5) ? crow::HTTPMethod::Purge :
         throw std::runtime_error("invalid http method");
 }
 #endif
