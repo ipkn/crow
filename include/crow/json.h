@@ -96,6 +96,13 @@ namespace crow
             }
         }
 
+        enum class num_type : char {
+            Signed_integer,
+            Unsigned_integer,
+            Floating_point,
+            Null
+        };
+
         class rvalue;
         rvalue load(const char* data, size_t size);
 
@@ -216,13 +223,16 @@ namespace crow
                 : start_{s},
                 end_{e},
                 t_{t}
-            {}
+            {
+                determine_num_type();
+            }
 
             rvalue(const rvalue& r)
             : start_(r.start_),
                 end_(r.end_),
                 key_(r.key_),
                 t_(r.t_),
+                nt_(r.nt_),
                 option_(r.option_)
             {
                 copy_l(r);
@@ -240,6 +250,7 @@ namespace crow
                 key_ = r.key_;
                 copy_l(r);
                 t_ = r.t_;
+                nt_ = r.nt_;
                 option_ = r.option_;
                 return *this;
             }
@@ -252,6 +263,7 @@ namespace crow
                 lsize_ = r.lsize_;
                 lremain_ = r.lremain_;
                 t_ = r.t_;
+                nt_ = r.nt_;
                 option_ = r.option_;
                 return *this;
             }
@@ -285,6 +297,17 @@ namespace crow
                 }
 #endif
                 return t_;
+            }
+
+            num_type nt() const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                if (option_ & error_bit)
+                {
+                    throw std::runtime_error("invalid json object");
+                }
+#endif
+                return nt_;
             }
 
             int64_t i() const
@@ -591,6 +614,28 @@ namespace crow
                 lremain_ --;
             }
 
+            // determines num_type from the string
+            void determine_num_type()
+            {
+                if (t_ != type::Number)
+                {
+                    nt_ = num_type::Null;
+                    return;
+                }
+
+                const std::size_t len = end_ - start_;
+                const bool has_minus = std::memchr(start_, '-', len) != nullptr;
+                const bool has_e = std::memchr(start_, 'e', len) != nullptr
+                                || std::memchr(start_, 'E', len) != nullptr;
+                const bool has_dec_sep = std::memchr(start_, '.', len) != nullptr;
+                if (has_dec_sep || has_e)
+                  nt_ = num_type::Floating_point;
+                else if (has_minus)
+                  nt_ = num_type::Signed_integer;
+                else
+                  nt_ = num_type::Unsigned_integer;
+            }
+
             mutable char* start_;
             mutable char* end_;
             detail::r_string key_;
@@ -598,6 +643,7 @@ namespace crow
             uint32_t lsize_;
             uint16_t lremain_;
             type t_;
+            num_type nt_{num_type::Null};
             mutable uint8_t option_{0};
 
             friend rvalue load_nocopy_internal(char* data, size_t size);
@@ -1092,7 +1138,12 @@ namespace crow
             type t() const { return t_; }
         private:
             type t_{type::Null};
-            double d {};
+            num_type nt{num_type::Null};
+            union {
+              double d;
+              int64_t si;
+              uint64_t ui {};
+            } num;
             std::string s;
             std::unique_ptr<std::vector<wvalue>> l;
             std::unique_ptr<std::unordered_map<std::string, wvalue>> o;
@@ -1110,7 +1161,13 @@ namespace crow
                     case type::True:
                         return;
                     case type::Number:
-                        d = r.d();
+                        nt = r.nt();
+                        if (nt == num_type::Floating_point)
+                          num.d = r.d();
+                        else if (nt == num_type::Signed_integer)
+                          num.si = r.i();
+                        else
+                          num.ui = r.u();
                         return;
                     case type::String:
                         s = r.s();
@@ -1140,7 +1197,7 @@ namespace crow
             wvalue& operator = (wvalue&& r)
             {
                 t_ = r.t_;
-                d = r.d;
+                num = r.num;
                 s = std::move(r.s);
                 l = std::move(r.l);
                 o = std::move(r.o);
@@ -1149,9 +1206,7 @@ namespace crow
 
             void clear()
             {
-                t_ = type::Null;
-                l.reset();
-                o.reset();
+                reset();
             }
 
             void reset()
@@ -1180,7 +1235,8 @@ namespace crow
             {
                 reset();
                 t_ = type::Number;
-                d = value;
+                num.d = value;
+                nt = num_type::Floating_point;
                 return *this;
             }
 
@@ -1188,7 +1244,8 @@ namespace crow
             {
                 reset();
                 t_ = type::Number;
-                d = (double)value;
+                num.ui = value;
+                nt = num_type::Unsigned_integer;
                 return *this;
             }
 
@@ -1196,7 +1253,8 @@ namespace crow
             {
                 reset();
                 t_ = type::Number;
-                d = (double)value;
+                num.si = value;
+                nt = num_type::Signed_integer;
                 return *this;
             }
 
@@ -1204,7 +1262,8 @@ namespace crow
             {
                 reset();
                 t_ = type::Number;
-                d = (double)value;
+                num.si = value;
+                nt = num_type::Signed_integer;
                 return *this;
             }
 
@@ -1212,7 +1271,8 @@ namespace crow
             {
                 reset();
                 t_ = type::Number;
-                d = (double)value;
+                num.si = value;
+                nt = num_type::Signed_integer;
                 return *this;
             }
 
@@ -1220,7 +1280,8 @@ namespace crow
             {
                 reset();
                 t_ = type::Number;
-                d = (double)value;
+                num.si = value;
+                nt = num_type::Signed_integer;
                 return *this;
             }
 
@@ -1228,7 +1289,8 @@ namespace crow
             {
                 reset();
                 t_ = type::Number;
-                d = (double)value;
+                num.ui = value;
+                nt = num_type::Unsigned_integer;
                 return *this;
             }
 
@@ -1236,7 +1298,8 @@ namespace crow
             {
                 reset();
                 t_ = type::Number;
-                d = (double)value;
+                num.ui = value;
+                nt = num_type::Unsigned_integer;
                 return *this;
             }
 
@@ -1244,7 +1307,8 @@ namespace crow
             {
                 reset();
                 t_ = type::Number;
-                d = (double)value;
+                num.ui = value;
+                nt = num_type::Unsigned_integer;
                 return *this;
             }
 
@@ -1406,11 +1470,23 @@ namespace crow
                     {
                         char outbuf[128];
 #ifdef _MSC_VER
-                        sprintf_s(outbuf, 128, "%g", v.d);
+#define MSC_COMPATIBLE_SPRINTF(BUFFER_PTR, FORMAT_PTR, VALUE) sprintf_s((BUFFER_PTR), 128, (FORMAT_PTR), (VALUE))
 #else
-                        sprintf(outbuf, "%g", v.d);
+#define MSC_COMPATIBLE_SPRINTF(BUFFER_PTR, FORMAT_PTR, VALUE) sprintf((BUFFER_PTR), (FORMAT_PTR), (VALUE))
 #endif
-
+                        if (v.nt == num_type::Floating_point)
+                        {
+                          MSC_COMPATIBLE_SPRINTF(outbuf, "%g", v.num.d);
+                        }
+                        else if (v.nt == num_type::Signed_integer)
+                        {
+                          MSC_COMPATIBLE_SPRINTF(outbuf, "%lld", v.num.si);
+                        }
+                        else
+                        {
+                          MSC_COMPATIBLE_SPRINTF(outbuf, "%llu", v.num.ui);
+                        }
+#undef MSC_COMPATIBLE_SPRINTF
                         out += outbuf;
                     }
                     break;
