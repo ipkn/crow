@@ -533,6 +533,10 @@ TEST(json_read)
     std::string s3 = R"({"uint64": 18446744073709551615})";
     auto z1 = json::load(s3);
     ASSERT_EQUAL(18446744073709551615ull, z1["uint64"].u());
+
+    std::ostringstream os;
+    os << z1["uint64"];
+    ASSERT_EQUAL("18446744073709551615", os.str());
 }
 
 TEST(json_read_real)

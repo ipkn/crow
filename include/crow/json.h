@@ -656,7 +656,17 @@ namespace crow
                 case type::Null: os << "null"; break;
                 case type::False: os << "false"; break;
                 case type::True: os << "true"; break;
-                case type::Number: os << r.d(); break;
+                case type::Number:
+                    {
+                        switch (r.nt())
+                        {
+                        case num_type::Floating_point: os << r.d(); break;
+                        case num_type::Signed_integer: os << r.i(); break;
+                        case num_type::Unsigned_integer: os << r.u(); break;
+                        case num_type::Null: throw std::runtime_error("Number with num_type Null");
+                        }
+                    }
+                    break;
                 case type::String: os << '"' << r.s() << '"'; break;
                 case type::List: 
                     {
