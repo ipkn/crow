@@ -238,9 +238,9 @@ namespace crow
                 start_ = r.start_;
                 end_ = r.end_;
                 key_ = r.key_;
-                copy_l(r);
                 t_ = r.t_;
                 option_ = r.option_;
+                copy_l(r);
                 return *this;
             }
             rvalue& operator = (rvalue&& r) noexcept
