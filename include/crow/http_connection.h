@@ -370,11 +370,13 @@ public:
             {302, "HTTP/1.1 302 Moved Temporarily\r\n"},
             {304, "HTTP/1.1 304 Not Modified\r\n"},
 
-            {400, "HTTP/1.1 400 Bad Request\r\n"},
-            {401, "HTTP/1.1 401 Unauthorized\r\n"},
-            {403, "HTTP/1.1 403 Forbidden\r\n"},
-            {404, "HTTP/1.1 404 Not Found\r\n"},
-            {422, "HTTP/1.1 422 Unprocessable Entity\r\n"},
+                {400, "HTTP/1.1 400 Bad Request\r\n"},
+                {401, "HTTP/1.1 401 Unauthorized\r\n"},
+                {403, "HTTP/1.1 403 Forbidden\r\n"},
+                {404, "HTTP/1.1 404 Not Found\r\n"},
+                {413, "HTTP/1.1 413 Payload Too Large\r\n"},
+                {422, "HTTP/1.1 422 Unprocessable Entity\r\n"},
+                {429, "HTTP/1.1 429 Too Many Requests\r\n"},
 
             {500, "HTTP/1.1 500 Internal Server Error\r\n"},
             {501, "HTTP/1.1 501 Not Implemented\r\n"},
