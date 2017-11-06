@@ -399,6 +399,10 @@ namespace crow
             return ret;
         }
 
+        bool empty() const {
+          return key_value_pairs_.empty();
+        }
+
     private:
         std::string url_;
         std::vector<char*> key_value_pairs_;
