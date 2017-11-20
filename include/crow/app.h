@@ -134,6 +134,12 @@ namespace crow
             router_.debug_print();
         }
 
+        self_t& loglevel(crow::LogLevel level)
+        {
+            crow::logger::setLogLevel(level);
+            return *this;
+        }
+
 #ifdef CROW_ENABLE_SSL
         self_t& ssl_file(const std::string& crt_filename, const std::string& key_filename)
         {

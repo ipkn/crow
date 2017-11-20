@@ -35,10 +35,11 @@ namespace crow
             std::unordered_map<std::string, std::string> jar;
             std::unordered_map<std::string, std::string> cookies_to_add;
 
-            std::string get_cookie(const std::string& key)
+            std::string get_cookie(const std::string& key) const
             {
-                if (jar.count(key))
-                    return jar[key];
+                auto cookie = jar.find(key);
+                if (cookie != jar.end())
+                    return cookie->second;
                 return {};
             }
 
@@ -73,69 +74,22 @@ namespace crow
                 if (pos == cookies.size())
                     break;
 
-                std::string value;
+                size_t pos_semicolon = cookies.find(';', pos);
+                std::string value = cookies.substr(pos, pos_semicolon-pos);
 
-                if (cookies[pos] == '"')
+                boost::trim(value);
+                if (value[0] == '"' && value[value.size()-1] == '"')
                 {
-                    int dquote_meet_count = 0;
-                    pos ++;
-                    size_t pos_dquote = pos-1;
-                    do
-                    {
-                        pos_dquote = cookies.find('"', pos_dquote+1);
-                        dquote_meet_count ++;
-                    } while(pos_dquote < cookies.size() && cookies[pos_dquote-1] == '\\');
-                    if (pos_dquote == cookies.npos)
-                        break;
-
-                    if (dquote_meet_count == 1)
-                        value = cookies.substr(pos, pos_dquote - pos);
-                    else
-                    {
-                        value.clear();
-                        value.reserve(pos_dquote-pos);
-                        for(size_t p = pos; p < pos_dquote; p++)
-                        {
-                            // FIXME minimal escaping
-                            if (cookies[p] == '\\' && p + 1 < pos_dquote)
-                            {
-                                p++;
-                                if (cookies[p] == '\\' || cookies[p] == '"')
-                                    value += cookies[p];
-                                else
-                                {
-                                    value += '\\';
-                                    value += cookies[p];
-                                }
-                            }
-                            else
-                                value += cookies[p];
-                        }
-                    }
-
-                    ctx.jar.emplace(std::move(name), std::move(value));
-                    pos = cookies.find(";", pos_dquote+1);
-                    if (pos == cookies.npos)
-                        break;
-                    pos++;
-                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
-                    if (pos == cookies.size())
-                        break;
+                    value = value.substr(1, value.size()-2);
                 }
-                else
-                {
-                    size_t pos_semicolon = cookies.find(';', pos);
-                    value = cookies.substr(pos, pos_semicolon - pos);
-                    boost::trim(value);
-                    ctx.jar.emplace(std::move(name), std::move(value));
-                    pos = pos_semicolon;
-                    if (pos == cookies.npos)
-                        break;
-                    pos ++;
-                    while(pos < cookies.size() && cookies[pos] == ' ') pos++;
-                    if (pos == cookies.size())
-                        break;
-                }
+
+                ctx.jar.emplace(std::move(name), std::move(value));
+
+                pos = pos_semicolon;
+                if (pos == cookies.npos)
+                    break;
+                pos++;
+                while(pos < cookies.size() && cookies[pos] == ' ') pos++;
             }
         }
 
@@ -143,7 +97,10 @@ namespace crow
         {
             for(auto& cookie:ctx.cookies_to_add)
             {
-                res.add_header("Set-Cookie", cookie.first + "=" + cookie.second);
+                if (cookie.second.empty())
+                    res.add_header("Set-Cookie", cookie.first + "=\"\"");
+                else
+                    res.add_header("Set-Cookie", cookie.first + "=" + cookie.second);
             }
         }
     };
