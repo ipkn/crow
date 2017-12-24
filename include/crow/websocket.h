@@ -191,7 +191,7 @@ namespace crow
 
                                     {
                                         is_reading = false;
-                                        mini_header_ = htons(mini_header_);
+                                        mini_header_ = ntohs(mini_header_);
 #ifdef CROW_ENABLE_DEBUG
                                         
                                         if (!ec && bytes_transferred != 2)
@@ -231,9 +231,9 @@ namespace crow
                         case WebSocketReadState::Len16:
                             {
                                 remaining_length_ = 0;
-                				uint16_t remaining_length16_ = 0;
+                                remaining_length16_ = 0;
                                 boost::asio::async_read(adaptor_.socket(), boost::asio::buffer(&remaining_length16_, 2), 
-                                    [this,&remaining_length16_](const boost::system::error_code& ec, std::size_t 
+                                    [this](const boost::system::error_code& ec, std::size_t 
 #ifdef CROW_ENABLE_DEBUG
                                         bytes_transferred
 #endif
@@ -502,6 +502,7 @@ namespace crow
                 std::string message_;
                 std::string fragment_;
                 WebSocketReadState state_{WebSocketReadState::MiniHeader};
+                uint16_t remaining_length16_{0};
                 uint64_t remaining_length_{0};
                 bool close_connection_{false};
                 bool is_reading{false};
