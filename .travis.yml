@@ -15,7 +15,7 @@ env:
     - COMPILER=g++-4.9 CCOMPILER=gcc-4.9
     - COMPILER=g++-5 CCOMPILER=gcc-5
     - COMPILER=clang++-3.6 CCOMPILER=clang-3.6
-    - COMPILER=x86_64-w64-mingw32-g++-posix CCOMPILER=x86_64-w64-mingw32-gcc-posix
+    - COMPILER=x86_64-w64-mingw32-g++ CCOMPILER=x86_64-w64-mingw32-gcc
 
 addons:
   apt:
