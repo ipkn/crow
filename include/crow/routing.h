@@ -31,24 +31,24 @@ namespace crow
         
         virtual void validate() = 0;
         std::unique_ptr<BaseRule> upgrade()
-		{
-			if (rule_to_upgrade_)
-				return std::move(rule_to_upgrade_);
-			return {};
-		}
+        {
+            if (rule_to_upgrade_)
+                return std::move(rule_to_upgrade_);
+            return {};
+        }
 
         virtual void handle(const request&, response&, const routing_params&) = 0;
         virtual void handle_upgrade(const request&, response& res, SocketAdaptor&&) 
-		{
-			res = response(404);
-			res.end();
-		}
+        {
+            res = response(404);
+            res.end();
+        }
 #ifdef CROW_ENABLE_SSL
         virtual void handle_upgrade(const request&, response& res, SSLAdaptor&&) 
-		{
-			res = response(404);
-			res.end();
-		}
+        {
+            res = response(404);
+            res.end();
+        }
 #endif
 
         uint32_t get_methods()
@@ -56,13 +56,25 @@ namespace crow
             return methods_;
         }
 
+        template <typename F>
+        void foreach_method(F f)
+        {
+            for(uint32_t method = 0, method_bit = 1; method < (uint32_t)HTTPMethod::InternalMethodCount; method++, method_bit<<=1)
+            {
+                if (methods_ & method_bit)
+                    f(method);
+            }
+        }
+
+        const std::string& rule() { return rule_; }
+
     protected:
         uint32_t methods_{1<<(int)HTTPMethod::Get};
 
         std::string rule_;
         std::string name_;
 
-		std::unique_ptr<BaseRule> rule_to_upgrade_;
+        std::unique_ptr<BaseRule> rule_to_upgrade_;
 
         friend class Router;
         template <typename T>
@@ -255,89 +267,89 @@ namespace crow
         }
     }
 
-	class WebSocketRule : public BaseRule
-	{
+    class WebSocketRule : public BaseRule
+    {
         using self_t = WebSocketRule;
-	public:
+    public:
         WebSocketRule(std::string rule)
             : BaseRule(std::move(rule))
         {
         }
 
-		void validate() override
-		{
-		}
+        void validate() override
+        {
+        }
 
-		void handle(const request&, response& res, const routing_params&) override
-		{
-			res = response(404);
-			res.end();
-		}
+        void handle(const request&, response& res, const routing_params&) override
+        {
+            res = response(404);
+            res.end();
+        }
 
         void handle_upgrade(const request& req, response&, SocketAdaptor&& adaptor) override 
-		{
-			new crow::websocket::Connection<SocketAdaptor>(req, std::move(adaptor), open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
-		}
+        {
+            new crow::websocket::Connection<SocketAdaptor>(req, std::move(adaptor), open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
+        }
 #ifdef CROW_ENABLE_SSL
         void handle_upgrade(const request& req, response&, SSLAdaptor&& adaptor) override
-		{
-			new crow::websocket::Connection<SSLAdaptor>(req, std::move(adaptor), open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
-		}
+        {
+            new crow::websocket::Connection<SSLAdaptor>(req, std::move(adaptor), open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
+        }
 #endif
 
-		template <typename Func>
-		self_t& onopen(Func f)
-		{
-			open_handler_ = f;
-			return *this;
-		}
+        template <typename Func>
+        self_t& onopen(Func f)
+        {
+            open_handler_ = f;
+            return *this;
+        }
 
-		template <typename Func>
-		self_t& onmessage(Func f)
-		{
-			message_handler_ = f;
-			return *this;
-		}
+        template <typename Func>
+        self_t& onmessage(Func f)
+        {
+            message_handler_ = f;
+            return *this;
+        }
 
-		template <typename Func>
-		self_t& onclose(Func f)
-		{
-			close_handler_ = f;
-			return *this;
-		}
+        template <typename Func>
+        self_t& onclose(Func f)
+        {
+            close_handler_ = f;
+            return *this;
+        }
 
-		template <typename Func>
-		self_t& onerror(Func f)
-		{
-			error_handler_ = f;
-			return *this;
-		}
+        template <typename Func>
+        self_t& onerror(Func f)
+        {
+            error_handler_ = f;
+            return *this;
+        }
 
-		template <typename Func>
-		self_t& onaccept(Func f)
-		{
-		    accept_handler_ = f;
-		    return *this;
-		}
+        template <typename Func>
+        self_t& onaccept(Func f)
+        {
+            accept_handler_ = f;
+            return *this;
+        }
 
-	protected:
-		std::function<void(crow::websocket::connection&)> open_handler_;
-		std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler_;
-		std::function<void(crow::websocket::connection&, const std::string&)> close_handler_;
-		std::function<void(crow::websocket::connection&)> error_handler_;
-		std::function<bool(const crow::request&)> accept_handler_;
-	};
+    protected:
+        std::function<void(crow::websocket::connection&)> open_handler_;
+        std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler_;
+        std::function<void(crow::websocket::connection&, const std::string&)> close_handler_;
+        std::function<void(crow::websocket::connection&)> error_handler_;
+        std::function<bool(const crow::request&)> accept_handler_;
+    };
 
     template <typename T>
     struct RuleParameterTraits
     {
         using self_t = T;
-		WebSocketRule& websocket() 
-		{
-			auto p =new WebSocketRule(((self_t*)this)->rule_);
+        WebSocketRule& websocket() 
+        {
+            auto p =new WebSocketRule(((self_t*)this)->rule_);
             ((self_t*)this)->rule_to_upgrade_.reset(p);
-			return *p;
-		}
+            return *p;
+        }
 
         self_t& name(std::string name) noexcept
         {
@@ -879,15 +891,14 @@ public:
     class Router
     {
     public:
-        Router() : rules_(2) 
+        Router()
         {
         }
 
         DynamicRule& new_rule_dynamic(const std::string& rule)
         {
             auto ruleObject = new DynamicRule(rule);
-
-            internal_add_rule_object(rule, ruleObject);
+            all_rules_.emplace_back(ruleObject);
 
             return *ruleObject;
         }
@@ -896,57 +907,78 @@ public:
         typename black_magic::arguments<N>::type::template rebind<TaggedRule>& new_rule_tagged(const std::string& rule)
         {
             using RuleT = typename black_magic::arguments<N>::type::template rebind<TaggedRule>;
-            auto ruleObject = new RuleT(rule);
 
-            internal_add_rule_object(rule, ruleObject);
+            auto ruleObject = new RuleT(rule);
+            all_rules_.emplace_back(ruleObject);
 
             return *ruleObject;
         }
 
         void internal_add_rule_object(const std::string& rule, BaseRule* ruleObject)
         {
-            rules_.emplace_back(ruleObject);
-            trie_.add(rule, rules_.size() - 1);
-
-            // directory case: 
-            //   request to `/about' url matches `/about/' rule 
+            bool has_trailing_slash = false;
+            std::string rule_without_trailing_slash;
             if (rule.size() > 1 && rule.back() == '/')
             {
-                std::string rule_without_trailing_slash = rule;
+                has_trailing_slash = true;
+                rule_without_trailing_slash = rule;
                 rule_without_trailing_slash.pop_back();
-                trie_.add(rule_without_trailing_slash, RULE_SPECIAL_REDIRECT_SLASH);
             }
+
+            ruleObject->foreach_method([&](int method)
+                    {
+                        per_methods_[method].rules.emplace_back(ruleObject);
+                        per_methods_[method].trie.add(rule, per_methods_[method].rules.size() - 1);
+
+                        // directory case: 
+                        //   request to `/about' url matches `/about/' rule 
+                        if (has_trailing_slash)
+                        {
+                            per_methods_[method].trie.add(rule_without_trailing_slash, RULE_SPECIAL_REDIRECT_SLASH);
+                        }
+                    });
+
         }
 
         void validate()
         {
-            trie_.validate();
-            for(auto& rule:rules_)
+            for(auto& rule:all_rules_)
             {
                 if (rule)
-				{
-					auto upgraded = rule->upgrade();
-					if (upgraded)
-						rule = std::move(upgraded);
+                {
+                    auto upgraded = rule->upgrade();
+                    if (upgraded)
+                        rule = std::move(upgraded);
                     rule->validate();
-				}
+                    internal_add_rule_object(rule->rule(), rule.get());
+                }
+            }
+            for(auto& per_method:per_methods_)
+            {
+                per_method.trie.validate();
             }
         }
 
-		template <typename Adaptor> 
-		void handle_upgrade(const request& req, response& res, Adaptor&& adaptor)
-		{
-            auto found = trie_.find(req.url);
+        template <typename Adaptor> 
+        void handle_upgrade(const request& req, response& res, Adaptor&& adaptor)
+        {
+            if (req.method >= HTTPMethod::InternalMethodCount)
+                return;
+            auto& per_method = per_methods_[(int)req.method];
+            auto& trie = per_method.trie;
+            auto& rules = per_method.rules;
+
+            auto found = trie.find(req.url);
             unsigned rule_index = found.first;
             if (!rule_index)
             {
-                CROW_LOG_DEBUG << "Cannot match rules " << req.url;
+                CROW_LOG_DEBUG << "Cannot match rules " << req.url << ' ' << method_name(req.method);
                 res = response(404);
                 res.end();
                 return;
             }
 
-            if (rule_index >= rules_.size())
+            if (rule_index >= rules.size())
                 throw std::runtime_error("Trie internal structure corrupted!");
 
             if (rule_index == RULE_SPECIAL_REDIRECT_SLASH)
@@ -967,20 +999,12 @@ public:
                 return;
             }
 
-            if ((rules_[rule_index]->get_methods() & (1<<(uint32_t)req.method)) == 0)
-            {
-                CROW_LOG_DEBUG << "Rule found but method mismatch: " << req.url << " with " << method_name(req.method) << "(" << (uint32_t)req.method << ") / " << rules_[rule_index]->get_methods();
-                res = response(404);
-                res.end();
-                return;
-            }
-
-            CROW_LOG_DEBUG << "Matched rule (upgrade) '" << rules_[rule_index]->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->get_methods();
+            CROW_LOG_DEBUG << "Matched rule (upgrade) '" << rules[rule_index]->rule_ << "' " << (uint32_t)req.method << " / " << rules[rule_index]->get_methods();
 
             // any uncaught exceptions become 500s
             try
             {
-                rules_[rule_index]->handle_upgrade(req, res, std::move(adaptor));
+                rules[rule_index]->handle_upgrade(req, res, std::move(adaptor));
             }
             catch(std::exception& e)
             {
@@ -996,23 +1020,29 @@ public:
                 res.end();
                 return;   
             }
-		}
+        }
 
         void handle(const request& req, response& res)
         {
-            auto found = trie_.find(req.url);
+            if (req.method >= HTTPMethod::InternalMethodCount)
+                return;
+            auto& per_method = per_methods_[(int)req.method];
+            auto& trie = per_method.trie;
+            auto& rules = per_method.rules;
+
+            auto found = trie.find(req.url);
 
             unsigned rule_index = found.first;
 
             if (!rule_index)
             {
-                CROW_LOG_DEBUG << "Cannot match rules " << req.url;
+                CROW_LOG_DEBUG << "Cannot match rules " << req.url << ' ' << method_name(req.method);
                 res = response(404);
                 res.end();
                 return;
             }
 
-            if (rule_index >= rules_.size())
+            if (rule_index >= rules.size())
                 throw std::runtime_error("Trie internal structure corrupted!");
 
             if (rule_index == RULE_SPECIAL_REDIRECT_SLASH)
@@ -1033,20 +1063,12 @@ public:
                 return;
             }
 
-            if ((rules_[rule_index]->get_methods() & (1<<(uint32_t)req.method)) == 0)
-            {
-                CROW_LOG_DEBUG << "Rule found but method mismatch: " << req.url << " with " << method_name(req.method) << "(" << (uint32_t)req.method << ") / " << rules_[rule_index]->get_methods();
-                res = response(404);
-                res.end();
-                return;
-            }
-
-            CROW_LOG_DEBUG << "Matched rule '" << rules_[rule_index]->rule_ << "' " << (uint32_t)req.method << " / " << rules_[rule_index]->get_methods();
+            CROW_LOG_DEBUG << "Matched rule '" << rules[rule_index]->rule_ << "' " << (uint32_t)req.method << " / " << rules[rule_index]->get_methods();
 
             // any uncaught exceptions become 500s
             try
             {
-                rules_[rule_index]->handle(req, res, found.second);
+                rules[rule_index]->handle(req, res, found.second);
             }
             catch(std::exception& e)
             {
@@ -1066,11 +1088,23 @@ public:
 
         void debug_print()
         {
-            trie_.debug_print();
+            for(int i = 0; i < (int)HTTPMethod::InternalMethodCount; i ++)
+            {
+                CROW_LOG_DEBUG << method_name((HTTPMethod)i);
+                per_methods_[i].trie.debug_print();
+            }
         }
 
     private:
-        std::vector<std::unique_ptr<BaseRule>> rules_;
-        Trie trie_;
+        struct PerMethod
+        {
+            std::vector<BaseRule*> rules;
+            Trie trie;
+
+            // rule index 0, 1 has special meaning; preallocate it to avoid duplication.
+            PerMethod() : rules(2) {}
+        };
+        std::array<PerMethod, (int)HTTPMethod::InternalMethodCount> per_methods_;
+        std::vector<std::unique_ptr<BaseRule>> all_rules_;
     };
 }

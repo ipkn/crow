@@ -1,11 +1,10 @@
 //#define CROW_ENABLE_LOGGING
+#define CROW_LOG_LEVEL 0
 #define CROW_ENABLE_DEBUG
 #include <iostream>
 #include <sstream>
 #include <vector>
 #include "crow.h"
-#undef CROW_LOG_LEVEL
-#define CROW_LOG_LEVEL 0
 
 using namespace std;
 using namespace crow;
@@ -127,6 +126,8 @@ TEST(PathRouting)
     ([]{
         return "path";
     });
+
+    app.validate();
 
     {
         request req;
@@ -335,6 +336,9 @@ TEST(http_method)
         return "purge";
     });
 
+    app.validate();
+    app.debug_print();
+
 
     // cannot have multiple handlers for the same url
     //CROW_ROUTE(app, "/")
@@ -411,8 +415,10 @@ TEST(server_handling_error_request)
     static char buf[2048];
     SimpleApp app;
     CROW_ROUTE(app, "/")([]{return "A";});
-    Server<SimpleApp> server(&app, LOCALHOST_ADDRESS, 45451);
-    auto _ = async(launch::async, [&]{server.run();});
+    //Server<SimpleApp> server(&app, LOCALHOST_ADDRESS, 45451);
+    //auto _ = async(launch::async, [&]{server.run();});
+    auto _ = async(launch::async, [&]{app.bindaddr(LOCALHOST_ADDRESS).port(45451).run();});
+    app.wait_for_server_start();
     std::string sendmsg = "POX";
     asio::io_service is;
     {
@@ -432,7 +438,7 @@ TEST(server_handling_error_request)
             //std::cerr << e.what() << std::endl;
         }
     }
-    server.stop();
+    app.stop();
 }
 
 TEST(multi_server)
@@ -442,11 +448,15 @@ TEST(multi_server)
     CROW_ROUTE(app1, "/").methods("GET"_method, "POST"_method)([]{return "A";});
     CROW_ROUTE(app2, "/").methods("GET"_method, "POST"_method)([]{return "B";});
 
-    Server<SimpleApp> server1(&app1, LOCALHOST_ADDRESS, 45451);
-    Server<SimpleApp> server2(&app2, LOCALHOST_ADDRESS, 45452);
+    //Server<SimpleApp> server1(&app1, LOCALHOST_ADDRESS, 45451);
+    //Server<SimpleApp> server2(&app2, LOCALHOST_ADDRESS, 45452);
 
-    auto _ = async(launch::async, [&]{server1.run();});
-    auto _2 = async(launch::async, [&]{server2.run();});
+    //auto _ = async(launch::async, [&]{server1.run();});
+    //auto _2 = async(launch::async, [&]{server2.run();});
+    auto _ = async(launch::async, [&]{app1.bindaddr(LOCALHOST_ADDRESS).port(45451).run();});
+    auto _2 = async(launch::async, [&]{app2.bindaddr(LOCALHOST_ADDRESS).port(45452).run();});
+    app1.wait_for_server_start();
+    app2.wait_for_server_start();
 
     std::string sendmsg = "POST /\r\nContent-Length:3\r\nX-HeaderTest: 123\r\n\r\nA=B\r\n";
     asio::io_service is;
@@ -474,8 +484,8 @@ TEST(multi_server)
         ASSERT_EQUAL('B', buf[recved-1]);
     }
 
-    server1.stop();
-    server2.stop();
+    app1.stop();
+    app2.stop();
 }
 
 TEST(json_read)
@@ -864,8 +874,10 @@ TEST(middleware_context)
         return "";
     });
 
-    decltype(app)::server_t server(&app, LOCALHOST_ADDRESS, 45451);
-    auto _ = async(launch::async, [&]{server.run();});
+    //decltype(app)::server_t server(&app, LOCALHOST_ADDRESS, 45451);
+    //auto _ = async(launch::async, [&]{server.run();});
+    auto _ = async(launch::async, [&]{app.bindaddr(LOCALHOST_ADDRESS).port(45451).run();});
+    app.wait_for_server_start();
     std::string sendmsg = "GET /\r\n\r\n";
     asio::io_service is;
     {
@@ -908,7 +920,7 @@ TEST(middleware_context)
         ASSERT_EQUAL("2 after", out[2]);
         ASSERT_EQUAL("1 after", out[3]);
     }
-    server.stop();
+    app.stop();
 }
 
 TEST(middleware_cookieparser)
@@ -934,8 +946,10 @@ TEST(middleware_cookieparser)
         return "";
     });
 
-    decltype(app)::server_t server(&app, LOCALHOST_ADDRESS, 45451);
-    auto _ = async(launch::async, [&]{server.run();});
+    //decltype(app)::server_t server(&app, LOCALHOST_ADDRESS, 45451);
+    //auto _ = async(launch::async, [&]{server.run();});
+    auto _ = async(launch::async, [&]{app.bindaddr(LOCALHOST_ADDRESS).port(45451).run();});
+    app.wait_for_server_start();
     std::string sendmsg = "GET /\r\nCookie: key1=value1; key2=\"val=ue2\"; key3=\"val\"ue3\"; key4=\"val\"ue4\"\r\n\r\n";
     asio::io_service is;
     {
@@ -953,7 +967,7 @@ TEST(middleware_cookieparser)
         ASSERT_EQUAL("val\"ue3", value3);
         ASSERT_EQUAL("val\"ue4", value4);
     }
-    server.stop();
+    app.stop();
 }
 
 TEST(bug_quick_repeated_request)
@@ -966,8 +980,10 @@ TEST(bug_quick_repeated_request)
         return "hello";
     });
 
-    decltype(app)::server_t server(&app, LOCALHOST_ADDRESS, 45451);
-    auto _ = async(launch::async, [&]{server.run();});
+    //decltype(app)::server_t server(&app, LOCALHOST_ADDRESS, 45451);
+    //auto _ = async(launch::async, [&]{server.run();});
+    auto _ = async(launch::async, [&]{app.bindaddr(LOCALHOST_ADDRESS).port(45451).run();});
+    app.wait_for_server_start();
     std::string sendmsg = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
     asio::io_service is;
     {
@@ -991,7 +1007,7 @@ TEST(bug_quick_repeated_request)
                 }));
         }
     }
-    server.stop();
+    app.stop();
 }
 
 TEST(simple_url_params)
@@ -1010,8 +1026,10 @@ TEST(simple_url_params)
 
     ///params?h=1&foo=bar&lol&count[]=1&count[]=4&pew=5.2
 
-    decltype(app)::server_t server(&app, LOCALHOST_ADDRESS, 45451);
-    auto _ = async(launch::async, [&]{server.run();});
+    //decltype(app)::server_t server(&app, LOCALHOST_ADDRESS, 45451);
+    //auto _ = async(launch::async, [&]{server.run();});
+    auto _ = async(launch::async, [&]{app.bindaddr(LOCALHOST_ADDRESS).port(45451).run();});
+    app.wait_for_server_start();
     asio::io_service is;
     std::string sendmsg;
 
@@ -1122,7 +1140,7 @@ TEST(simple_url_params)
         ASSERT_EQUAL(string(last_url_params.get_list("tmnt")[1]), "donatello");
         ASSERT_EQUAL(string(last_url_params.get_list("tmnt")[2]), "raphael");
     }
-    server.stop();
+    app.stop();
 }
 
 TEST(route_dynamic)
