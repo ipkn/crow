@@ -175,9 +175,10 @@ namespace crow
                     return os;
                 }
             private:
-                void force(char* s, uint32_t /*length*/)
+                void force(char* s, uint32_t length)
                 {
                     s_ = s;
+                    e_ = s_ + length;
                     owned_ = 1;
                 }
                 friend rvalue crow::json::load(const char* data, size_t size);
