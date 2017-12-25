@@ -44,7 +44,8 @@ namespace crow
 
         void close()
         {
-            socket_.close();
+            boost::system::error_code ec;
+            socket_.close(ec);
         }
 
         template <typename F> 
@@ -89,7 +90,8 @@ namespace crow
 
         void close()
         {
-            raw_socket().close();
+            boost::system::error_code ec;
+            raw_socket().close(ec);
         }
 
         boost::asio::io_service& get_io_service()
