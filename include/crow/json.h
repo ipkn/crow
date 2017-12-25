@@ -1479,26 +1479,26 @@ namespace crow
                 case type::True: out += "true"; break;
                 case type::Number: 
                     {
-                        char outbuf[128];
+                        if (v.nt == num_type::Floating_point)
+                        {
 #ifdef _MSC_VER
 #define MSC_COMPATIBLE_SPRINTF(BUFFER_PTR, FORMAT_PTR, VALUE) sprintf_s((BUFFER_PTR), 128, (FORMAT_PTR), (VALUE))
 #else
 #define MSC_COMPATIBLE_SPRINTF(BUFFER_PTR, FORMAT_PTR, VALUE) sprintf((BUFFER_PTR), (FORMAT_PTR), (VALUE))
 #endif
-                        if (v.nt == num_type::Floating_point)
-                        {
-                          MSC_COMPATIBLE_SPRINTF(outbuf, "%g", v.num.d);
+                            char outbuf[128];
+                            MSC_COMPATIBLE_SPRINTF(outbuf, "%g", v.num.d);
+                            out += outbuf;
+#undef MSC_COMPATIBLE_SPRINTF
                         }
                         else if (v.nt == num_type::Signed_integer)
                         {
-                          MSC_COMPATIBLE_SPRINTF(outbuf, "%lld", v.num.si);
+                            out += std::to_string(v.num.si);
                         }
                         else
                         {
-                          MSC_COMPATIBLE_SPRINTF(outbuf, "%llu", v.num.ui);
+                            out += std::to_string(v.num.ui);
                         }
-#undef MSC_COMPATIBLE_SPRINTF
-                        out += outbuf;
                     }
                     break;
                 case type::String: dump_string(v.s, out); break;
