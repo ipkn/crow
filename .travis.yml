@@ -11,10 +11,10 @@ compiler:
 
 env:
   matrix:
-    - COMPILER=g++-4.8 CCOMPILER=gcc-4.8 PUSH_COVERAGE=ON
-    - COMPILER=g++-4.9 CCOMPILER=gcc-4.9
-    - COMPILER=g++-5 CCOMPILER=gcc-5
-    - COMPILER=clang++-3.6 CCOMPILER=clang-3.6
+          #- COMPILER=g++-4.8 CCOMPILER=gcc-4.8 PUSH_COVERAGE=ON
+          #- COMPILER=g++-4.9 CCOMPILER=gcc-4.9
+          #    - COMPILER=g++-5 CCOMPILER=gcc-5
+          #- COMPILER=clang++-3.6 CCOMPILER=clang-3.6
     - COMPILER=x86_64-w64-mingw32-g++ CCOMPILER=x86_64-w64-mingw32-gcc
 
 addons:
@@ -41,7 +41,7 @@ before_script:
   - mkdir build
   - cd build
   - cmake --version
-  - cmake ..
+  - cmake .. -DCMAKE_SYSTEM_NAME=Windows
 
 script: make -j2 && ctest -j2
 
