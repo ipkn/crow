@@ -501,7 +501,7 @@ TEST(json_read)
     //ASSERT_THROW(3 == x["message"]);
     ASSERT_EQUAL(12, x["message"].size());
 
-    std::string s = R"({"int":3,     "ints"  :[1,2,3,4,5]		})";
+    std::string s = R"({"int":3,     "ints"  :[1,2,3,4,5],	"bigint":1234567890	})";
     auto y = json::load(s);
     ASSERT_EQUAL(3, y["int"]);
     ASSERT_EQUAL(3.0, y["int"]);
@@ -519,6 +519,7 @@ TEST(json_read)
 	ASSERT_EQUAL(2, q);
 	q = y["ints"][2].i();
 	ASSERT_EQUAL(3, q);
+    ASSERT_EQUAL(1234567890, y["bigint"]);
 
     std::string s2 = R"({"bools":[true, false], "doubles":[1.2, -3.4]})";
     auto z = json::load(s2);
@@ -532,6 +533,10 @@ TEST(json_read)
     std::string s3 = R"({"uint64": 18446744073709551615})";
     auto z1 = json::load(s3);
     ASSERT_EQUAL(18446744073709551615ull, z1["uint64"].u());
+
+    std::ostringstream os;
+    os << z1["uint64"];
+    ASSERT_EQUAL("18446744073709551615", os.str());
 }
 
 TEST(json_read_real)
@@ -596,6 +601,8 @@ TEST(json_write)
     ASSERT_TRUE(R"({"message":{"x":3,"y":5}})" == json::dump(x) || R"({"message":{"y":5,"x":3}})" == json::dump(x));
     x["message"] = 5.5;
     ASSERT_EQUAL(R"({"message":5.5})", json::dump(x));
+    x["message"] = 1234567890;
+    ASSERT_EQUAL(R"({"message":1234567890})", json::dump(x));
 
     json::wvalue y;
     y["scores"][0] = 1;
@@ -614,6 +621,30 @@ TEST(json_write)
     y["scores"] = std::vector<int>{1,2,3};
     ASSERT_EQUAL(R"({"scores":[1,2,3]})", json::dump(y));
 
+}
+
+TEST(json_copy_r_to_w_to_r)
+{
+  json::rvalue r = json::load(R"({"smallint":2,"bigint":2147483647,"fp":23.43,"fpsc":2.343e1,"str":"a string","trueval":true,"falseval":false,"nullval":null,"listval":[1,2,"foo","bar"],"obj":{"member":23,"other":"baz"}})");
+  json::wvalue w{r};
+  json::rvalue x = json::load(json::dump(w)); // why no copy-ctor wvalue -> rvalue?
+  ASSERT_EQUAL(2, x["smallint"]);
+  ASSERT_EQUAL(2147483647, x["bigint"]);
+  ASSERT_EQUAL(23.43, x["fp"]);
+  ASSERT_EQUAL(23.43, x["fpsc"]);
+  ASSERT_EQUAL("a string", x["str"]);
+  ASSERT_TRUE(true == x["trueval"].b());
+  ASSERT_TRUE(false == x["falseval"].b());
+  ASSERT_TRUE(json::type::Null == x["nullval"].t());
+  ASSERT_EQUAL(4u, x["listval"].size());
+  ASSERT_EQUAL(1, x["listval"][0]);
+  ASSERT_EQUAL(2, x["listval"][1]);
+  ASSERT_EQUAL("foo", x["listval"][2]);
+  ASSERT_EQUAL("bar", x["listval"][3]);
+  ASSERT_EQUAL(23, x["obj"]["member"]);
+  ASSERT_EQUAL("member", x["obj"]["member"].key());
+  ASSERT_EQUAL("baz", x["obj"]["other"]);
+  ASSERT_EQUAL("other", x["obj"]["other"].key());
 }
 
 TEST(template_basic)
