@@ -15,7 +15,6 @@ env:
     - COMPILER=g++-4.9 CCOMPILER=gcc-4.9
     - COMPILER=g++-5 CCOMPILER=gcc-5
     - COMPILER=clang++-3.6 CCOMPILER=clang-3.6
-    - COMPILER=x86_64-w64-mingw32-g++-posix CCOMPILER=x86_64-w64-mingw32-gcc-posix
 
 addons:
   apt:
@@ -31,7 +30,6 @@ addons:
       - clang-3.6
       - libboost1.55-all-dev
       - python-pip
-      - mingw-w64
 
 install:
   - if [ "$PUSH_COVERAGE" == "ON" ]; then pip install --user git+git://github.com/eddyxu/cpp-coveralls.git; fi
