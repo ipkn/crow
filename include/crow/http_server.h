@@ -80,15 +80,8 @@ namespace crow
                             auto update_date_str = [&]
                             {
                                 auto last_time_t = time(0);
-                                tm my_tm;
-
-#ifdef _MSC_VER
-                                gmtime_s(&my_tm, &last_time_t);
-#else
-                                gmtime_r(&last_time_t, &my_tm);
-#endif
                                 date_str.resize(100);
-                                size_t date_str_sz = strftime(&date_str[0], 99, "%a, %d %b %Y %H:%M:%S GMT", &my_tm);
+                                size_t date_str_sz = strftime(&date_str[0], 99, "%a, %d %b %Y %H:%M:%S GMT", gmtime(&last_time_t));
                                 date_str.resize(date_str_sz);
                             };
                             update_date_str();

@@ -49,15 +49,7 @@ namespace crow
                 char date[32];
                 time_t t = time(0);
 
-                tm my_tm;
-
-#ifdef _MSC_VER
-                gmtime_s(&my_tm, &t);
-#else
-                gmtime_r(&t, &my_tm);
-#endif
-
-                size_t sz = strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", &my_tm);
+                size_t sz = strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", gmtime(&t));
                 return std::string(date, date+sz);
             }
 
