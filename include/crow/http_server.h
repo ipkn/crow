@@ -82,7 +82,7 @@ namespace crow
                                 auto last_time_t = time(0);
                                 tm my_tm;
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) or defined(__MINGW32__)
                                 gmtime_s(&my_tm, &last_time_t);
 #else
                                 gmtime_r(&last_time_t, &my_tm);
