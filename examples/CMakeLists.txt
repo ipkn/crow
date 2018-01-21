@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
 project (crow_examples)
 
+if(WIN32)
+    list(APPEND Boost_LIBRARIES Ws2_32 Mswsock)
+endif()
+
 if (MSVC)
 	add_executable(example_vs example_vs.cpp)
 	target_link_libraries(example_vs ${Boost_LIBRARIES})

@@ -6,6 +6,10 @@ set(TEST_SRCS
 unittest.cpp
 )
 
+if(WIN32)
+    list(APPEND Boost_LIBRARIES Ws2_32 Mswsock)
+endif()
+
 add_executable(unittest ${TEST_SRCS})
 #target_link_libraries(unittest crow)
 target_link_libraries(unittest ${Boost_LIBRARIES})

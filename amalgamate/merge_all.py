@@ -1,6 +1,7 @@
 """Merges all the header files."""
 from glob import glob
 from os import path as pt
+import os
 import re
 from collections import defaultdict
 import sys
@@ -11,8 +12,8 @@ if len(sys.argv) > 1:
 
 OUTPUT = 'crow_all.h'
 re_depends = re.compile('^#include "(.*)"', re.MULTILINE)
-headers = [x.rsplit('/', 1)[-1] for x in glob(pt.join(header_path, '*.h*'))]
-headers += ['crow/' + x.rsplit('/', 1)[-1] for x in glob(pt.join(header_path, 'crow/*.h*'))]
+headers = [x.rsplit(os.sep, 1)[-1] for x in glob(pt.join(header_path, '*.h*'))]
+headers += ['crow/' + x.rsplit(os.sep, 1)[-1] for x in glob(pt.join(header_path, 'crow/*.h*'))]
 print(headers)
 edges = defaultdict(list)
 for header in headers:
