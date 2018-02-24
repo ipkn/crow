@@ -374,6 +374,7 @@ namespace crow
                 {401, "HTTP/1.1 401 Unauthorized\r\n"},
                 {403, "HTTP/1.1 403 Forbidden\r\n"},
                 {404, "HTTP/1.1 404 Not Found\r\n"},
+                {409, "HTTP/1.1 409 Conflict\r\n"},                
                 {413, "HTTP/1.1 413 Payload Too Large\r\n"},
                 {422, "HTTP/1.1 422 Unprocessable Entity\r\n"},
                 {429, "HTTP/1.1 429 Too Many Requests\r\n"},
