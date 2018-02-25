@@ -1,18 +1,18 @@
 """Merges all the header files."""
 from glob import glob
-from os import path as pt
+from os import path as pt, sep
 import re
 from collections import defaultdict
 import sys
 
-header_path = "../include"
+header_path = pt.join("..","include")
 if len(sys.argv) > 1:
     header_path = sys.argv[1]
 
 OUTPUT = 'crow_all.h'
 re_depends = re.compile('^#include "(.*)"', re.MULTILINE)
-headers = [x.rsplit('/', 1)[-1] for x in glob(pt.join(header_path, '*.h*'))]
-headers += ['crow/' + x.rsplit('/', 1)[-1] for x in glob(pt.join(header_path, 'crow/*.h*'))]
+headers = [x.rsplit(sep, 1)[-1] for x in glob(pt.join(header_path, '*.h*'))]
+headers += [pt.join('crow', '' + x.rsplit(sep, 1)[-1]) for x in glob(pt.join(header_path, pt.join('crow','*.h*')))]
 print(headers)
 edges = defaultdict(list)
 for header in headers:
@@ -20,7 +20,9 @@ for header in headers:
     match = re_depends.findall(d)
     for m in match:
         # m should included before header
-        edges[m].append(header)
+        edges[m].append('/'.join(header.split(sep)))
+
+headers = map((lambda h: '/'.join(h.split(sep))), headers)
 
 visited = defaultdict(bool)
 order = []
