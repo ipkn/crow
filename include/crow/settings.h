@@ -21,7 +21,9 @@
 
     default to INFO
 */
+#ifndef CROW_LOG_LEVEL
 #define CROW_LOG_LEVEL 1
+#endif
 
 
 // compiler flags
