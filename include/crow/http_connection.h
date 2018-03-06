@@ -557,9 +557,17 @@ namespace crow
             {
                 if (!adaptor_.is_open())
                 {
-                    return;
+                    return true;
                 }
+				
+				if(this->is_writing)
+				{
+					CROW_LOG_DEBUG << this << " timer called functor but didn't close connection in writing";
+					return false;					
+				}
                 adaptor_.close();
+				
+				return true;
             });
             CROW_LOG_DEBUG << this << " timer added: " << timer_cancel_key_.first << ' ' << timer_cancel_key_.second;
         }
