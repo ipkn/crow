@@ -7,7 +7,7 @@ int main()
 {
     crow::SimpleApp app;
 
-    std::mutex mtx;;
+    std::mutex mtx;
     std::unordered_set<crow::websocket::connection*> users;
 
     CROW_ROUTE(app, "/ws")
