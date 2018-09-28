@@ -257,6 +257,8 @@ namespace crow
             req_ = std::move(parser_.to_request());
             request& req = req_;
 
+            req.remoteIpAddress = adaptor_.remote_endpoint().address().to_string();
+
             if (parser_.check_version(1, 0))
             {
                 // HTTP/1.0
