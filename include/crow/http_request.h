@@ -29,6 +29,7 @@ namespace crow
         query_string url_params;
         ci_map headers;
         std::string body;
+        std::string remoteIpAddress;
 
         void* middleware_context{};
         boost::asio::io_service* io_service{};
