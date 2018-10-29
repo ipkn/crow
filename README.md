@@ -89,11 +89,18 @@ CROW_ROUTE(app, "/add_json")
 
 ## How to Build
 
-If you just want to use crow, copy amalgamate/crow_all.h and include it.
+If you just want to use crow:
+
+ - Clone this repository
+ - Run amalgamate/merge_all.py
+ - Copy amalgamate/crow_all.h and include in your project
+ - Compile using clang++
+ - Use the following build options: `-std=c++11 -stdlib=libc++`
+ - Use the following linking options: `-lpthread -lboost`
 
 ### Requirements
 
- - C++ compiler with good C++11 support (tested with g++>=4.8)
+ - C++ compiler with good C++11 support
  - boost library
  - CMake for build examples
  - Linking with tcmalloc/jemalloc is recommended for speed.
