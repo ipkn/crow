@@ -1,9 +1,11 @@
 #pragma once
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/array.hpp>
+#include <boost/algorithm/string/split.hpp>
 #include "crow/socket_adaptors.h"
 #include "crow/http_request.h"
 #include "crow/TinySHA1.hpp"
+#include "crow/zlib.hpp"
 
 namespace crow
 {
@@ -61,7 +63,18 @@ namespace crow
 							return;
 						}
 					}
-
+#ifdef CROW_ENABLE_WEBSOCKET_COMPRESSION
+                    std::string extensionsHeader = req.get_header_value("Sec-WebSocket-Extensions");
+                    std::vector<std::string> extensions;
+                    boost::split(extensions, extensionsHeader, boost::is_any_of(";"));
+                    if (std::find(extensions.begin(), extensions.end(), "permessage-deflate") != extensions.end())
+                    {
+                        bool reset_compressor_on_send_ = std::find(extensions.begin(), extensions.end(), "server_no_context_takeover") != extensions.end();
+                        compressor_.reset(new zlib_compressor(reset_compressor_on_send_, true, 15, Z_BEST_COMPRESSION, 8, Z_DEFAULT_STRATEGY));
+                        bool reset_decompressor_on_send_ = std::find(extensions.begin(), extensions.end(), "client_no_context_takeover") != extensions.end();
+                        decompressor_.reset(new zlib_decompressor(reset_decompressor_on_send_, true, 15));
+                    }
+#endif
 					// Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
 					// Sec-WebSocket-Version: 13
                     std::string magic = req.get_header_value("Sec-WebSocket-Key") +  "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -98,9 +111,11 @@ namespace crow
                 void send_binary(const std::string& msg) override
                 {
                     dispatch([this, msg]{
-                        auto header = build_header(2, msg.size());
+                        std::string msg_ = compressor_ ? compressor_->compress(msg) : msg;
+                        auto header = build_header(2, msg_.size());
+                        if (compressor_) header[0] += 0x40;
                         write_buffers_.emplace_back(std::move(header));
-                        write_buffers_.emplace_back(msg);
+                        write_buffers_.emplace_back(msg_);
                         do_write();
                     });
                 }
@@ -108,9 +123,11 @@ namespace crow
                 void send_text(const std::string& msg) override
                 {
                     dispatch([this, msg]{
-                        auto header = build_header(1, msg.size());
+                        std::string msg_ = compressor_ ? compressor_->compress(msg) : msg;
+                        auto header = build_header(1, msg_.size());
+                        if (compressor_) header[0] += 0x40;
                         write_buffers_.emplace_back(std::move(header));
-                        write_buffers_.emplace_back(msg);
+                        write_buffers_.emplace_back(msg_);
                         do_write();
                     });
                 }
@@ -167,6 +184,16 @@ namespace crow
                     write_buffers_.emplace_back(header);
                     write_buffers_.emplace_back(std::move(hello));
                     write_buffers_.emplace_back(crlf);
+                    if (compressor_ && decompressor_) {
+                        write_buffers_.emplace_back(
+                            "Sec-WebSocket-Extensions: permessage-deflate"
+                            "; server_max_window_bits=" + std::to_string(decompressor_->window_bits) +
+                            "; client_max_window_bits=" + std::to_string(compressor_->window_bits) +
+                            (compressor_->reset_before_compress ? "; server_no_context_takeover": "") +
+                            (decompressor_->reset_before_decompress ? "; client_no_context_takeover": "")
+                        );
+                        write_buffers_.emplace_back(crlf);
+                    }
                     write_buffers_.emplace_back(crlf);
                     do_write();
                     if (open_handler_)
@@ -368,6 +395,11 @@ namespace crow
                     return mini_header_ & 0x8000;
                 }
 
+                bool is_compressed()
+                {
+                    return mini_header_ & 0x4000;
+                }
+
                 int opcode()
                 {
                     return (mini_header_ & 0x0f00) >> 8;
@@ -387,7 +419,7 @@ namespace crow
                                 if (is_FIN())
                                 {
                                     if (message_handler_)
-                                        message_handler_(*this, message_, is_binary_);
+                                        message_handler_(*this, (is_compressed() && decompressor_) ? decompressor_->decompress(message_) : message_, is_binary_);
                                     message_.clear();
                                 }
                             }
@@ -398,7 +430,7 @@ namespace crow
                                 if (is_FIN())
                                 {
                                     if (message_handler_)
-                                        message_handler_(*this, message_, is_binary_);
+                                        message_handler_(*this, (is_compressed() && decompressor_) ? decompressor_->decompress(message_) : message_, is_binary_);
                                     message_.clear();
                                 }
                             }
@@ -410,7 +442,7 @@ namespace crow
                                 if (is_FIN())
                                 {
                                     if (message_handler_)
-                                        message_handler_(*this, message_, is_binary_);
+                                        message_handler_(*this, (is_compressed() && decompressor_) ? decompressor_->decompress(message_) : message_, is_binary_);
                                     message_.clear();
                                 }
                             }
@@ -513,6 +545,11 @@ namespace crow
                 bool error_occured_{false};
                 bool pong_received_{false};
                 bool is_close_handler_called_{false};
+
+                bool reset_compressor_on_send_{false};
+                bool reset_decompressor_on_send_{false};
+                std::unique_ptr<zlib_compressor> compressor_;
+                std::unique_ptr<zlib_decompressor> decompressor_;
 
 				std::function<void(crow::websocket::connection&)> open_handler_;
 				std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler_;

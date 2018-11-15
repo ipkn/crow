@@ -11,6 +11,9 @@
 /* #ifdef - enables ssl */
 //#define CROW_ENABLE_SSL
 
+/* #ifdef - enables websocket compression */
+//#define CROW_ENABLE_WEBSOCKET_COMPRESSION
+
 /* #define - specifies log level */
 /*
     Debug       = 0
