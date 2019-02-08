@@ -93,7 +93,7 @@ int main()
 
     // more json example
     app.route_dynamic("/add_json")
-        .methods(crow::HTTPMethod::POST)
+        .methods(crow::HTTPMethod::Post)
     ([](const crow::request& req){
         auto x = crow::json::load(req.body);
         if (!x)
@@ -122,7 +122,7 @@ int main()
     });    
 
     // ignore all log
-    crow::logger::setLogLevel(crow::LogLevel::DEBUG);
+    crow::logger::setLogLevel(crow::LogLevel::Debug);
     //crow::logger::setHandler(std::make_shared<ExampleLogHandler>());
 
     app.port(18080)
