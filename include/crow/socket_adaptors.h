@@ -48,6 +48,24 @@ namespace crow
             socket_.close(ec);
         }
 
+        void shutdown_both()
+        {
+            boost::system::error_code ec;
+            socket_.shutdown(boost::asio::socket_base::shutdown_type::shutdown_both, ec);
+        }
+
+        void shutdown_send()
+        {
+            boost::system::error_code ec;
+            socket_.shutdown(boost::asio::socket_base::shutdown_type::shutdown_send, ec);
+        }
+
+        void shutdown_recv()
+        {
+            boost::system::error_code ec;
+            socket_.shutdown(boost::asio::socket_base::shutdown_type::shutdown_receive, ec);
+        }
+
         template <typename F> 
         void start(F f)
         {
