@@ -112,6 +112,24 @@ namespace crow
             raw_socket().close(ec);
         }
 
+        void shutdown_both()
+        {
+            boost::system::error_code ec;
+            raw_socket().shutdown(boost::asio::socket_base::shutdown_type::shutdown_both, ec);
+        }
+
+        void shutdown_send()
+        {
+            boost::system::error_code ec;
+            raw_socket().shutdown(boost::asio::socket_base::shutdown_type::shutdown_send, ec);
+        }
+
+        void shutdown_recv()
+        {
+            boost::system::error_code ec;
+            raw_socket().shutdown(boost::asio::socket_base::shutdown_type::shutdown_receive, ec);
+        }
+
         boost::asio::io_service& get_io_service()
         {
             return raw_socket().get_io_service();
