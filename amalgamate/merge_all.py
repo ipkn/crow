@@ -7,11 +7,13 @@ import re
 from collections import defaultdict
 import sys
 
-header_path = "../include"
-if len(sys.argv) > 1:
-    header_path = sys.argv[1]
+if len(sys.argv) != 3:
+    print("Usage: {} <CROW_HEADERS_DIRECTORY_PATH> <CROW_OUTPUT_HEADER_PATH>".format(sys.argv[0]))
+    sys.exit(1)
 
-OUTPUT = 'crow_all.h'
+header_path = sys.argv[1]
+output_path = sys.argv[2]
+
 re_depends = re.compile('^#include "(.*)"', re.MULTILINE)
 headers = [x.rsplit('/', 1)[-1] for x in glob(pt.join(header_path, '*.h*'))]
 headers += ['crow/' + x.rsplit('/', 1)[-1] for x in glob(pt.join(header_path, 'crow/*.h*'))]
@@ -54,4 +56,4 @@ for header in order:
     build.append(re_depends.sub(lambda x: '\n', d))
     build.append('\n')
 
-open(OUTPUT, 'w').write('\n'.join(build))
+open(output_path, 'w').write('\n'.join(build))
