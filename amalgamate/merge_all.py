@@ -1,3 +1,5 @@
+#!/bin/env python
+
 """Merges all the header files."""
 from glob import glob
 from os import path as pt
