@@ -83,9 +83,9 @@ namespace crow
                                 tm my_tm;
 
 #if defined(_MSC_VER) or defined(__MINGW32__)
-                                gmtime_s(&my_tm, &last_time_t);
+                                localtime_s(&my_tm, &last_time_t);
 #else
-                                gmtime_r(&last_time_t, &my_tm);
+                                localtime_r(&last_time_t, &my_tm);
 #endif
                                 date_str.resize(100);
                                 size_t date_str_sz = strftime(&date_str[0], 99, "%a, %d %b %Y %H:%M:%S GMT", &my_tm);
