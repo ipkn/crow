@@ -52,9 +52,9 @@ namespace crow
                 tm my_tm;
 
 #if defined(_MSC_VER) or defined(__MINGW32__)
-                gmtime_s(&my_tm, &t);
+                localtime_s(&my_tm, &t);
 #else
-                gmtime_r(&t, &my_tm);
+                localtime_r(&t, &my_tm);
 #endif
 
                 size_t sz = strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", &my_tm);
