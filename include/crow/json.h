@@ -344,7 +344,7 @@ namespace crow
             double d() const
             {
 #ifndef CROW_JSON_NO_ERROR_CHECK
-                if (t() != type::Number)
+                if (t() != type::Number && t() != type::String)
                     throw std::runtime_error("value is not number");
 #endif
                 return boost::lexical_cast<double>(start_, end_-start_);
