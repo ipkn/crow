@@ -8,7 +8,10 @@ endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
+if (APPLE)
+else()
 find_package(Tcmalloc)
+endif()
 find_package(Threads)
 find_package(OpenSSL)
 
