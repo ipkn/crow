@@ -15,7 +15,7 @@ void broadcast(const string& msg)
     x["msgs"][0] = msgs.back();
     x["last"] = msgs.size();
     string body = crow::json::dump(x);
-    for(auto p:ress)
+    for(auto p : ress)
     {
         auto* res = p.first;
         CROW_LOG_DEBUG << res << " replied: " << body;

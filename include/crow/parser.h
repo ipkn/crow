@@ -3,7 +3,6 @@
 #include <string>
 #include <unordered_map>
 #include <boost/algorithm/string.hpp>
-#include <boost/tokenizer.hpp>
 #include <algorithm>
 
 #include "crow/http_parser_merged.h"

@@ -96,28 +96,28 @@ typedef int (*http_cb) (http_parser*);
   CROW_XX(5,  CONNECT,     CONNECT)      \
   CROW_XX(6,  OPTIONS,     OPTIONS)      \
   CROW_XX(7,  TRACE,       TRACE)        \
-  /* webdav */                      \
-  CROW_XX(8,  COPY,        COPY)         \
-  CROW_XX(9,  LOCK,        LOCK)         \
-  CROW_XX(10, MKCOL,       MKCOL)        \
-  CROW_XX(11, MOVE,        MOVE)         \
-  CROW_XX(12, PROPFIND,    PROPFIND)     \
-  CROW_XX(13, PROPPATCH,   PROPPATCH)    \
-  CROW_XX(14, SEARCH,      SEARCH)       \
-  CROW_XX(15, UNLOCK,      UNLOCK)       \
-  /* subversion */                  \
-  CROW_XX(16, REPORT,      REPORT)       \
-  CROW_XX(17, MKACTIVITY,  MKACTIVITY)   \
-  CROW_XX(18, CHECKOUT,    CHECKOUT)     \
-  CROW_XX(19, MERGE,       MERGE)        \
-  /* upnp */                        \
-  CROW_XX(20, MSEARCH,     M-SEARCH)     \
-  CROW_XX(21, NOTIFY,      NOTIFY)       \
-  CROW_XX(22, SUBSCRIBE,   SUBSCRIBE)    \
-  CROW_XX(23, UNSUBSCRIBE, UNSUBSCRIBE)  \
   /* RFC-5789 */                    \
-  CROW_XX(24, PATCH,       PATCH)        \
-  CROW_XX(25, PURGE,       PURGE)        \
+  CROW_XX(8, PATCH,       PATCH)        \
+  CROW_XX(9, PURGE,       PURGE)        \
+  /* webdav */                      \
+  CROW_XX(10,  COPY,        COPY)         \
+  CROW_XX(11,  LOCK,        LOCK)         \
+  CROW_XX(12, MKCOL,       MKCOL)        \
+  CROW_XX(13, MOVE,        MOVE)         \
+  CROW_XX(14, PROPFIND,    PROPFIND)     \
+  CROW_XX(15, PROPPATCH,   PROPPATCH)    \
+  CROW_XX(16, SEARCH,      SEARCH)       \
+  CROW_XX(17, UNLOCK,      UNLOCK)       \
+  /* subversion */                  \
+  CROW_XX(18, REPORT,      REPORT)       \
+  CROW_XX(19, MKACTIVITY,  MKACTIVITY)   \
+  CROW_XX(20, CHECKOUT,    CHECKOUT)     \
+  CROW_XX(21, MERGE,       MERGE)        \
+  /* upnp */                        \
+  CROW_XX(22, MSEARCH,     M-SEARCH)     \
+  CROW_XX(23, NOTIFY,      NOTIFY)       \
+  CROW_XX(24, SUBSCRIBE,   SUBSCRIBE)    \
+  CROW_XX(25, UNSUBSCRIBE, UNSUBSCRIBE)  \
   /* CalDAV */                      \
   CROW_XX(26, MKCALENDAR,  MKCALENDAR)   \
 

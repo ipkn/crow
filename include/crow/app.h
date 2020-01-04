@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <type_traits>
 #include <thread>
+#include <condition_variable>
 
 #include "crow/settings.h"
 #include "crow/logging.h"
@@ -95,6 +96,13 @@ namespace crow
             router_.validate();
         }
 
+        void notify_server_start()
+        {
+            std::unique_lock<std::mutex> lock(start_mutex_);
+            server_started_ = true;
+            cv_started_.notify_all();
+        }
+
         void run()
         {
             validate();
@@ -103,6 +111,7 @@ namespace crow
             {
                 ssl_server_ = std::move(std::unique_ptr<ssl_server_t>(new ssl_server_t(this, bindaddr_, port_, &middlewares_, concurrency_, &ssl_context_)));
                 ssl_server_->set_tick_function(tick_interval_, tick_function_);
+                notify_server_start();
                 ssl_server_->run();
             }
             else
@@ -110,6 +119,7 @@ namespace crow
             {
                 server_ = std::move(std::unique_ptr<server_t>(new server_t(this, bindaddr_, port_, &middlewares_, concurrency_, nullptr)));
                 server_->set_tick_function(tick_interval_, tick_function_);
+                notify_server_start();
                 server_->run();
             }
         }
@@ -132,6 +142,12 @@ namespace crow
         {
             CROW_LOG_DEBUG << "Routing:";
             router_.debug_print();
+        }
+
+        self_t& loglevel(crow::LogLevel level)
+        {
+            crow::logger::setLogLevel(level);
+            return *this;
         }
 
 #ifdef CROW_ENABLE_SSL
@@ -220,6 +236,14 @@ namespace crow
             return *this;
         }
 
+        void wait_for_server_start()
+        {
+            std::unique_lock<std::mutex> lock(start_mutex_);
+            if (server_started_)
+                return;
+            cv_started_.wait(lock);
+        }
+
     private:
         uint16_t port_ = 80;
         uint16_t concurrency_ = 1;
@@ -235,6 +259,10 @@ namespace crow
         std::unique_ptr<ssl_server_t> ssl_server_;
 #endif
         std::unique_ptr<server_t> server_;
+
+        bool server_started_{false};
+        std::condition_variable cv_started_;
+        std::mutex start_mutex_;
     };
     template <typename ... Middlewares>
     using App = Crow<Middlewares...>;

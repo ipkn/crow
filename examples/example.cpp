@@ -146,6 +146,15 @@ int main()
         for(const auto& countVal : count) {
             os << " - " << countVal << '\n';
         }
+
+        // To get a dictionary from the request
+        // You have to submit something like '/params?mydict[a]=b&mydict[abcd]=42' to have a list of pairs ((a, b) and (abcd, 42))
+        auto mydict = req.url_params.get_dict("mydict");
+        os << "The key 'dict' contains " << mydict.size() << " value(s).\n";
+        for(const auto& mydictVal : mydict) {
+            os << " - " << mydictVal.first << " -> " << mydictVal.second << '\n';
+        }
+
         return crow::response{os.str()};
     });    
 
@@ -154,8 +163,8 @@ int main()
         return std::string(512*1024, ' ');
     });
 
-    // ignore all log
-    crow::logger::setLogLevel(crow::LogLevel::DEBUG);
+    // enables all log
+    app.loglevel(crow::LogLevel::DEBUG);
     //crow::logger::setHandler(std::make_shared<ExampleLogHandler>());
 
     app.port(18080)
