@@ -347,8 +347,9 @@ namespace crow
                                             {
                                                 handle_fragment();
                                                 state_ = WebSocketReadState::MiniHeader;
-                                                do_read();
                                             }
+					    // Read next data chunk or handle the fragment if done
+					    do_read();
                                         }
                                         else
                                         {
