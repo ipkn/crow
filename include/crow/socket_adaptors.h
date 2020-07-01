@@ -8,6 +8,7 @@ namespace crow
 {
     using namespace boost;
     using tcp = asio::ip::tcp;
+    using stream_protocol = asio::local::stream_protocol;
 
     struct SocketAdaptor
     {
@@ -55,6 +56,54 @@ namespace crow
         }
 
         tcp::socket socket_;
+    };
+    
+    struct UnixSocketAdaptor
+    {
+        using context = void;
+        UnixSocketAdaptor(boost::asio::io_service& io_service, context*)
+            : socket_(io_service)
+        {
+        }
+
+        boost::asio::io_service& get_io_service()
+        {
+            return socket_.get_io_service();
+        }
+
+        stream_protocol::socket& raw_socket()
+        {
+            return socket_;
+        }
+
+        stream_protocol::socket& socket()
+        {
+            return socket_;
+        }
+
+        stream_protocol::endpoint remote_endpoint()
+        {
+            return socket_.local_endpoint();
+        }
+
+        bool is_open()
+        {
+            return socket_.is_open();
+        }
+
+        void close()
+        {
+            boost::system::error_code ec;
+            socket_.close(ec);
+        }
+
+        template <typename F> 
+        void start(F f)
+        {
+            f(boost::system::error_code());
+        }
+
+        stream_protocol::socket socket_;
     };
 
 #ifdef CROW_ENABLE_SSL
