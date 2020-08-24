@@ -349,6 +349,8 @@ namespace crow
                                                 state_ = WebSocketReadState::MiniHeader;
                                                 do_read();
                                             }
+					    else
+                                                do_read();
                                         }
                                         else
                                         {
