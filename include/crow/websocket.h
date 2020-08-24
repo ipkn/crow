@@ -350,10 +350,7 @@ namespace crow
                                                 do_read();
                                             }
 					    else
-					    {
-                                                state_ = WebSocketReadState::Payload;
                                                 do_read();
-                                            }
                                         }
                                         else
                                         {
