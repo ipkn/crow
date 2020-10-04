@@ -1,4 +1,4 @@
-//This file is generated from /etc/nginx/mime.types using nginx_mime2cpp.py
+//This file is generated from nginx/conf/mime.types using nginx_mime2cpp.py
 #include <map>
 #include <string>
 

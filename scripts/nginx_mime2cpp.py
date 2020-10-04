@@ -1,7 +1,7 @@
 def main():
     mtfile = open("mime.types", "r")
     mtcppfile = open("mime_types.h", "w")
-    mtcppfile.write("//This file is generated from /etc/nginx/mime.types using nginx_mime2cpp.py\n")
+    mtcppfile.write("//This file is generated from nginx/conf/mime.types using nginx_mime2cpp.py\n")
     mtcppfile.write("#include <map>\n#include <string>\n\nnamespace crow{\nstd::map<std::string, std::string> mime_types {\n")
     lines = mtfile.readlines()
     i=0
