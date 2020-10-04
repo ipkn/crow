@@ -8,6 +8,7 @@
 
 #include "crow/socket_adaptors.h"
 #include "crow/logging.h"
+#include "crow/mime_types.h"
 #if !defined(_WIN32)
 #include <sys/stat.h>
 #include <sys/sendfile.h>
@@ -144,8 +145,16 @@ namespace crow
             file_info.statResult = stat(file_info.path.c_str(), &file_info.statbuf);
             if (file_info.statResult == 0)
             {
+                std::size_t last_dot = path.find_last_of(".");
+                std::string extension = path.substr(last_dot+1);
+                std::string mimeType = "";
                 code = 200;
                 this->add_header("Content-length", std::to_string(file_info.statbuf.st_size));
+                
+                if (extension != "")
+                    mimeType = mime_types[extension];
+                    if (mimeType != "")
+                        this-> add_header("Content-Type", mimeType);
             }
         }
 
