@@ -161,8 +161,6 @@ namespace crow
         SocketAdaptor* adaptor;
         void do_write_sendfile() {
             off_t start_= 0;
-//add mimetypes, headers?
-//Content-Disposition, Content-Type
 
 
             int fd_{open(file_info.path.c_str(), O_RDONLY)};
