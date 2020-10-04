@@ -181,6 +181,7 @@ namespace crow
     template <typename Adaptor, typename Handler, typename ... Middlewares>
     class Connection
     {
+        friend class crow::response;
     public:
         Connection(
             boost::asio::io_service& io_service, 
@@ -347,13 +348,26 @@ namespace crow
                 detail::after_handlers_call_helper<
                     ((int)sizeof...(Middlewares)-1),
                     decltype(ctx_),
-                    decltype(*middlewares_)> 
+                    decltype(*middlewares_)>
                 (*middlewares_, ctx_, req_, res);
             }
+           prepare_buffers();
+            CROW_LOG_INFO << "Response: " << this << ' ' << req_.raw_url << ' ' << res.code << ' ' << close_connection_;
+            if (res.file_info.path.size())
+            {
+                do_write_static();
+            }else {
+                do_write_general();
+            }
 
+        }
+
+    private:
+
+        void prepare_buffers(){
             //auto self = this->shared_from_this();
             res.complete_request_handler_ = nullptr;
-            
+
             if (!adaptor_.is_open())
             {
                 //CROW_LOG_DEBUG << this << " delete (socket is closed) " << is_reading << ' ' << is_writing;
@@ -447,6 +461,26 @@ namespace crow
             }
 
             buffers_.emplace_back(crlf.data(), crlf.size());
+            
+        }
+#if !defined(_WIN32)
+        void do_write_static(){
+            res.adaptor = &adaptor_;
+            is_writing = true;
+            boost::asio::write(adaptor_.socket(), buffers_);
+            res.do_write_sendfile();
+            //(-_-)
+            res.end();
+            res.clear();
+            buffers_.clear();
+        }
+#else
+        void do_write_static(){
+            CROW_LOG_INFO << "windows static file support is not ready"
+        }
+}
+#endif
+        void do_write_general(){
             res_body_copy_.swap(res.body);
             buffers_.emplace_back(res_body_copy_.data(), res_body_copy_.size());
 
@@ -460,7 +494,6 @@ namespace crow
             }
         }
 
-    private:
         void do_read()
         {
             //auto self = this->shared_from_this();

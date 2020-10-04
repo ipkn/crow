@@ -6,6 +6,13 @@
 #include "crow/http_request.h"
 #include "crow/ci_map.h"
 
+#include "crow/socket_adaptors.h"
+#include "crow/logging.h"
+#if !defined(_WIN32)
+#include <sys/stat.h>
+#include <sys/sendfile.h>
+#endif
+
 namespace crow
 {
     template <typename Adaptor, typename Handler, typename ... Middlewares>
@@ -120,7 +127,47 @@ namespace crow
         {
             return is_alive_helper_ && is_alive_helper_();
         }
+ /* adding static file support here
+  * middlware must call res.set_static_file_info(filename)
+  * you must add route starting with /your/restricted/path/<string>
+  */
+#if !defined(_WIN32)
+        struct static_file_info{
+            std::string path = "";
+            struct stat statbuf;
+            int statResult;
+        };
+        static_file_info file_info;
 
+        void set_static_file_info(std::string path){
+            file_info.path = path;
+            file_info.statResult = stat(file_info.path.c_str(), &file_info.statbuf);
+            if (file_info.statResult == 0)
+            {
+                code = 200;
+                this->add_header("Content-length", std::to_string(file_info.statbuf.st_size));
+            }
+        }
+
+        SocketAdaptor* adaptor;
+        void do_write_sendfile() {
+            off_t start_= 0;
+//add mimetypes, headers?
+//Content-Disposition, Content-Type
+
+
+            int fd_{open(file_info.path.c_str(), O_RDONLY)};
+            //assert(fd_ != 0);
+            if (file_info.statResult == 0)
+            {
+                ssize_t bytes_sent = 0 ;
+                size_t total_bytes_sent = 0;
+                sendfile(adaptor->socket().native_handle(), fd_, &start_, file_info.statbuf.st_size - start_);
+            }
+
+        }
+#endif
+/* static file support end */
         private:
             bool completed_{};
             std::function<void()> complete_request_handler_;

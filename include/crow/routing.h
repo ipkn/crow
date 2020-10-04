@@ -972,7 +972,7 @@ public:
             unsigned rule_index = found.first;
             if (!rule_index)
             {
-                CROW_LOG_DEBUG << "Cannot match rules " << req.url << ' ' << method_name(req.method);
+                CROW_LOG_INFO << "Cannot match rules " << req.url << ' ' << method_name(req.method);
                 res = response(404);
                 res.end();
                 return;
