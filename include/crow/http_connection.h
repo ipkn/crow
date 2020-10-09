@@ -465,10 +465,9 @@ namespace crow
         }
 #if !defined(_WIN32)
         void do_write_static(){
-            res.adaptor = &adaptor_;
             is_writing = true;
             boost::asio::write(adaptor_.socket(), buffers_);
-            res.do_write_sendfile();
+            res.do_write_sendfile(&adaptor_);
             //(-_-)
             res.end();
             res.clear();

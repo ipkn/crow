@@ -158,8 +158,8 @@ namespace crow
             }
         }
 
-        SocketAdaptor* adaptor;
-        void do_write_sendfile() {
+        template<typename Adaptor>
+        void do_write_sendfile(Adaptor adaptor) {
             off_t start_= 0;
 
 
@@ -169,7 +169,7 @@ namespace crow
             {
                 ssize_t bytes_sent = 0 ;
                 size_t total_bytes_sent = 0;
-                sendfile(adaptor->socket().native_handle(), fd_, &start_, file_info.statbuf.st_size - start_);
+                sendfile(adaptor->raw_socket().native_handle(), fd_, &start_, file_info.statbuf.st_size - start_);
             }
 
         }
