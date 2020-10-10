@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 #include <unordered_map>
+#include <ios>
+#include <fstream>
 
 #include "crow/json.h"
 #include "crow/http_request.h"
@@ -162,14 +164,23 @@ namespace crow
         void do_write_sendfile(Adaptor adaptor) {
             off_t start_= 0;
 
-
-            int fd_{open(file_info.path.c_str(), O_RDONLY)};
-            //assert(fd_ != 0);
             if (file_info.statResult == 0)
             {
                 ssize_t bytes_sent = 0 ;
                 size_t total_bytes_sent = 0;
+#ifdef CROW_ENABLE_SSL
+                std::ifstream is(file_info.path.c_str(), std::ios::in | std::ios::binary);
+                char buf[300000];
+                while (is.read(buf, sizeof(buf)).gcount() > 0)
+                {
+                    std::vector<asio::const_buffer> buffers;
+                    buffers.push_back(boost::asio::buffer(buf));
+                    boost::asio::write(adaptor->socket(), buffers, [this](std::error_code ec, std::size_t){return false;});
+                }
+#else
+                int fd_{open(file_info.path.c_str(), O_RDONLY)};
                 sendfile(adaptor->raw_socket().native_handle(), fd_, &start_, file_info.statbuf.st_size - start_);
+#endif
             }
 
         }
