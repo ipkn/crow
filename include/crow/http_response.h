@@ -153,10 +153,13 @@ namespace crow
                 code = 200;
                 this->add_header("Content-length", std::to_string(file_info.statbuf.st_size));
                 
-                if (extension != "")
+                if (extension != ""){
                     mimeType = mime_types[extension];
                     if (mimeType != "")
                         this-> add_header("Content-Type", mimeType);
+                    else
+                        this-> add_header("content-Type", "text/plain");
+                }
             }
         }
 
