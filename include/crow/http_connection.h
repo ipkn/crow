@@ -473,11 +473,14 @@ namespace crow
             res.clear();
             buffers_.clear();
         }
-#else
+#else //TODO support windows
         void do_write_static(){
-            CROW_LOG_INFO << "windows static file support is not ready"
+            CROW_LOG_INFO << "windows static file support is not ready";
+            res.code = 500;
+            res.end();
+            res.clear();
+            buffers_.clear();
         }
-}
 #endif
         void do_write_general(){
             res_body_copy_.swap(res.body);

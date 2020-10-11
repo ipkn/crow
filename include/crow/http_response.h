@@ -13,7 +13,6 @@
 #include "crow/mime_types.h"
 #if !defined(_WIN32)
 #include <sys/stat.h>
-#include <sys/sendfile.h>
 #endif
 
 namespace crow
@@ -161,31 +160,28 @@ namespace crow
                         this-> add_header("content-Type", "text/plain");
                 }
             }
+            else
+            {
+                code = 404;
+                this->end();
+            }
         }
 
         template<typename Adaptor>
         void do_write_sendfile(Adaptor adaptor) {
-            off_t start_= 0;
 
             if (file_info.statResult == 0)
             {
-                ssize_t bytes_sent = 0 ;
-                size_t total_bytes_sent = 0;
-#ifdef CROW_ENABLE_SSL
+
                 std::ifstream is(file_info.path.c_str(), std::ios::in | std::ios::binary);
-                char buf[300000];
+                char buf[16384];
                 while (is.read(buf, sizeof(buf)).gcount() > 0)
                 {
                     std::vector<asio::const_buffer> buffers;
                     buffers.push_back(boost::asio::buffer(buf));
                     boost::asio::write(adaptor->socket(), buffers, [this](std::error_code ec, std::size_t){return false;});
                 }
-#else
-                int fd_{open(file_info.path.c_str(), O_RDONLY)};
-                sendfile(adaptor->raw_socket().native_handle(), fd_, &start_, file_info.statbuf.st_size - start_);
-#endif
             }
-
         }
 #endif
 /* static file support end */
