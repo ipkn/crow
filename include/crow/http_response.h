@@ -179,7 +179,20 @@ namespace crow
                 {
                     std::vector<asio::const_buffer> buffers;
                     buffers.push_back(boost::asio::buffer(buf));
-                    boost::asio::write(adaptor->socket(), buffers, [this](std::error_code ec, std::size_t){return false;});
+                    boost::asio::write(adaptor->socket(), buffers, [this](std::error_code ec, std::size_t)
+                    {
+                        if (!ec)
+                        {
+                            //CROW_LOG_DEBUG << "sending file, no error";
+                            return false;
+                        }
+                        else
+                        {
+                            CROW_LOG_ERROR << ec << " - happened while sending file";
+                            this->end();
+                            return true;
+                        }
+                    });
                 }
             }
         }
