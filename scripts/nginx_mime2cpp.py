@@ -1,4 +1,14 @@
 #get mime.types file from the nginx repository at nginx/conf/mime.types
+#typical output filename: mime_types.h
+import sys
+
+if len(sys.argv) != 3:
+    print("Usage: {} <NGINX_MIME_TYPE_FILE_PATH> <CROW_OUTPUT_HEADER_PATH>".format(sys.argv[0]))
+    sys.exit(1)
+
+file_path = sys.argv[1]
+output_path = sys.argv[2]
+
 tabspace = "    "
 def main():
     outLines = []
@@ -10,7 +20,7 @@ def main():
         "namespace crow {",
         tabspace + "std::unordered_map<std::string, std::string> mime_types {"])
 
-    with open("mime.types", "r") as mtfile:
+    with open(file_path, "r") as mtfile:
         incomplete = ""
         incompleteExists = False
         for line in mtfile:
@@ -30,7 +40,7 @@ def main():
     outLines[-1] = outLines[-1][:-1]
     outLines.extend([tabspace + "};", "}"])
 
-    with open("mime_types.h", "w") as mtcppfile:
+    with open(output_path, "w") as mtcppfile:
         mtcppfile.writelines(x + '\n' for x in outLines)
 
 def mime_line_to_cpp(mlist):
