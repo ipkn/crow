@@ -468,7 +468,7 @@ namespace crow
             is_writing = true;
             boost::asio::write(adaptor_.socket(), buffers_);
             res.do_write_sendfile(&adaptor_);
-            //(-_-)
+
             res.end();
             res.clear();
             buffers_.clear();
