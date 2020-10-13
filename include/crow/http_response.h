@@ -1,10 +1,19 @@
 #pragma once
 #include <string>
 #include <unordered_map>
+#include <ios>
+#include <fstream>
 
 #include "crow/json.h"
 #include "crow/http_request.h"
 #include "crow/ci_map.h"
+
+#include "crow/socket_adaptors.h"
+#include "crow/logging.h"
+#include "crow/mime_types.h"
+#if !defined(_WIN32)
+#include <sys/stat.h>
+#endif
 
 namespace crow
 {
@@ -120,7 +129,75 @@ namespace crow
         {
             return is_alive_helper_ && is_alive_helper_();
         }
+ /* adding static file support here
+  * middlware must call res.set_static_file_info(filename)
+  * you must add route starting with /your/restricted/path/<string>
+  */
+#if !defined(_WIN32)
+        struct static_file_info{
+            std::string path = "";
+            struct stat statbuf;
+            int statResult;
+        };
+        static_file_info file_info;
 
+        void set_static_file_info(std::string path){
+            file_info.path = path;
+            file_info.statResult = stat(file_info.path.c_str(), &file_info.statbuf);
+            if (file_info.statResult == 0)
+            {
+                std::size_t last_dot = path.find_last_of(".");
+                std::string extension = path.substr(last_dot+1);
+                std::string mimeType = "";
+                code = 200;
+                this->add_header("Content-length", std::to_string(file_info.statbuf.st_size));
+                
+                if (extension != ""){
+                    mimeType = mime_types[extension];
+                    if (mimeType != "")
+                        this-> add_header("Content-Type", mimeType);
+                    else
+                        this-> add_header("content-Type", "text/plain");
+                }
+            }
+            else
+            {
+                code = 404;
+                this->end();
+            }
+        }
+
+        template<typename Adaptor>
+        void do_write_sendfile(Adaptor adaptor) {
+
+            if (file_info.statResult == 0)
+            {
+
+                std::ifstream is(file_info.path.c_str(), std::ios::in | std::ios::binary);
+                char buf[16384];
+                while (is.read(buf, sizeof(buf)).gcount() > 0)
+                {
+                    std::vector<asio::const_buffer> buffers;
+                    buffers.push_back(boost::asio::buffer(buf));
+                    boost::asio::write(adaptor->socket(), buffers, [this](std::error_code ec, std::size_t)
+                    {
+                        if (!ec)
+                        {
+                            //CROW_LOG_DEBUG << "sending file, no error";
+                            return false;
+                        }
+                        else
+                        {
+                            CROW_LOG_ERROR << ec << " - happened while sending file";
+                            this->end();
+                            return true;
+                        }
+                    });
+                }
+            }
+        }
+#endif
+/* static file support end */
         private:
             bool completed_{};
             std::function<void()> complete_request_handler_;

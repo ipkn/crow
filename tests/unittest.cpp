@@ -1222,6 +1222,57 @@ TEST(route_dynamic)
     }
 }
 
+#include <sys/stat.h>
+TEST(send_file)
+{
+    SimpleApp app;
+
+    CROW_ROUTE(app, "/jpg")
+    ([](const crow::request&, crow::response& res) {
+        res.set_static_file_info("img/cat.jpg");
+        res.end();
+    });
+
+    CROW_ROUTE(app, "/jpg2")
+    ([](const crow::request&, crow::response& res) {
+        res.set_static_file_info("img/cat2.jpg");
+        res.end();
+    });
+
+    app.validate();
+
+    {
+        request req;
+        response res;
+
+        req.url = "/jpg";
+
+        app.handle(req, res);
+
+
+        struct stat statbuf;
+        int statResult;
+
+        statResult = stat("img/cat.jpg", &statbuf);
+
+
+
+        ASSERT_EQUAL(200, res.code);
+        ASSERT_EQUAL("image/jpeg", res.headers.find("Content-Type")->second);
+        ASSERT_EQUAL(to_string(statbuf.st_size), res.headers.find("Content-Length")->second);
+    }
+
+    {
+        request req;
+        response res;
+
+        req.url = "/jpg2";
+
+        app.handle(req, res);
+
+        ASSERT_EQUAL(404, res.code);
+    }
+}
 int main()
 {
     return testmain();
