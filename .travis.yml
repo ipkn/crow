@@ -29,7 +29,7 @@ addons:
       - libboost-all-dev
 
 install:
-  - if [ "$PUSH_COVERAGE" == "ON" ]; then pip install --user cpp-coverage; fi
+  - if [ "$PUSH_COVERAGE" == "ON" ]; then pip install --user cpp-coveralls; fi
 
 before_script:
   - export CXX=$COMPILER CC=$CCOMPILER
