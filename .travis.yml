@@ -27,7 +27,6 @@ addons:
       - g++-10
       - clang
       - libboost-all-dev
-      - python-pip
 
 install:
   - if [ "$PUSH_COVERAGE" == "ON" ]; then pip install --user cpp-coverage; fi
