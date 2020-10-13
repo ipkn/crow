@@ -1229,13 +1229,13 @@ TEST(send_file)
 
     CROW_ROUTE(app, "/jpg")
     ([](const crow::request&, crow::response& res) {
-        res.set_static_file_info("img/cat.jpg");
+        res.set_static_file_info("tests/img/cat.jpg");
         res.end();
     });
 
     CROW_ROUTE(app, "/jpg2")
     ([](const crow::request&, crow::response& res) {
-        res.set_static_file_info("img/cat2.jpg");
+        res.set_static_file_info("tests/img/cat2.jpg"); //This file is nonexistent on purpose
         res.end();
     });
 
@@ -1253,7 +1253,7 @@ TEST(send_file)
         struct stat statbuf;
         int statResult;
 
-        statResult = stat("img/cat.jpg", &statbuf);
+        statResult = stat("tests/img/cat.jpg", &statbuf);
 
 
 

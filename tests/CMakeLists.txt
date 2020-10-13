@@ -20,6 +20,7 @@ target_link_libraries(unittest gcov)
 endif()
 
 add_subdirectory(template)
+add_subdirectory(img)
 #CXXFLAGS="-g -O0 -Wall -W -Wshadow -Wunused-variable \
 #Wunused-parameter -Wunused-function -Wunused -Wno-system-headers \
 #-Wno-deprecated -Woverloaded-virtual -Wwrite-strings -fprofile-arcs -ftest-coverage"
