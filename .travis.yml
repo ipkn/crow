@@ -1,10 +1,9 @@
 language: cpp
 
-sudo: false
 cache: ccache
 
-notifications:
-  irc: "chat.freenode.net##crow"
+dist: focal
+
 
 compiler:
   - gcc
@@ -28,7 +27,7 @@ addons:
       - g++-4.9
       - g++-5
       - clang-3.6
-      - libboost1.55-all-dev
+      - libboost-all-dev
       - python-pip
 
 install:
@@ -41,7 +40,7 @@ before_script:
   - cmake --version
   - cmake ..
 
-script: make -j2 && ctest -j2
+script: make -j2 && ctest -V -j2
 
 after_success:
   - cd ..
