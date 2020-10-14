@@ -93,10 +93,10 @@ If you just want to use crow, copy amalgamate/crow_all.h and include it.
 
 ### Requirements
 
- - C++ compiler with good C++11 support (tested with g++>=4.8)
- - boost library
- - CMake for build examples
- - Linking with tcmalloc/jemalloc is recommended for speed.
+ - C++ compiler with good C++11 support (tested with g++>=8).
+ - boost 1.7 library.
+ - (optional) CMake to build tests and/or examples.
+ - (optional) Linking with tcmalloc/jemalloc is recommended for speed.
 
  - Now supporting VS2013 with limited functionality (only run-time check for url is available.)
 
