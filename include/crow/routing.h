@@ -28,7 +28,7 @@ namespace crow
         virtual ~BaseRule()
         {
         }
-        
+
         virtual void validate() = 0;
         std::unique_ptr<BaseRule> upgrade()
         {
@@ -38,13 +38,13 @@ namespace crow
         }
 
         virtual void handle(const request&, response&, const routing_params&) = 0;
-        virtual void handle_upgrade(const request&, response& res, SocketAdaptor&&) 
+        virtual void handle_upgrade(const request&, response& res, SocketAdaptor&&)
         {
             res = response(404);
             res.end();
         }
 #ifdef CROW_ENABLE_SSL
-        virtual void handle_upgrade(const request&, response& res, SSLAdaptor&&) 
+        virtual void handle_upgrade(const request&, response& res, SSLAdaptor&&)
         {
             res = response(404);
             res.end();
@@ -102,12 +102,12 @@ namespace crow
                 response& res;
             };
 
-            template <typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2> 
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename S1, typename S2>
             struct call
             {
             };
 
-            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2>
             struct call<F, NInt, NUint, NDouble, NString, black_magic::S<int64_t, Args1...>, black_magic::S<Args2...>>
             {
                 void operator()(F cparams)
@@ -118,7 +118,7 @@ namespace crow
                 }
             };
 
-            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2>
             struct call<F, NInt, NUint, NDouble, NString, black_magic::S<uint64_t, Args1...>, black_magic::S<Args2...>>
             {
                 void operator()(F cparams)
@@ -129,7 +129,7 @@ namespace crow
                 }
             };
 
-            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2>
             struct call<F, NInt, NUint, NDouble, NString, black_magic::S<double, Args1...>, black_magic::S<Args2...>>
             {
                 void operator()(F cparams)
@@ -140,7 +140,7 @@ namespace crow
                 }
             };
 
-            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2> 
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1, typename ... Args2>
             struct call<F, NInt, NUint, NDouble, NString, black_magic::S<std::string, Args1...>, black_magic::S<Args2...>>
             {
                 void operator()(F cparams)
@@ -151,7 +151,7 @@ namespace crow
                 }
             };
 
-            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1> 
+            template <typename F, int NInt, int NUint, int NDouble, int NString, typename ... Args1>
             struct call<F, NInt, NUint, NDouble, NString, black_magic::S<>, black_magic::S<Args1...>>
             {
                 void operator()(F cparams)
@@ -159,7 +159,7 @@ namespace crow
                     cparams.handler(
                         cparams.req,
                         cparams.res,
-                        cparams.params.template get<typename Args1::type>(Args1::pos)... 
+                        cparams.params.template get<typename Args1::type>(Args1::pos)...
                     );
                 }
             };
@@ -229,21 +229,21 @@ namespace crow
                 struct handler_type_helper
                 {
                     using type = std::function<void(const crow::request&, crow::response&, Args...)>;
-                    using args_type = black_magic::S<typename black_magic::promote_t<Args>...>; 
+                    using args_type = black_magic::S<typename black_magic::promote_t<Args>...>;
                 };
 
                 template <typename ... Args>
                 struct handler_type_helper<const request&, Args...>
                 {
                     using type = std::function<void(const crow::request&, crow::response&, Args...)>;
-                    using args_type = black_magic::S<typename black_magic::promote_t<Args>...>; 
+                    using args_type = black_magic::S<typename black_magic::promote_t<Args>...>;
                 };
 
                 template <typename ... Args>
                 struct handler_type_helper<const request&, response&, Args...>
                 {
                     using type = std::function<void(const crow::request&, crow::response&, Args...)>;
-                    using args_type = black_magic::S<typename black_magic::promote_t<Args>...>; 
+                    using args_type = black_magic::S<typename black_magic::promote_t<Args>...>;
                 };
 
                 typename handler_type_helper<ArgsWrapped...>::type handler_;
@@ -253,7 +253,7 @@ namespace crow
                     detail::routing_handler_call_helper::call<
                         detail::routing_handler_call_helper::call_params<
                             decltype(handler_)>,
-                        0, 0, 0, 0, 
+                        0, 0, 0, 0,
                         typename handler_type_helper<ArgsWrapped...>::args_type,
                         black_magic::S<>
                     >()(
@@ -286,7 +286,7 @@ namespace crow
             res.end();
         }
 
-        void handle_upgrade(const request& req, response&, SocketAdaptor&& adaptor) override 
+        void handle_upgrade(const request& req, response&, SocketAdaptor&& adaptor) override
         {
             new crow::websocket::Connection<SocketAdaptor>(req, std::move(adaptor), open_handler_, message_handler_, close_handler_, error_handler_, accept_handler_);
         }
@@ -344,7 +344,7 @@ namespace crow
     struct RuleParameterTraits
     {
         using self_t = T;
-        WebSocketRule& websocket() 
+        WebSocketRule& websocket()
         {
             auto p =new WebSocketRule(((self_t*)this)->rule_);
             ((self_t*)this)->rule_to_upgrade_.reset(p);
@@ -414,7 +414,7 @@ namespace crow
 #else
         template <typename Func, unsigned ... Indices>
 #endif
-        std::function<void(const request&, response&, const routing_params&)> 
+        std::function<void(const request&, response&, const routing_params&)>
         wrap(Func f, black_magic::seq<Indices...>)
         {
 #ifdef CROW_MSVC_WORKAROUND
@@ -423,7 +423,7 @@ namespace crow
             using function_t = utility::function_traits<Func>;
 #endif
             if (!black_magic::is_parameter_tag_compatible(
-                black_magic::get_parameter_tag_runtime(rule_.c_str()), 
+                black_magic::get_parameter_tag_runtime(rule_.c_str()),
                 black_magic::compute_parameter_tag_from_args_list<
                     typename function_t::template arg<Indices>...>::value))
             {
@@ -471,9 +471,9 @@ namespace crow
         operator()(Func&& f)
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
-                black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value , 
+                black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value ,
                 "Handler type is mismatched with URL parameters");
-            static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value, 
+            static_assert(!std::is_same<void, decltype(f(std::declval<Args>()...))>::value,
                 "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
 
             handler_ = (
@@ -491,14 +491,14 @@ namespace crow
         template <typename Func>
         typename std::enable_if<
             !black_magic::CallHelper<Func, black_magic::S<Args...>>::value &&
-            black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value, 
+            black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value,
             void>::type
         operator()(Func&& f)
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
-                black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value, 
+                black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value,
                 "Handler type is mismatched with URL parameters");
-            static_assert(!std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<Args>()...))>::value, 
+            static_assert(!std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<Args>()...))>::value,
                 "Handler function cannot have void return type; valid return types: string, int, crow::resposne, crow::json::wvalue");
 
             handler_ = (
@@ -516,16 +516,16 @@ namespace crow
         template <typename Func>
         typename std::enable_if<
             !black_magic::CallHelper<Func, black_magic::S<Args...>>::value &&
-            !black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value, 
+            !black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value,
             void>::type
         operator()(Func&& f)
         {
             static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
                 black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value ||
                 black_magic::CallHelper<Func, black_magic::S<crow::request, crow::response&, Args...>>::value
-                , 
+                ,
                 "Handler type is mismatched with URL parameters");
-            static_assert(std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<crow::response&>(), std::declval<Args>()...))>::value, 
+            static_assert(std::is_same<void, decltype(f(std::declval<crow::request>(), std::declval<crow::response&>(), std::declval<Args>()...))>::value,
                 "Handler function with response argument should have void return type");
 
                 handler_ = std::move(f);
@@ -542,9 +542,9 @@ namespace crow
         {
             detail::routing_handler_call_helper::call<
                 detail::routing_handler_call_helper::call_params<
-                    decltype(handler_)>, 
-                0, 0, 0, 0, 
-                black_magic::S<Args...>, 
+                    decltype(handler_)>,
+                0, 0, 0, 0,
+                black_magic::S<Args...>,
                 black_magic::S<>
             >()(
                 detail::routing_handler_call_helper::call_params<
@@ -571,11 +571,11 @@ namespace crow
 
             bool IsSimpleNode() const
             {
-                return 
+                return
                     !rule_index &&
                     std::all_of(
-                        std::begin(param_childrens), 
-                        std::end(param_childrens), 
+                        std::begin(param_childrens),
+                        std::end(param_childrens),
                         [](unsigned x){ return !x; });
             }
         };
@@ -930,8 +930,8 @@ public:
                         per_methods_[method].rules.emplace_back(ruleObject);
                         per_methods_[method].trie.add(rule, per_methods_[method].rules.size() - 1);
 
-                        // directory case: 
-                        //   request to `/about' url matches `/about/' rule 
+                        // directory case:
+                        //   request to `/about' url matches `/about/' rule
                         if (has_trailing_slash)
                         {
                             per_methods_[method].trie.add(rule_without_trailing_slash, RULE_SPECIAL_REDIRECT_SLASH);
@@ -959,7 +959,7 @@ public:
             }
         }
 
-        template <typename Adaptor> 
+        template <typename Adaptor>
         void handle_upgrade(const request& req, response& res, Adaptor&& adaptor)
         {
             if (req.method >= HTTPMethod::InternalMethodCount)
@@ -1030,14 +1030,14 @@ public:
                 CROW_LOG_ERROR << "An uncaught exception occurred: " << e.what();
                 res = response(500);
                 res.end();
-                return;   
+                return;
             }
             catch(...)
             {
                 CROW_LOG_ERROR << "An uncaught exception occurred. The type was unknown so no information was available.";
                 res = response(500);
                 res.end();
-                return;   
+                return;
             }
         }
 
@@ -1113,14 +1113,14 @@ public:
                 CROW_LOG_ERROR << "An uncaught exception occurred: " << e.what();
                 res = response(500);
                 res.end();
-                return;   
+                return;
             }
             catch(...)
             {
                 CROW_LOG_ERROR << "An uncaught exception occurred. The type was unknown so no information was available.";
                 res = response(500);
                 res.end();
-                return;   
+                return;
             }
         }
 
