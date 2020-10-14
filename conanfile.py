@@ -1,6 +1,5 @@
 from conans import ConanFile, CMake
 
-
 class CrowConan(ConanFile):
     name = "Crow"
     version = "0.1"
