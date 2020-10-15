@@ -964,34 +964,25 @@ public:
         {
             if (req.method >= HTTPMethod::InternalMethodCount)
                 return;
-            auto& per_method = per_methods_[(int)req.method];
-            auto& trie = per_method.trie;
-            auto& rules = per_method.rules;
 
-            auto found = trie.find(req.url);
-            unsigned rule_index = found.first;
+            auto& per_method = per_methods_[(int)req.method];
+            auto& rules = per_method.rules;
+            unsigned rule_index = per_method.trie.find(req.url).first;
+
             if (!rule_index)
             {
                 for (auto& per_method: per_methods_)
                 {
-                    auto& trie = per_method.trie;
-                    auto& rules = per_method.rules;
-
-                    auto found = trie.find(req.url);
-
-                    unsigned rule_index = found.first;
-
-                    if (rule_index)
+                    if (per_method.trie.find(req.url).first)
                     {
-                        CROW_LOG_DEBUG << "Incorrect method " << req.url << " " << method_name(req.method);
+                        CROW_LOG_DEBUG << "Cannot match method " << req.url << " " << method_name(req.method);
                         res = response(405);
                         res.end();
                         return;
                     }
                 }
 
-
-                CROW_LOG_INFO << "Cannot match rules " << req.url << ' ' << method_name(req.method);
+                CROW_LOG_INFO << "Cannot match rules " << req.url;
                 res = response(404);
                 res.end();
                 return;
@@ -1057,24 +1048,16 @@ public:
             {
                 for (auto& per_method: per_methods_)
                 {
-                    auto& trie = per_method.trie;
-                    auto& rules = per_method.rules;
-
-                    auto found = trie.find(req.url);
-
-                    unsigned rule_index = found.first;
-
-                    if (rule_index)
+                    if (per_method.trie.find(req.url).first)
                     {
-                        CROW_LOG_DEBUG << "Incorrect method " << req.url << " " << method_name(req.method);
+                        CROW_LOG_DEBUG << "Cannot match method " << req.url << " " << method_name(req.method);
                         res = response(405);
                         res.end();
                         return;
                     }
                 }
 
-
-                CROW_LOG_DEBUG << "Cannot match rules " << req.url << ' ' << method_name(req.method);
+                CROW_LOG_DEBUG << "Cannot match rules " << req.url;
                 res = response(404);
                 res.end();
                 return;
