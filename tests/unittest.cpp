@@ -408,6 +408,17 @@ TEST(http_method)
         ASSERT_NOTEQUAL("get", res.body);
     }
 
+    {
+        request req;
+        response res;
+
+        req.url = "/get_only";
+        req.method = "POST"_method;
+        app.handle(req, res);
+
+        ASSERT_EQUAL(405, res.code);
+    }
+
 }
 
 TEST(server_handling_error_request)
