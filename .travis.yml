@@ -18,6 +18,7 @@ env:
     - GH_REPO_NAME: crow
     - DOXYFILE: $TRAVIS_BUILD_DIR/Doxyfile
     - GH_REPO_REF: github.com/mrozigor/crow.git
+    - THEME_REPO_REF: github.com/The-EDev/darxygen.git
 
 addons:
   apt:
