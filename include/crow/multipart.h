@@ -50,10 +50,10 @@ namespace crow
 
                 for (uint8_t i=0 ; i<parts.size(); i++)
                 {
-                    str << delimiter << std::endl;
+                    str << delimiter << crlf;
                     str << dump(i);
                 }
-                str << delimiter << "--" << std::endl;
+                str << delimiter << "--" << crlf;
                 return str.str();
             }
 
@@ -69,10 +69,10 @@ namespace crow
                     {
                         str << "; " << it.first << '=' << pad(it.second);
                     }
-                    str << std::endl;
+                    str << crlf;
                 }
-                str << std::endl;
-                str << item.body << std::endl;
+                str << crlf;
+                str << item.body << crlf;
                 return str.str();
             }
 
