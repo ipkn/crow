@@ -11,7 +11,6 @@
 #include "crow/dumb_timer_queue.h"
 #include "crow/utility.h"
 #include "crow/common.h"
-#include "crow/mime_types.h"
 #include "crow/http_request.h"
 #include "crow/websocket.h"
 #include "crow/parser.h"
