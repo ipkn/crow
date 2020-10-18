@@ -46,14 +46,14 @@ namespace crow
             const std::string dump()
             {
                 std::stringstream str;
-                std::string delimiter = "--" + boundary;
+                std::string delimiter = dd + boundary;
 
-                for (uint8_t i=0 ; i<parts.size(); i++)
+                for (uint i=0 ; i<parts.size(); i++)
                 {
                     str << delimiter << crlf;
                     str << dump(i);
                 }
-                str << delimiter << "--" << crlf;
+                str << delimiter << dd << crlf;
                 return str.str();
             }
 
@@ -89,13 +89,12 @@ namespace crow
 
           private:
 
-            std::string get_boundary(std::string header)
+            std::string get_boundary(const std::string& header)
             {
                 size_t found = header.find("boundary=");
                 if (found)
                     return header.substr(found+9);
-                static std::string empty;
-                return empty;
+                return std::string();
             }
 
             std::vector<part> parse_body(std::string body)
@@ -109,11 +108,12 @@ namespace crow
                   {
                       size_t found = body.find(delimiter);
                       std::string section = body.substr(0, found);
+
                       //+2 is the CRLF
                       //We don't check it and delete it so that the same delimiter can be used for
                       //the last delimiter (--delimiter--CRLF).
                       body.erase(0, found + delimiter.length() + 2);
-                      if (section != "")
+                      if (!section.empty())
                       {
                           sections.emplace_back(parse_section(section));
                       }
@@ -136,7 +136,7 @@ namespace crow
 
             void parse_section_head(std::string& lines, part& part)
             {
-                while (lines != "")
+                while (!lines.empty())
                 {
                     header to_add;
 
@@ -144,7 +144,7 @@ namespace crow
                     std::string line = lines.substr(0, found);
                     lines.erase(0, found+2);
                     //add the header if available
-                    if (line != "")
+                    if (!line.empty())
                     {
                         size_t found = line.find("; ");
                         std::string header = line.substr(0, found);
@@ -159,7 +159,7 @@ namespace crow
                     }
 
                     //add the parameters
-                    while (line != "")
+                    while (!line.empty())
                     {
                         size_t found = line.find("; ");
                         std::string param = line.substr(0, found);
@@ -178,14 +178,14 @@ namespace crow
                 }
             }
 
-            inline std::string trim (std::string& string, char excess = '"')
+            inline std::string trim (std::string& string, const char& excess = '"')
             {
                 if (string.length() > 1 && string[0] == excess && string[string.length()-1] == excess)
                     return string.substr(1, string.length()-2);
                 return string;
             }
 
-            inline std::string pad (std::string& string, char padding = '"')
+            inline std::string pad (std::string& string, const char& padding = '"')
             {
                     return (padding + string + padding);
             }
