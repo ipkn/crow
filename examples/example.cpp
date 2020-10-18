@@ -167,7 +167,8 @@ int main()
     CROW_ROUTE(app,"/multipart")
     ([](const crow::request& req){
         crow::multipart::message msg(req);
-        CROW_LOG_INFO << "body of the first part " << msg.parts[0];
+        CROW_LOG_INFO << "body of the first part " << msg.parts[0].body;
+        return "it works!";
     });
 
     // enables all log
