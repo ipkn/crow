@@ -1,59 +1,18 @@
-//#define CROW_ENABLE_LOGGING
-#define CROW_LOG_LEVEL 0
-#define CROW_ENABLE_DEBUG
+#define CATCH_CONFIG_MAIN
+#define CROW_LOG_LEVEL 10
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <sys/stat.h>
 #include "crow.h"
+#include "catch.hpp"
 
 using namespace std;
 using namespace crow;
 
-struct Test { Test(); virtual void test() = 0; };
-vector<Test*> tests;
-Test::Test() { tests.push_back(this); }
-
-bool failed__ = false;
-void error_print()
-{
-    cerr << endl;
-}
-
-template <typename A, typename ...Args>
-void error_print(const A& a, Args...args)
-{
-    cerr<<a;
-    error_print(args...);
-}
-
-template <typename ...Args>
-void fail(Args...args) { error_print(args...);failed__ = true; }
-
-#define ASSERT_TRUE(x) if (!(x)) fail(__FILE__ ":", __LINE__, ": Assert fail: expected ", #x, " is true, at " __FILE__ ":",__LINE__)
-#define ASSERT_EQUAL(a, b) if ((a) != (b)) fail(__FILE__ ":", __LINE__, ": Assert fail: expected ", (a), " actual ", (b),  ", " #a " == " #b ", at " __FILE__ ":",__LINE__)
-#define ASSERT_NOTEQUAL(a, b) if ((a) == (b)) fail(__FILE__ ":", __LINE__, ": Assert fail: not expected ", (a), ", " #a " != " #b ", at " __FILE__ ":",__LINE__)
-#define ASSERT_THROW(x) \
-    try \
-    { \
-        x; \
-        fail(__FILE__ ":", __LINE__, ": Assert fail: exception should be thrown"); \
-    } \
-    catch(std::exception&) \
-    { \
-    }
-
-
-
-#define TEST(x) struct test##x:public Test{void test();}x##_; \
-    void test##x::test()
-#define DISABLE_TEST(x) struct test##x{void test();}x##_; \
-    void test##x::test()
-
-
 #define LOCALHOST_ADDRESS "127.0.0.1"
 
-
-TEST(Rule)
+TEST_CASE("Rule")
 {
     TaggedRule<> r("/http/");
     r.name("abc");
@@ -62,7 +21,7 @@ TEST(Rule)
     try
     {
         r.validate();
-        fail("empty handler should fail to validate");
+        FAIL_CHECK("empty handler should fail to validate");
     }
     catch(runtime_error& e)
     {
@@ -78,9 +37,9 @@ TEST(Rule)
     response res;
 
     // executing handler
-    ASSERT_EQUAL(0, x);
+    REQUIRE(0 == x);
     r.handle(request(), res, routing_params());
-    ASSERT_EQUAL(1, x);
+    REQUIRE(1 == x);
 
     // registering handler with request argument
     r([&x](const crow::request&){x = 2;return "";});
@@ -88,32 +47,32 @@ TEST(Rule)
     r.validate();
 
     // executing handler
-    ASSERT_EQUAL(1, x);
+    REQUIRE(1 == x);
     r.handle(request(), res, routing_params());
-    ASSERT_EQUAL(2, x);
+    REQUIRE(2 == x);
 }
 
-TEST(ParameterTagging)
+TEST_CASE("ParameterTagging")
 {
     static_assert(black_magic::is_valid("<int><int><int>"), "valid url");
     static_assert(!black_magic::is_valid("<int><int<<int>"), "invalid url");
     static_assert(!black_magic::is_valid("nt>"), "invalid url");
-    ASSERT_EQUAL(1, black_magic::get_parameter_tag("<int>"));
-    ASSERT_EQUAL(2, black_magic::get_parameter_tag("<uint>"));
-    ASSERT_EQUAL(3, black_magic::get_parameter_tag("<float>"));
-    ASSERT_EQUAL(3, black_magic::get_parameter_tag("<double>"));
-    ASSERT_EQUAL(4, black_magic::get_parameter_tag("<str>"));
-    ASSERT_EQUAL(4, black_magic::get_parameter_tag("<string>"));
-    ASSERT_EQUAL(5, black_magic::get_parameter_tag("<path>"));
-    ASSERT_EQUAL(6*6+6+1, black_magic::get_parameter_tag("<int><int><int>"));
-    ASSERT_EQUAL(6*6+6+2, black_magic::get_parameter_tag("<uint><int><int>"));
-    ASSERT_EQUAL(6*6+6*3+2, black_magic::get_parameter_tag("<uint><double><int>"));
+    REQUIRE(1 == black_magic::get_parameter_tag("<int>"));
+    REQUIRE(2 == black_magic::get_parameter_tag("<uint>"));
+    REQUIRE(3 == black_magic::get_parameter_tag("<float>"));
+    REQUIRE(3 == black_magic::get_parameter_tag("<double>"));
+    REQUIRE(4 == black_magic::get_parameter_tag("<str>"));
+    REQUIRE(4 == black_magic::get_parameter_tag("<string>"));
+    REQUIRE(5 == black_magic::get_parameter_tag("<path>"));
+    REQUIRE(6*6+6+1 == black_magic::get_parameter_tag("<int><int><int>"));
+    REQUIRE(6*6+6+2 == black_magic::get_parameter_tag("<uint><int><int>"));
+    REQUIRE(6*6+6*3+2 == black_magic::get_parameter_tag("<uint><double><int>"));
 
     // url definition parsed in compile time, build into *one number*, and given to template argument
     static_assert(std::is_same<black_magic::S<uint64_t, double, int64_t>, black_magic::arguments<6*6+6*3+2>::type>::value, "tag to type container");
 }
 
-TEST(PathRouting)
+TEST_CASE("PathRouting")
 {
     SimpleApp app;
 
@@ -137,7 +96,7 @@ TEST(PathRouting)
 
         app.handle(req, res);
 
-        ASSERT_EQUAL(200, res.code);
+        REQUIRE(200 == res.code);
     }
     {
         request req;
@@ -146,7 +105,7 @@ TEST(PathRouting)
         req.url = "/file/";
 
         app.handle(req, res);
-        ASSERT_EQUAL(404, res.code);
+        REQUIRE(404 == res.code);
     }
     {
         request req;
@@ -155,7 +114,7 @@ TEST(PathRouting)
         req.url = "/path";
 
         app.handle(req, res);
-        ASSERT_NOTEQUAL(404, res.code);
+        REQUIRE(404 != res.code);
     }
     {
         request req;
@@ -164,11 +123,11 @@ TEST(PathRouting)
         req.url = "/path/";
 
         app.handle(req, res);
-        ASSERT_EQUAL(200, res.code);
+        REQUIRE(200 == res.code);
     }
 }
 
-TEST(RoutingTest)
+TEST_CASE("RoutingTest")
 {
     SimpleApp app;
     int A{};
@@ -211,7 +170,7 @@ TEST(RoutingTest)
 
         app.handle(req, res);
 
-        ASSERT_EQUAL(404, res.code);
+        REQUIRE(404 == res.code);
 	}
 
     {
@@ -222,9 +181,9 @@ TEST(RoutingTest)
 
         app.handle(req, res);
 
-        ASSERT_EQUAL(200, res.code);
+        REQUIRE(200 == res.code);
 
-        ASSERT_EQUAL(1001999, B);
+        REQUIRE(1001999 == B);
     }
 
     {
@@ -235,10 +194,10 @@ TEST(RoutingTest)
 
         app.handle(req, res);
 
-        ASSERT_EQUAL(200, res.code);
+        REQUIRE(200 == res.code);
 
-        ASSERT_EQUAL(-100, A);
-        ASSERT_EQUAL(1999, B);
+        REQUIRE(-100 == A);
+        REQUIRE(1999 == B);
     }
     {
         request req;
@@ -249,12 +208,12 @@ TEST(RoutingTest)
 
         app.handle(req, res);
 
-        ASSERT_EQUAL(200, res.code);
+        REQUIRE(200 == res.code);
 
-        ASSERT_EQUAL(5000, A);
-        ASSERT_EQUAL(3, B);
-        ASSERT_EQUAL(-2.71828, C);
-        ASSERT_EQUAL("hellhere", D);
+        REQUIRE(5000 == A);
+        REQUIRE(3 == B);
+        REQUIRE(-2.71828 == C);
+        REQUIRE("hellhere" == D);
     }
     {
         request req;
@@ -265,21 +224,21 @@ TEST(RoutingTest)
 
         app.handle(req, res);
 
-        ASSERT_EQUAL(200, res.code);
+        REQUIRE(200 == res.code);
 
-        ASSERT_EQUAL(-5, A);
-        ASSERT_EQUAL(999, B);
-        ASSERT_EQUAL(3.141592, C);
-        ASSERT_EQUAL("hello_there", D);
-        ASSERT_EQUAL("a/b/c/d", E);
+        REQUIRE(-5 == A);
+        REQUIRE(999 == B);
+        REQUIRE(3.141592 == C);
+        REQUIRE("hello_there" == D);
+        REQUIRE("a/b/c/d" == E);
     }
 }
 
-TEST(simple_response_routing_params)
+TEST_CASE("simple_response_routing_params")
 {
-    ASSERT_EQUAL(100, response(100).code);
-    ASSERT_EQUAL(200, response("Hello there").code);
-    ASSERT_EQUAL(500, response(500, "Internal Error?").code);
+    REQUIRE(100 == response(100).code);
+    REQUIRE(200 == response("Hello there").code);
+    REQUIRE(500 == response(500, "Internal Error?").code);
 
     routing_params rp;
     rp.int_params.push_back(1);
@@ -287,14 +246,14 @@ TEST(simple_response_routing_params)
     rp.uint_params.push_back(2);
     rp.double_params.push_back(3);
     rp.string_params.push_back("hello");
-    ASSERT_EQUAL(1, rp.get<int64_t>(0));
-    ASSERT_EQUAL(5, rp.get<int64_t>(1));
-    ASSERT_EQUAL(2, rp.get<uint64_t>(0));
-    ASSERT_EQUAL(3, rp.get<double>(0));
-    ASSERT_EQUAL("hello", rp.get<string>(0));
+    REQUIRE(1 == rp.get<int64_t>(0));
+    REQUIRE(5 == rp.get<int64_t>(1));
+    REQUIRE(2 == rp.get<uint64_t>(0));
+    REQUIRE(3 == rp.get<double>(0));
+    REQUIRE("hello" == rp.get<string>(0));
 }
 
-TEST(handler_with_response)
+TEST_CASE("handler_with_response")
 {
     SimpleApp app;
     CROW_ROUTE(app, "/")([](const crow::request&, crow::response&)
@@ -302,7 +261,7 @@ TEST(handler_with_response)
     });
 }
 
-TEST(http_method)
+TEST_CASE("http_method")
 {
     SimpleApp app;
 
@@ -352,7 +311,7 @@ TEST(http_method)
         req.url = "/";
         app.handle(req, res);
 
-        ASSERT_EQUAL("2", res.body);
+        REQUIRE("2" == res.body);
     }
     {
         request req;
@@ -362,7 +321,7 @@ TEST(http_method)
         req.method = "POST"_method;
         app.handle(req, res);
 
-        ASSERT_EQUAL("1", res.body);
+        REQUIRE("1" == res.body);
     }
 
     {
@@ -372,7 +331,7 @@ TEST(http_method)
         req.url = "/get_only";
         app.handle(req, res);
 
-        ASSERT_EQUAL("get", res.body);
+        REQUIRE("get" == res.body);
     }
 
     {
@@ -383,7 +342,7 @@ TEST(http_method)
         req.method = "PATCH"_method;
         app.handle(req, res);
 
-        ASSERT_EQUAL("patch", res.body);
+        REQUIRE("patch" == res.body);
     }
 
     {
@@ -394,7 +353,7 @@ TEST(http_method)
         req.method = "PURGE"_method;
         app.handle(req, res);
 
-        ASSERT_EQUAL("purge", res.body);
+        REQUIRE("purge" == res.body);
     }
 
     {
@@ -405,7 +364,7 @@ TEST(http_method)
         req.method = "POST"_method;
         app.handle(req, res);
 
-        ASSERT_NOTEQUAL("get", res.body);
+        REQUIRE("get" != res.body);
     }
 
     {
@@ -416,12 +375,12 @@ TEST(http_method)
         req.method = "POST"_method;
         app.handle(req, res);
 
-        ASSERT_EQUAL(405, res.code);
+        REQUIRE(405 == res.code);
     }
 
 }
 
-TEST(server_handling_error_request)
+TEST_CASE("server_handling_error_request")
 {
     static char buf[2048];
     SimpleApp app;
@@ -442,7 +401,7 @@ TEST(server_handling_error_request)
         try
         {
             c.receive(asio::buffer(buf, 2048));
-            fail();
+            FAIL_CHECK();
         }
         catch(std::exception& e)
         {
@@ -452,7 +411,7 @@ TEST(server_handling_error_request)
     app.stop();
 }
 
-TEST(multi_server)
+TEST_CASE("multi_server")
 {
     static char buf[2048];
     SimpleApp app1, app2;
@@ -478,7 +437,7 @@ TEST(multi_server)
         c.send(asio::buffer(sendmsg));
 
         size_t recved = c.receive(asio::buffer(buf, 2048));
-        ASSERT_EQUAL('A', buf[recved-1]);
+        REQUIRE('A' == buf[recved-1]);
     }
 
     {
@@ -492,14 +451,14 @@ TEST(multi_server)
         }
 
         size_t recved = c.receive(asio::buffer(buf, 2048));
-        ASSERT_EQUAL('B', buf[recved-1]);
+        REQUIRE('B' == buf[recved-1]);
     }
 
     app1.stop();
     app2.stop();
 }
 
-TEST(json_read)
+TEST_CASE("json_read")
 {
 	{
         const char* json_error_tests[] =
@@ -521,7 +480,7 @@ TEST(json_read)
             auto x = json::load(s);
             if (x)
             {
-                fail("should fail to parse ", s);
+              FAIL_CHECK(std::string("should fail to parse ") + s);
                 return;
             }
         }
@@ -529,54 +488,54 @@ TEST(json_read)
 
     auto x = json::load(R"({"message":"hello, world"})");
     if (!x)
-        fail("fail to parse");
-    ASSERT_EQUAL("hello, world", x["message"]);
-    ASSERT_EQUAL(1, x.size());
-    ASSERT_EQUAL(false, x.has("mess"));
-    ASSERT_THROW(x["mess"]);
+        FAIL_CHECK("fail to parse");
+    REQUIRE("hello, world" == x["message"]);
+    REQUIRE(1 == x.size());
+    REQUIRE(false == x.has("mess"));
+    REQUIRE_THROWS(x["mess"]);
     // TODO returning false is better than exception
     //ASSERT_THROW(3 == x["message"]);
-    ASSERT_EQUAL(12, x["message"].size());
+    REQUIRE(12 == x["message"].size());
 
     std::string s = R"({"int":3,     "ints"  :[1,2,3,4,5],	"bigint":1234567890	})";
     auto y = json::load(s);
-    ASSERT_EQUAL(3, y["int"]);
-    ASSERT_EQUAL(3.0, y["int"]);
-    ASSERT_NOTEQUAL(3.01, y["int"]);
-	ASSERT_EQUAL(5, y["ints"].size());
-	ASSERT_EQUAL(1, y["ints"][0]);
-	ASSERT_EQUAL(2, y["ints"][1]);
-	ASSERT_EQUAL(3, y["ints"][2]);
-	ASSERT_EQUAL(4, y["ints"][3]);
-	ASSERT_EQUAL(5, y["ints"][4]);
-	ASSERT_EQUAL(1u, y["ints"][0]);
-	ASSERT_EQUAL(1.f, y["ints"][0]);
+    REQUIRE(3 == y["int"]);
+    REQUIRE(3.0 == y["int"]);
+    REQUIRE(3.01 != y["int"]);
+	REQUIRE(5 == y["ints"].size());
+	REQUIRE(1 == y["ints"][0]);
+	REQUIRE(2 == y["ints"][1]);
+	REQUIRE(3 == y["ints"][2]);
+	REQUIRE(4 == y["ints"][3]);
+	REQUIRE(5 == y["ints"][4]);
+	REQUIRE(1u == y["ints"][0]);
+	REQUIRE(1.f == y["ints"][0]);
 
 	int q = (int)y["ints"][1];
-	ASSERT_EQUAL(2, q);
+	REQUIRE(2 == q);
 	q = y["ints"][2].i();
-	ASSERT_EQUAL(3, q);
-    ASSERT_EQUAL(1234567890, y["bigint"]);
+	REQUIRE(3 == q);
+    REQUIRE(1234567890 == y["bigint"]);
 
     std::string s2 = R"({"bools":[true, false], "doubles":[1.2, -3.4]})";
     auto z = json::load(s2);
-    ASSERT_EQUAL(2, z["bools"].size());
-    ASSERT_EQUAL(2, z["doubles"].size());
-    ASSERT_EQUAL(true, z["bools"][0].b());
-    ASSERT_EQUAL(false, z["bools"][1].b());
-    ASSERT_EQUAL(1.2, z["doubles"][0].d());
-    ASSERT_EQUAL(-3.4, z["doubles"][1].d());
+    REQUIRE(2 == z["bools"].size());
+    REQUIRE(2 == z["doubles"].size());
+    REQUIRE(true == z["bools"][0].b());
+    REQUIRE(false == z["bools"][1].b());
+    REQUIRE(1.2 == z["doubles"][0].d());
+    REQUIRE(-3.4 == z["doubles"][1].d());
 
     std::string s3 = R"({"uint64": 18446744073709551615})";
     auto z1 = json::load(s3);
-    ASSERT_EQUAL(18446744073709551615ull, z1["uint64"].u());
+    REQUIRE(18446744073709551615ull == z1["uint64"].u());
 
     std::ostringstream os;
     os << z1["uint64"];
-    ASSERT_EQUAL("18446744073709551615", os.str());
+    REQUIRE("18446744073709551615" == os.str());
 }
 
-TEST(json_read_real)
+TEST_CASE("json_read_real")
 {
     vector<std::string> v{"0.036303908355795146", "0.18320417789757412",
     "0.05319940476190476", "0.15224702380952382", "0", "0.3296201145552561",
@@ -595,106 +554,106 @@ TEST(json_read_real)
     for(auto x:v)
     {
         CROW_LOG_DEBUG << x;
-        ASSERT_EQUAL(json::load(x).d(), boost::lexical_cast<double>(x));
+        REQUIRE(json::load(x).d() == boost::lexical_cast<double>(x));
     }
 
     auto ret = json::load(R"---({"balloons":[{"mode":"ellipse","left":0.036303908355795146,"right":0.18320417789757412,"top":0.05319940476190476,"bottom":0.15224702380952382,"index":"0"},{"mode":"ellipse","left":0.3296201145552561,"right":0.47921580188679247,"top":0.05873511904761905,"bottom":0.1577827380952381,"index":"1"},{"mode":"ellipse","left":0.4996841307277628,"right":0.6425412735849056,"top":0.052113095238095236,"bottom":0.12830357142857143,"index":"2"},{"mode":"ellipse","left":0.7871041105121294,"right":0.954220013477089,"top":0.05869047619047619,"bottom":0.1625,"index":"3"},{"mode":"ellipse","left":0.8144794474393531,"right":0.9721613881401617,"top":0.1399404761904762,"bottom":0.24470238095238095,"index":"4"},{"mode":"ellipse","left":0.04527459568733154,"right":0.2096950808625337,"top":0.35267857142857145,"bottom":0.42791666666666667,"index":"5"},{"mode":"ellipse","left":0.855731974393531,"right":0.9352467991913747,"top":0.3816220238095238,"bottom":0.4282886904761905,"index":"6"},{"mode":"ellipse","left":0.39414167789757415,"right":0.5316079851752021,"top":0.3809375,"bottom":0.4571279761904762,"index":"7"},{"mode":"ellipse","left":0.03522995283018868,"right":0.1915641846361186,"top":0.6164136904761904,"bottom":0.7192708333333333,"index":"8"},{"mode":"ellipse","left":0.05675117924528302,"right":0.21308541105121293,"top":0.7045386904761904,"bottom":0.8016815476190476,"index":"9"}]})---");
-    ASSERT_TRUE(ret);
+    REQUIRE(ret);
 }
 
-TEST(json_read_unescaping)
+TEST_CASE("json_read_unescaping")
 {
     {
         auto x = json::load(R"({"data":"\ud55c\n\t\r"})");
         if (!x)
         {
-            fail("fail to parse");
+            FAIL_CHECK("fail to parse");
             return;
         }
-        ASSERT_EQUAL(6, x["data"].size());
-        ASSERT_EQUAL("한\n\t\r", x["data"]);
+        REQUIRE(6 == x["data"].size());
+        REQUIRE("한\n\t\r" == x["data"]);
     }
     {
         // multiple r_string instance
         auto x = json::load(R"({"data":"\ud55c\n\t\r"})");
         auto a = x["data"].s();
         auto b = x["data"].s();
-        ASSERT_EQUAL(6, a.size());
-        ASSERT_EQUAL(6, b.size());
-        ASSERT_EQUAL(6, x["data"].size());
+        REQUIRE(6 == a.size());
+        REQUIRE(6 == b.size());
+        REQUIRE(6 == x["data"].size());
     }
 }
 
-TEST(json_write)
+TEST_CASE("json_write")
 {
     json::wvalue x;
     x["message"] = "hello world";
-    ASSERT_EQUAL(R"({"message":"hello world"})", json::dump(x));
+    REQUIRE(R"({"message":"hello world"})" == json::dump(x));
     x["message"] = std::string("string value");
-    ASSERT_EQUAL(R"({"message":"string value"})", json::dump(x));
+    REQUIRE(R"({"message":"string value"})" == json::dump(x));
     x["message"]["x"] = 3;
-    ASSERT_EQUAL(R"({"message":{"x":3}})", json::dump(x));
+    REQUIRE(R"({"message":{"x":3}})" == json::dump(x));
     x["message"]["y"] = 5;
-    ASSERT_TRUE(R"({"message":{"x":3,"y":5}})" == json::dump(x) || R"({"message":{"y":5,"x":3}})" == json::dump(x));
+    REQUIRE((R"({"message":{"x":3,"y":5}})" == json::dump(x) || R"({"message":{"y":5,"x":3}})" == json::dump(x)));
     x["message"] = 5.5;
-    ASSERT_EQUAL(R"({"message":5.5})", json::dump(x));
+    REQUIRE(R"({"message":5.5})" == json::dump(x));
     x["message"] = 1234567890;
-    ASSERT_EQUAL(R"({"message":1234567890})", json::dump(x));
+    REQUIRE(R"({"message":1234567890})" == json::dump(x));
 
     json::wvalue y;
     y["scores"][0] = 1;
     y["scores"][1] = "king";
     y["scores"][2] = 3.5;
-    ASSERT_EQUAL(R"({"scores":[1,"king",3.5]})", json::dump(y));
+    REQUIRE(R"({"scores":[1,"king",3.5]})" == json::dump(y));
 
     y["scores"][2][0] = "real";
     y["scores"][2][1] = false;
     y["scores"][2][2] = true;
-    ASSERT_EQUAL(R"({"scores":[1,"king",["real",false,true]]})", json::dump(y));
+    REQUIRE(R"({"scores":[1,"king",["real",false,true]]})" == json::dump(y));
 
     y["scores"]["a"]["b"]["c"] = nullptr;
-    ASSERT_EQUAL(R"({"scores":{"a":{"b":{"c":null}}}})", json::dump(y));
+    REQUIRE(R"({"scores":{"a":{"b":{"c":null}}}})" == json::dump(y));
 
     y["scores"] = std::vector<int>{1,2,3};
-    ASSERT_EQUAL(R"({"scores":[1,2,3]})", json::dump(y));
+    REQUIRE(R"({"scores":[1,2,3]})" == json::dump(y));
 
 }
 
-TEST(json_copy_r_to_w_to_r)
+TEST_CASE("json_copy_r_to_w_to_r")
 {
   json::rvalue r = json::load(R"({"smallint":2,"bigint":2147483647,"fp":23.43,"fpsc":2.343e1,"str":"a string","trueval":true,"falseval":false,"nullval":null,"listval":[1,2,"foo","bar"],"obj":{"member":23,"other":"baz"}})");
   json::wvalue w{r};
   json::rvalue x = json::load(json::dump(w)); // why no copy-ctor wvalue -> rvalue?
-  ASSERT_EQUAL(2, x["smallint"]);
-  ASSERT_EQUAL(2147483647, x["bigint"]);
-  ASSERT_EQUAL(23.43, x["fp"]);
-  ASSERT_EQUAL(23.43, x["fpsc"]);
-  ASSERT_EQUAL("a string", x["str"]);
-  ASSERT_TRUE(true == x["trueval"].b());
-  ASSERT_TRUE(false == x["falseval"].b());
-  ASSERT_TRUE(json::type::Null == x["nullval"].t());
-  ASSERT_EQUAL(4u, x["listval"].size());
-  ASSERT_EQUAL(1, x["listval"][0]);
-  ASSERT_EQUAL(2, x["listval"][1]);
-  ASSERT_EQUAL("foo", x["listval"][2]);
-  ASSERT_EQUAL("bar", x["listval"][3]);
-  ASSERT_EQUAL(23, x["obj"]["member"]);
-  ASSERT_EQUAL("member", x["obj"]["member"].key());
-  ASSERT_EQUAL("baz", x["obj"]["other"]);
-  ASSERT_EQUAL("other", x["obj"]["other"].key());
+  REQUIRE(2 == x["smallint"]);
+  REQUIRE(2147483647 == x["bigint"]);
+  REQUIRE(23.43 == x["fp"]);
+  REQUIRE(23.43 == x["fpsc"]);
+  REQUIRE("a string" == x["str"]);
+  REQUIRE(x["trueval"].b());
+  REQUIRE_FALSE(x["falseval"].b());
+  REQUIRE(json::type::Null == x["nullval"].t());
+  REQUIRE(4u == x["listval"].size());
+  REQUIRE(1 == x["listval"][0]);
+  REQUIRE(2 == x["listval"][1]);
+  REQUIRE("foo" == x["listval"][2]);
+  REQUIRE("bar" == x["listval"][3]);
+  REQUIRE(23 == x["obj"]["member"]);
+  REQUIRE("member" == x["obj"]["member"].key());
+  REQUIRE("baz" == x["obj"]["other"]);
+  REQUIRE("other" == x["obj"]["other"].key());
 }
 
-TEST(template_basic)
+TEST_CASE("template_basic")
 {
     auto t = crow::mustache::compile(R"---(attack of {{name}})---");
     crow::mustache::context ctx;
     ctx["name"] = "killer tomatoes";
     auto result = t.render(ctx);
-    ASSERT_EQUAL("attack of killer tomatoes", result);
+    REQUIRE("attack of killer tomatoes" == result);
     //crow::mustache::load("basic.mustache");
 }
 
-TEST(template_load)
+TEST_CASE("template_load")
 {
     crow::mustache::set_base(".");
     ofstream("test.mustache") << R"---(attack of {{name}})---";
@@ -702,39 +661,11 @@ TEST(template_load)
     crow::mustache::context ctx;
     ctx["name"] = "killer tomatoes";
     auto result = t.render(ctx);
-    ASSERT_EQUAL("attack of killer tomatoes", result);
+    REQUIRE("attack of killer tomatoes" == result);
     unlink("test.mustache");
 }
 
-int testmain()
-{
-    bool failed = false;
-    for(auto t:tests)
-    {
-        failed__ = false;
-        try
-        {
-            //cerr << typeid(*t).name() << endl;
-            t->test();
-        }
-        catch(std::exception& e)
-        {
-            fail(e.what());
-        }
-        if (failed__)
-        {
-            cerr << "F";
-            cerr << '\t' << typeid(*t).name() << endl;
-            failed = true;
-        }
-        else
-            cerr << ".";
-    }
-    cerr<<endl;
-    return failed ? -1 : 0;
-}
-
-TEST(black_magic)
+TEST_CASE("black_magic")
 {
     using namespace black_magic;
     static_assert(std::is_same<void, last_element_type<int, char, void>::type>::value, "last_element_type");
@@ -767,7 +698,7 @@ struct NullSimpleMiddleware
 };
 
 
-TEST(middleware_simple)
+TEST_CASE("middleware_simple")
 {
     App<NullMiddleware, NullSimpleMiddleware> app;
     decltype(app)::server_t server(&app, LOCALHOST_ADDRESS, 45451);
@@ -851,7 +782,7 @@ struct ThirdMW
     }
 };
 
-TEST(middleware_context)
+TEST_CASE("middleware_context")
 {
 
     static char buf[2048];
@@ -903,15 +834,15 @@ TEST(middleware_context)
     }
     {
         auto& out = test_middleware_context_vector;
-        ASSERT_EQUAL(1, x);
-        ASSERT_EQUAL(7, out.size());
-        ASSERT_EQUAL("1 before", out[0]);
-        ASSERT_EQUAL("2 before", out[1]);
-        ASSERT_EQUAL("3 before", out[2]);
-        ASSERT_EQUAL("handle", out[3]);
-        ASSERT_EQUAL("3 after", out[4]);
-        ASSERT_EQUAL("2 after", out[5]);
-        ASSERT_EQUAL("1 after", out[6]);
+        REQUIRE(1 == x);
+        REQUIRE(7 == out.size());
+        REQUIRE("1 before" == out[0]);
+        REQUIRE("2 before" == out[1]);
+        REQUIRE("3 before" == out[2]);
+        REQUIRE("handle" == out[3]);
+        REQUIRE("3 after" == out[4]);
+        REQUIRE("2 after" == out[5]);
+        REQUIRE("1 after" == out[6]);
     }
     std::string sendmsg2 = "GET /break\r\n\r\n";
     {
@@ -925,16 +856,16 @@ TEST(middleware_context)
     }
     {
         auto& out = test_middleware_context_vector;
-        ASSERT_EQUAL(4, out.size());
-        ASSERT_EQUAL("1 before", out[0]);
-        ASSERT_EQUAL("2 before", out[1]);
-        ASSERT_EQUAL("2 after", out[2]);
-        ASSERT_EQUAL("1 after", out[3]);
+        REQUIRE(4 == out.size());
+        REQUIRE("1 before" == out[0]);
+        REQUIRE("2 before" == out[1]);
+        REQUIRE("2 after" == out[2]);
+        REQUIRE("1 after" == out[3]);
     }
     app.stop();
 }
 
-TEST(middleware_cookieparser)
+TEST_CASE("middleware_cookieparser")
 {
     static char buf[2048];
 
@@ -973,15 +904,15 @@ TEST(middleware_cookieparser)
         c.close();
     }
     {
-        ASSERT_EQUAL("value1", value1);
-        ASSERT_EQUAL("val=ue2", value2);
-        ASSERT_EQUAL("val\"ue3", value3);
-        ASSERT_EQUAL("val\"ue4", value4);
+        REQUIRE("value1" == value1);
+        REQUIRE("val=ue2" == value2);
+        REQUIRE("val\"ue3" == value3);
+        REQUIRE("val\"ue4" == value4);
     }
     app.stop();
 }
 
-TEST(bug_quick_repeated_request)
+TEST_CASE("bug_quick_repeated_request")
 {
     static char buf[2048];
 
@@ -1012,7 +943,7 @@ TEST(bug_quick_repeated_request)
                         c.send(asio::buffer(sendmsg));
 
                         size_t received = c.receive(asio::buffer(buf, 2048));
-                        ASSERT_EQUAL("hello", std::string(buf + received - 5, buf + received));
+                        REQUIRE("hello" == std::string(buf + received - 5, buf + received));
                     }
                     c.close();
                 }));
@@ -1021,7 +952,7 @@ TEST(bug_quick_repeated_request)
     app.stop();
 }
 
-TEST(simple_url_params)
+TEST_CASE("simple_url_params")
 {
     static char buf[2048];
 
@@ -1056,7 +987,7 @@ TEST(simple_url_params)
         stringstream ss;
         ss << last_url_params;
 
-        ASSERT_EQUAL("[  ]", ss.str());
+        REQUIRE("[  ]" == ss.str());
     }
     // check single presence
     sendmsg = "GET /params?foobar\r\n\r\n";
@@ -1067,9 +998,9 @@ TEST(simple_url_params)
         c.receive(asio::buffer(buf, 2048));
         c.close();
 
-        ASSERT_TRUE(last_url_params.get("missing") == nullptr);
-        ASSERT_TRUE(last_url_params.get("foobar") != nullptr);
-        ASSERT_TRUE(last_url_params.get_list("missing").empty());
+        REQUIRE(last_url_params.get("missing") == nullptr);
+        REQUIRE(last_url_params.get("foobar") != nullptr);
+        REQUIRE(last_url_params.get_list("missing").empty());
     }
     // check multiple presence
     sendmsg = "GET /params?foo&bar&baz\r\n\r\n";
@@ -1080,10 +1011,10 @@ TEST(simple_url_params)
         c.receive(asio::buffer(buf, 2048));
         c.close();
 
-        ASSERT_TRUE(last_url_params.get("missing") == nullptr);
-        ASSERT_TRUE(last_url_params.get("foo") != nullptr);
-        ASSERT_TRUE(last_url_params.get("bar") != nullptr);
-        ASSERT_TRUE(last_url_params.get("baz") != nullptr);
+        REQUIRE(last_url_params.get("missing") == nullptr);
+        REQUIRE(last_url_params.get("foo") != nullptr);
+        REQUIRE(last_url_params.get("bar") != nullptr);
+        REQUIRE(last_url_params.get("baz") != nullptr);
     }
     // check single value
     sendmsg = "GET /params?hello=world\r\n\r\n";
@@ -1094,7 +1025,7 @@ TEST(simple_url_params)
         c.receive(asio::buffer(buf, 2048));
         c.close();
 
-        ASSERT_EQUAL(string(last_url_params.get("hello")), "world");
+        REQUIRE(string(last_url_params.get("hello")) == "world");
     }
     // check multiple value
     sendmsg = "GET /params?hello=world&left=right&up=down\r\n\r\n";
@@ -1105,9 +1036,9 @@ TEST(simple_url_params)
         c.receive(asio::buffer(buf, 2048));
         c.close();
 
-        ASSERT_EQUAL(string(last_url_params.get("hello")), "world");
-        ASSERT_EQUAL(string(last_url_params.get("left")), "right");
-        ASSERT_EQUAL(string(last_url_params.get("up")),  "down");
+        REQUIRE(string(last_url_params.get("hello")) == "world");
+        REQUIRE(string(last_url_params.get("left")) == "right");
+        REQUIRE(string(last_url_params.get("up")) == "down");
     }
     // check multiple value, multiple types
     sendmsg = "GET /params?int=100&double=123.45&boolean=1\r\n\r\n";
@@ -1118,9 +1049,9 @@ TEST(simple_url_params)
         c.receive(asio::buffer(buf, 2048));
         c.close();
 
-        ASSERT_EQUAL(boost::lexical_cast<int>(last_url_params.get("int")), 100);
-        ASSERT_EQUAL(boost::lexical_cast<double>(last_url_params.get("double")), 123.45);
-        ASSERT_EQUAL(boost::lexical_cast<bool>(last_url_params.get("boolean")), true);
+        REQUIRE(boost::lexical_cast<int>(last_url_params.get("int")) == 100);
+        REQUIRE(boost::lexical_cast<double>(last_url_params.get("double")) == 123.45);
+        REQUIRE(boost::lexical_cast<bool>(last_url_params.get("boolean")));
     }
     // check single array value
     sendmsg = "GET /params?tmnt[]=leonardo\r\n\r\n";
@@ -1132,9 +1063,9 @@ TEST(simple_url_params)
         c.receive(asio::buffer(buf, 2048));
         c.close();
 
-        ASSERT_TRUE(last_url_params.get("tmnt") == nullptr);
-        ASSERT_EQUAL(last_url_params.get_list("tmnt").size(), 1);
-        ASSERT_EQUAL(string(last_url_params.get_list("tmnt")[0]), "leonardo");
+        REQUIRE(last_url_params.get("tmnt") == nullptr);
+        REQUIRE(last_url_params.get_list("tmnt").size() == 1);
+        REQUIRE(string(last_url_params.get_list("tmnt")[0]) == "leonardo");
     }
     // check multiple array value
     sendmsg = "GET /params?tmnt[]=leonardo&tmnt[]=donatello&tmnt[]=raphael\r\n\r\n";
@@ -1146,15 +1077,15 @@ TEST(simple_url_params)
         c.receive(asio::buffer(buf, 2048));
         c.close();
 
-        ASSERT_EQUAL(last_url_params.get_list("tmnt").size(), 3);
-        ASSERT_EQUAL(string(last_url_params.get_list("tmnt")[0]), "leonardo");
-        ASSERT_EQUAL(string(last_url_params.get_list("tmnt")[1]), "donatello");
-        ASSERT_EQUAL(string(last_url_params.get_list("tmnt")[2]), "raphael");
+        REQUIRE(last_url_params.get_list("tmnt").size() == 3);
+        REQUIRE(string(last_url_params.get_list("tmnt")[0]) == "leonardo");
+        REQUIRE(string(last_url_params.get_list("tmnt")[1]) == "donatello");
+        REQUIRE(string(last_url_params.get_list("tmnt")[2]) == "raphael");
     }
     app.stop();
 }
 
-TEST(route_dynamic)
+TEST_CASE("route_dynamic")
 {
     SimpleApp app;
     int x = 1;
@@ -1187,7 +1118,7 @@ TEST(route_dynamic)
         ([](){
             return "";
         });
-        fail();
+        FAIL_CHECK();
     }
     catch(std::exception&)
     {
@@ -1197,7 +1128,7 @@ TEST(route_dynamic)
     try
     {
         app.validate();
-        fail();
+        FAIL_CHECK();
     }
     catch(std::exception&)
     {
@@ -1208,33 +1139,32 @@ TEST(route_dynamic)
         response res;
         req.url = "/";
         app.handle(req, res);
-        ASSERT_EQUAL(x, 2);
+        REQUIRE(x == 2);
     }
     {
         request req;
         response res;
         req.url = "/set_int/42";
         app.handle(req, res);
-        ASSERT_EQUAL(x, 42);
+        REQUIRE(x == 42);
     }
     {
         request req;
         response res;
         req.url = "/set5";
         app.handle(req, res);
-        ASSERT_EQUAL(x, 5);
+        REQUIRE(x == 5);
     }
     {
         request req;
         response res;
         req.url = "/set4";
         app.handle(req, res);
-        ASSERT_EQUAL(x, 4);
+        REQUIRE(x == 4);
     }
 }
 
-#include <sys/stat.h>
-TEST(send_file)
+TEST_CASE("send_file")
 {
     SimpleApp app;
 
@@ -1260,17 +1190,12 @@ TEST(send_file)
 
         app.handle(req, res);
 
-
         struct stat statbuf;
-        int statResult;
+        stat("tests/img/cat.jpg", &statbuf);
 
-        statResult = stat("tests/img/cat.jpg", &statbuf);
-
-
-
-        ASSERT_EQUAL(200, res.code);
-        ASSERT_EQUAL("image/jpeg", res.headers.find("Content-Type")->second);
-        ASSERT_EQUAL(to_string(statbuf.st_size), res.headers.find("Content-Length")->second);
+        REQUIRE(200 == res.code);
+        REQUIRE("image/jpeg" == res.headers.find("Content-Type")->second);
+        REQUIRE(to_string(statbuf.st_size) == res.headers.find("Content-Length")->second);
     }
 
     {
@@ -1281,10 +1206,6 @@ TEST(send_file)
 
         app.handle(req, res);
 
-        ASSERT_EQUAL(404, res.code);
+        REQUIRE(404 == res.code);
     }
-}
-int main()
-{
-    return testmain();
 }

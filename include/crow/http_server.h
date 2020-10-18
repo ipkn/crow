@@ -59,9 +59,6 @@ namespace crow
 
         void run()
         {
-            if (concurrency_ < 0)
-                concurrency_ = 1;
-
             for(int i = 0; i < concurrency_;  i++)
                 io_service_pool_.emplace_back(new boost::asio::io_service());
             get_cached_date_str_pool_.resize(concurrency_);

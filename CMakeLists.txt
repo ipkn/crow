@@ -1,10 +1,5 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.15)
 project (crow_all)
-
-if(EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
-endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
@@ -38,16 +33,15 @@ else()
 	find_package( Boost 1.52 COMPONENTS system thread REQUIRED )
 endif()
 
-include_directories( ${Boost_INCLUDE_DIR} )
+include_directories(${Boost_INCLUDE_DIR})
 
 set(PROJECT_INCLUDE_DIR
-    ${PROJECT_SOURCE_DIR}/include
+  ${PROJECT_SOURCE_DIR}/include
 )
 
 include_directories("${PROJECT_INCLUDE_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}")
 
-#add_subdirectory(src)
 add_subdirectory(examples)
 
 if (MSVC)
@@ -67,7 +61,7 @@ else()
 		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/amalgamate/crow_all.h ${PROJECT_SOURCE_DIR}/amalgamate
 		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/amalgamate
 		DEPENDS ${PROJECT_SOURCE_DIR}/include/*.h ${PROJECT_SOURCE_DIR}/include/crow/*.h
-	)
+  )
 
 	add_custom_target(amalgamation ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/amalgamate/crow_all.h)
 endif()

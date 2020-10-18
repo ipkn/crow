@@ -1,5 +1,5 @@
 all:
-	$(CXX) -Wall -std=c++11 -g -o mustachetest mustachetest.cc
+	$(CXX) -Wall -std=c++17 -g -o mustachetest mustachetest.cc
 .PHONY: clean
 clean:
 	rm -f mustachetest *.o

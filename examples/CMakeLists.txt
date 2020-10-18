@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.15)
 project (crow_examples)
 
 if (MSVC)
@@ -27,7 +27,6 @@ add_custom_command(OUTPUT ws.html
 add_custom_target(example_ws_copy ALL DEPENDS ws.html)
 
 add_executable(example example.cpp)
-#target_link_libraries(example crow)
 target_link_libraries(example ${Boost_LIBRARIES})
 target_link_libraries(example ${CMAKE_THREAD_LIBS_INIT})
 
@@ -37,7 +36,6 @@ endif(Tcmalloc_FOUND)
 
 add_executable(example_with_all example_with_all.cpp)
 add_dependencies(example_with_all amalgamation)
-#target_link_libraries(example crow)
 target_link_libraries(example_with_all ${Boost_LIBRARIES})
 target_link_libraries(example_with_all ${CMAKE_THREAD_LIBS_INIT})
 
@@ -58,6 +56,4 @@ add_custom_command(OUTPUT example_chat.html
 )
 add_custom_target(example_chat_copy ALL DEPENDS example_chat.html)
 
-#SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -g -pg" )
-#SET( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -g -pg" )
 endif()
