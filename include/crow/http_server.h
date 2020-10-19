@@ -31,7 +31,7 @@ namespace crow
             signals_(io_service_, SIGINT, SIGTERM),
             tick_timer_(io_service_),
             handler_(handler),
-            concurrency_(concurrency),
+            concurrency_(concurrency == 0 ? 1 : concurrency),
             port_(port),
             bindaddr_(bindaddr),
             middlewares_(middlewares),
