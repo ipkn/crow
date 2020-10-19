@@ -28,6 +28,7 @@ int main()
     return "";
   });
   context ctx(data);
+  cerr << dump(ctx) << endl;
   cout << templ.render(ctx);
   return 0;
 }

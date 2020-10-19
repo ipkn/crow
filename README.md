@@ -4,6 +4,7 @@ Crow is C++ microframework for web. (inspired by Python Flask)
 
 [![Travis Build](https://travis-ci.org/mrozigor/crow.svg?branch=master)](https://travis-ci.org/mrozigor/crow)
 [![Coverage Status](https://coveralls.io/repos/github/mrozigor/crow/badge.svg?branch=master)](https://coveralls.io/github/mrozigor/crow?branch=master)
+[![Gitter](https://badges.gitter.im/crowfork/community.svg)](https://gitter.im/crowfork/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 ```c++
 #include "crow.h"
@@ -32,7 +33,7 @@ int main()
    - You can also use [json11](https://github.com/dropbox/json11) or [rapidjson](https://github.com/miloyip/rapidjson) for better speed or readability
  - [Mustache](http://mustache.github.io/) based templating library (crow::mustache)
  - Header only
- - Provide an amalgamated header file [`crow_all.h`](https://github.com/ipkn/crow/releases/download/v0.1/crow_all.h) with every features ([Download from here](https://github.com/ipkn/crow/releases/download/v0.1/crow_all.h))
+ - All-in-one header file available
  - Middleware support
  - Websocket support
 
@@ -89,16 +90,14 @@ CROW_ROUTE(app, "/add_json")
 
 ## How to Build
 
-If you just want to use crow, copy amalgamate/crow_all.h and include it.
+If you just want to use crow, generate `crow_all.h` (use script `amalgamate/merge_all.py`) and include it.
 
 ### Requirements
 
- - C++ compiler with good C++11 support (tested with g++>=8).
+ - C++ compiler with good C++14 support (tested with g++>=8).
  - boost 1.7 library.
  - (optional) CMake to build tests and/or examples.
  - (optional) Linking with tcmalloc/jemalloc is recommended for speed.
-
- - Now supporting VS2013 with limited functionality (only run-time check for url is available.)
 
 ### Building (Tests, Examples)
 
@@ -115,7 +114,6 @@ You can run tests with following commands:
 ```
 ctest
 ```
-
 
 ### Installing missing dependencies
 

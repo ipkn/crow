@@ -173,6 +173,9 @@ namespace crow
                             {
                                 auto optional_ctx = find_context(tag_name(action), stack);
                                 auto& ctx = optional_ctx.second;
+                                std::cerr << "tag: " << tag_name(action) << std::endl;
+                                std::cerr << "ctx type: " << get_type_str(ctx.t()) << std::endl;
+                                std::cerr << "ctx: " << dump(ctx) << std::endl;
                                 switch(ctx.t())
                                 {
                                     case json::type::Number:
@@ -228,6 +231,9 @@ namespace crow
                                 }
 
                                 auto& ctx = optional_ctx.second;
+                                std::cerr << "tag: " << tag_name(action) << std::endl;
+                                std::cerr << "ctx type: " << get_type_str(ctx.t()) << std::endl;
+                                std::cerr << "ctx: " << dump(ctx) << std::endl;
                                 switch(ctx.t())
                                 {
                                     case json::type::List:
