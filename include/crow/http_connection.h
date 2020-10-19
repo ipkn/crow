@@ -181,7 +181,7 @@ namespace crow
     template <typename Adaptor, typename Handler, typename ... Middlewares>
     class Connection
     {
-        friend class crow::response;
+        friend struct crow::response;
     public:
         Connection(
             boost::asio::io_service& io_service, 
