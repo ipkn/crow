@@ -94,7 +94,8 @@ If you just want to use crow, generate `crow_all.h` (use script `amalgamate/merg
 
 ### Requirements
 
- - C++ compiler with good C++14 support (tested with g++>=8).
+ - C++ compiler with good C++14 support.
+    - Tested on g++-9.3 and clang-7.0, AMD64 (x86_64) and Arm64 v8
  - boost 1.7 library.
  - (optional) CMake to build tests and/or examples.
  - (optional) Linking with tcmalloc/jemalloc is recommended for speed.
