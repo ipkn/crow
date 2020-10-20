@@ -1277,8 +1277,3 @@ TEST_CASE("multipart")
     REQUIRE(test_string == res.body);
   }
 }
-
-int main()
-{
-    return testmain();
-}
