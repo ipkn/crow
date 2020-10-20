@@ -31,7 +31,7 @@ namespace crow
             signals_(io_service_, SIGINT, SIGTERM),
             tick_timer_(io_service_),
             handler_(handler),
-            concurrency_(concurrency),
+            concurrency_(concurrency == 0 ? 1 : concurrency),
             port_(port),
             bindaddr_(bindaddr),
             middlewares_(middlewares),
@@ -59,9 +59,6 @@ namespace crow
 
         void run()
         {
-            if (concurrency_ < 0)
-                concurrency_ = 1;
-
             for(int i = 0; i < concurrency_;  i++)
                 io_service_pool_.emplace_back(new boost::asio::io_service());
             get_cached_date_str_pool_.resize(concurrency_);
