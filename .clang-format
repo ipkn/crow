@@ -1,0 +1,8 @@
+﻿---
+BasedOnStyle: Google
+BreakBeforeBraces: Mozilla
+IndentWidth: '2'
+TabWidth: '2'
+UseTab: Never
+
+...

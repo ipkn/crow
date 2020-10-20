@@ -393,6 +393,7 @@ namespace crow
                                     message_.clear();
                                 }
                             }
+                            break;
                         case 1: // Text
                             {
                                 is_binary_ = false;
