@@ -1,6 +1,6 @@
 ![Crow logo](http://i.imgur.com/wqivvjK.jpg)
 
-Crow is C++ microframework for web. (inspired by Python Flask)
+Crow is a C++ microframework for web. (inspired by Python Flask)
 
 [![Travis Build](https://travis-ci.org/mrozigor/crow.svg?branch=master)](https://travis-ci.org/mrozigor/crow)
 [![Coverage Status](https://coveralls.io/repos/github/mrozigor/crow/badge.svg?branch=master)](https://coveralls.io/github/mrozigor/crow?branch=master)
