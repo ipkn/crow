@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_MAIN
-#define CROW_LOG_LEVEL 10
+#define CROW_LOG_LEVEL 0
 #include <sys/stat.h>
 
 #include <iostream>
