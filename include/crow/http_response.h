@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <ios>
 #include <fstream>
+#include <sstream>
 
 #include "crow/json.h"
 #include "crow/http_request.h"
@@ -141,6 +142,7 @@ namespace crow
         };
         static_file_info file_info;
 
+        ///Return a static file as the response body
         void set_static_file_info(std::string path){
             file_info.path = path;
             file_info.statResult = stat(file_info.path.c_str(), &file_info.statbuf);
@@ -151,7 +153,7 @@ namespace crow
                 std::string mimeType = "";
                 code = 200;
                 this->add_header("Content-length", std::to_string(file_info.statbuf.st_size));
-                
+
                 if (extension != ""){
                     mimeType = mime_types[extension];
                     if (mimeType != "")
@@ -168,32 +170,22 @@ namespace crow
         }
 
         template<typename Adaptor>
-        void do_write_sendfile(Adaptor adaptor) {
-
+        void do_stream_file(Adaptor& adaptor)
+        {
             if (file_info.statResult == 0)
             {
-
                 std::ifstream is(file_info.path.c_str(), std::ios::in | std::ios::binary);
-                char buf[16384];
-                while (is.read(buf, sizeof(buf)).gcount() > 0)
-                {
-                    std::vector<asio::const_buffer> buffers;
-                    buffers.push_back(boost::asio::buffer(buf));
-                    boost::asio::write(adaptor->socket(), buffers, [this](std::error_code ec, std::size_t)
-                    {
-                        if (!ec)
-                        {
-                            //CROW_LOG_DEBUG << "sending file, no error";
-                            return false;
-                        }
-                        else
-                        {
-                            CROW_LOG_ERROR << ec << " - happened while sending file";
-                            this->end();
-                            return true;
-                        }
-                    });
-                }
+                write_streamed(is, adaptor);
+            }
+        }
+
+        template<typename Adaptor>
+        void do_stream_body(Adaptor& adaptor)
+        {
+            if (body.length() > 0)
+            {
+                std::istringstream is(body);
+                write_streamed(is, adaptor);
             }
         }
 #endif
@@ -208,5 +200,30 @@ namespace crow
             {
                 set_header("Content-Type", "application/json");
             }
+
+            template<typename Stream, typename Adaptor>
+            void write_streamed(Stream& is, Adaptor& adaptor)
+            {
+                char buf[16384];
+                while (is.read(buf, sizeof(buf)).gcount() > 0)
+                {
+                    std::vector<asio::const_buffer> buffers;
+                    buffers.push_back(boost::asio::buffer(buf));
+                    boost::asio::write(adaptor.socket(), buffers, [this](std::error_code ec, std::size_t)
+                    {
+                        if (!ec)
+                        {
+                            return false;
+                        }
+                        else
+                        {
+                            CROW_LOG_ERROR << ec << " - happened while sending body";
+                            this->end();
+                            return true;
+                        }
+                    });
+                }
+            }
+
     };
 }
