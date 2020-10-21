@@ -35,7 +35,7 @@ namespace crow
         inline void escape(const std::string& str, std::string& ret)
         {
             ret.reserve(ret.size() + str.size()+str.size()/4);
-            for(char c:str)
+            for(unsigned char c:str)
             {
                 switch(c)
                 {
@@ -47,7 +47,7 @@ namespace crow
                     case '\r': ret += "\\r"; break;
                     case '\t': ret += "\\t"; break;
                     default:
-                        if (0 <= c && c < 0x20)
+                        if (c < 0x20)
                         {
                             ret += "\\u00";
                             auto to_hex = [](char c)
