@@ -534,6 +534,7 @@ namespace crow
                     {
                         cancel_deadline_timer();
                         parser_.done();
+                        adaptor_.shutdown_read();
                         adaptor_.close();
                         is_reading = false;
                         CROW_LOG_DEBUG << this << " from read(1)";
@@ -574,6 +575,7 @@ namespace crow
                     {
                         if (close_connection_)
                         {
+                            adaptor_.shutdown_write();
                             adaptor_.close();
                             CROW_LOG_DEBUG << this << " from write(1)";
                             check_destroy();
@@ -613,6 +615,7 @@ namespace crow
                 {
                     return;
                 }
+                adaptor_.shutdown_readwrite();
                 adaptor_.close();
             });
             CROW_LOG_DEBUG << this << " timer added: " << timer_cancel_key_.first << ' ' << timer_cancel_key_.second;
