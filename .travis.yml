@@ -4,15 +4,19 @@ cache: ccache
 
 dist: focal
 
+branches:
+  only:
+    - master
+
 compiler:
   - gcc
+  - clang
+
+arch:
+  - amd64
+  - arm64
 
 env:
-  matrix:
-    - COMPILER=g++ CCOMPILER=gcc PUSH_COVERAGE=ON TRAVIS_BUILD_DOCS=ON
-    - COMPILER=g++-8 CCOMPILER=gcc-8
-    - COMPILER=g++-10 CCOMPILER=gcc-10
-    - COMPILER=clang++ CCOMPILER=clang
   global:
     - secure: "CQRYHWlg/WDu5DBUeDwGo+rPeOofN08DhiLUNlLtZjMWaRyP0Cop1qVaFs8ESOkYiWek2MdpvjZud+7hL+yx2ogvNx4SfHpUMCDKYgcX+YQ9MmYwabvoKq8N6KVXE3lbPp549TonHdDuNCWNKRniNjYtrij5J+IiIiT8/6Txo2p9RWk6YSUTdXJ9YrfuWMtRuF5uo9SHGyujv8pOJKedrwWoSBbHT44jnwfHMVe/C8jgjwlrJ9N3iXOtsG6sj+UTS8vOpL+jpBONEbBfHgSFU57I7IFNdPQbSObpVwG9geOAHT7IQQyQ9hp2AJoFxxVURB5SzqztDDpQ0XIF76vuH9tA/fF2pwDsLRmcLR8JU1TCmQgvnlYD0+Or9S1Dq0tQME5AP+21Hk2zVcGdbgQP7XWix758F0vpOXa4PXw8TmAjP2jKyAMHlzR3icr3+OmKSK3uXMMt2HSMOJQ+JvFxr//DM493i/VGyeY25/zu3A9RstiE+1d82Fi9xKOmMf4smvSkjOgT0b727jqNbNe6CvEKQUmqHabzYRQzUVz6WPVDHBxZP7AiKmZIVQXYnDsVXywStkSoxxY5En6XKpq0GR3bIVtUMORgZPoZi7Jni+/4EckcYH8g9mpsQf9tPRcOZ2WIvt5gqp2MZuwBLBRcbxihuECfBscqdeA0oDU5AZw="
     - GH_REPO_NAME: crow
@@ -20,17 +24,10 @@ env:
     - GH_REPO_REF: github.com/mrozigor/crow.git
     - THEME_REPO_REF: github.com/mrozigor/darxygen.git
 
+
 addons:
   apt:
-    sources:
-      - ubuntu-toolchain-r-test
-      - boost-latest
-      - llvm-toolchain-precise
     packages:
-      - g++
-      - g++-8
-      - g++-10
-      - clang
       - libboost-all-dev
       - doxygen
       - doxygen-doc
@@ -38,20 +35,23 @@ addons:
       - doxygen-gui
       - graphviz
 
+before_install:
+  - if [ "$TRAVIS_COMPILER" == "gcc" -a "$TRAVIS_CPU_ARCH" == "amd64" ]; then export PUSH_COVERAGE=ON; fi
+  - if [ "$TRAVIS_BRANCH" == "master" -a "$TRAVIS_PULL_REQUEST" == "false" -a "$PUSH_COVERAGE" == "ON" ]; then export TRAVIS_BUILD_DOCS=ON; fi
+
 install:
   - if [ "$PUSH_COVERAGE" == "ON" ]; then pip install --user cpp-coveralls; fi
 
 before_script:
-  - export CXX=$COMPILER CC=$CCOMPILER
   - mkdir build
   - cd build
   - cmake --version
   - cmake ..
 
-script: make -j2 && ctest -V -j2
+script: make -j4 && ctest -V -j4
 
 after_success:
   - cd ..
   - if [ "$PUSH_COVERAGE" == "ON" ]; then coveralls -i include --exclude-pattern .*/http_parser_merged.h --exclude-pattern .*/TinySHA1.hpp --gcov-options '\-lp'; fi
   - chmod +x generateDocumentationAndDeploy.sh
-  - test "$TRAVIS_BRANCH" = "master" && test $TRAVIS_PULL_REQUEST = "false" && test "$TRAVIS_BUILD_DOCS" = "ON" && ./generateDocumentationAndDeploy.sh
+  - if [ "$TRAVIS_BUILD_DOCS" == "ON" ]; then ./generateDocumentationAndDeploy.sh; fi
