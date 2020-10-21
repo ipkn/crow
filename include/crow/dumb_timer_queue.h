@@ -49,7 +49,7 @@ namespace crow
                 while(!dq_.empty())
                 {
                     auto& x = dq_.front();
-                    if (now - x.first < std::chrono::seconds(dumb_timer_queue::tick))
+                    if (now - x.first < std::chrono::seconds(tick))
                         break;
                     if (x.second)
                     {
