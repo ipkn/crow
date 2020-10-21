@@ -1245,3 +1245,39 @@ TEST_CASE("send_file")
     REQUIRE(404 == res.code);
   }
 }
+
+TEST_CASE("stream_response")
+{
+
+    SimpleApp app;
+
+    CROW_ROUTE(app, "/test")
+    ([](const crow::request&, crow::response& res)
+    {
+      std::string keyword_ = "hello";
+      std::string key_response;
+      for (unsigned int i = 0; i<1000000; i++)
+        key_response += keyword_;
+      res.body = key_response;
+      res.end();
+    });
+
+    app.validate();
+
+    {
+        std::string keyword_ = "hello";
+        std::string key_response;
+        for (unsigned int i = 0; i<1000000; i++)
+          key_response += keyword_;
+
+        request req;
+        response res;
+
+        req.url = "/test";
+
+        app.handle(req, res);
+
+        REQUIRE(key_response == res.body);
+    }
+
+}

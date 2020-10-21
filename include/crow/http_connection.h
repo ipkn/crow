@@ -364,7 +364,8 @@ namespace crow
 
     private:
 
-        void prepare_buffers(){
+        void prepare_buffers()
+        {
             //auto self = this->shared_from_this();
             res.complete_request_handler_ = nullptr;
 
@@ -465,10 +466,11 @@ namespace crow
             
         }
 #if !defined(_WIN32)
-        void do_write_static(){
+        void do_write_static()
+        {
             is_writing = true;
             boost::asio::write(adaptor_.socket(), buffers_);
-            res.do_write_sendfile(&adaptor_);
+            res.do_stream_file(adaptor_);
 
             res.end();
             res.clear();
@@ -483,17 +485,31 @@ namespace crow
             buffers_.clear();
         }
 #endif
-        void do_write_general(){
-            res_body_copy_.swap(res.body);
-            buffers_.emplace_back(res_body_copy_.data(), res_body_copy_.size());
-
-            do_write();
-
-            if (need_to_start_read_after_complete_)
+        void do_write_general()
+        {
+            if (res.body.length() < megabyte)
             {
-                need_to_start_read_after_complete_ = false;
-                start_deadline();
-                do_read();
+                res_body_copy_.swap(res.body);
+                buffers_.emplace_back(res_body_copy_.data(), res_body_copy_.size());
+
+                do_write();
+
+                if (need_to_start_read_after_complete_)
+                {
+                    need_to_start_read_after_complete_ = false;
+                    start_deadline();
+                    do_read();
+                }
+            }
+            else
+            {
+                is_writing = true;
+                boost::asio::write(adaptor_.socket(), buffers_);
+                res.do_stream_body(adaptor_);
+
+                res.end();
+                res.clear();
+                buffers_.clear();
             }
         }
 
@@ -607,6 +623,8 @@ namespace crow
         Handler* handler_;
 
         boost::array<char, 4096> buffer_;
+
+        const uint megabyte = 1048576;
 
         HTTPParser<Connection> parser_;
         request req_;
