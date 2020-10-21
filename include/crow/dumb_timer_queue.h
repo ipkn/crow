@@ -12,10 +12,11 @@ namespace crow
 {
     namespace detail 
     {
-        // fast timer queue for fixed tick value.
+        ///Fast timer queue for fixed tick value.
         class dumb_timer_queue
         {
         public:
+            static int tick;
             using key = std::pair<dumb_timer_queue*, int>;
 
             void cancel(key& k)
@@ -48,7 +49,7 @@ namespace crow
                 while(!dq_.empty())
                 {
                     auto& x = dq_.front();
-                    if (now - x.first < std::chrono::seconds(tick))
+                    if (now - x.first < std::chrono::seconds(dumb_timer_queue::tick))
                         break;
                     if (x.second)
                     {
@@ -71,8 +72,6 @@ namespace crow
             }
 
         private:
-
-            int tick{5};
             boost::asio::io_service* io_service_{};
             std::deque<std::pair<decltype(std::chrono::steady_clock::now()), std::function<void()>>> dq_;
             int step_{};
