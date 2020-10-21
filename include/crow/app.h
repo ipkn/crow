@@ -17,6 +17,7 @@
 #include "crow/middleware_context.h"
 #include "crow/http_request.h"
 #include "crow/http_server.h"
+#include "crow/dumb_timer_queue.h"
 
 
 #ifdef CROW_MSVC_WORKAROUND
@@ -27,6 +28,7 @@
 
 namespace crow
 {
+    int detail::dumb_timer_queue::tick = 5;
 #ifdef CROW_ENABLE_SSL
     using ssl_context_t = boost::asio::ssl::context;
 #endif
@@ -43,12 +45,14 @@ namespace crow
         {
         }
 
-		template <typename Adaptor> 
+
+        template <typename Adaptor>
         void handle_upgrade(const request& req, response& res, Adaptor&& adaptor)
         {
             router_.handle_upgrade(req, res, adaptor);
         }
 
+        ///Process the request and generate a response for it
         void handle(const request& req, response& res)
         {
             router_.handle(req, res);
@@ -66,23 +70,34 @@ namespace crow
             return router_.new_rule_tagged<Tag>(std::move(rule));
         }
 
+        ///Set the port that Crow will handle requests on
         self_t& port(std::uint16_t port)
         {
             port_ = port;
             return *this;
         }
 
+        ///Set the connection timeout in seconds (default is 5)
+        self_t& timeout(std::uint8_t timeout)
+        {
+            detail::dumb_timer_queue::tick = timeout;
+            return *this;
+        }
+
+        ///The IP address that Crow will handle requests on (default is 0.0.0.0)
         self_t& bindaddr(std::string bindaddr)
         {
             bindaddr_ = bindaddr;
             return *this;
         }
 
+        ///Run the server on multiple threads using all available threads
         self_t& multithreaded()
         {
             return concurrency(std::thread::hardware_concurrency());
         }
 
+        ///Run the server on multiple threads using a specific number
         self_t& concurrency(std::uint16_t concurrency)
         {
             if (concurrency < 1)
@@ -103,6 +118,7 @@ namespace crow
             cv_started_.notify_all();
         }
 
+        ///Run the server
         void run()
         {
             validate();
@@ -124,6 +140,7 @@ namespace crow
             }
         }
 
+        ///Stop the server
         void stop()
         {
 #ifdef CROW_ENABLE_SSL
