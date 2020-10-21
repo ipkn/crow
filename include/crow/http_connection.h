@@ -487,7 +487,7 @@ namespace crow
 #endif
         void do_write_general()
         {
-            if (res.body.length() < megabyte)
+            if (res.body.length() < res_stream_threshold_)
             {
                 res_body_copy_.swap(res.body);
                 buffers_.emplace_back(res_body_copy_.data(), res_body_copy_.size());
@@ -624,7 +624,7 @@ namespace crow
 
         boost::array<char, 4096> buffer_;
 
-        const uint megabyte = 1048576;
+        const uint res_stream_threshold_ = 1048576;
 
         HTTPParser<Connection> parser_;
         request req_;
