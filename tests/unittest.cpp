@@ -1235,13 +1235,45 @@ TEST_CASE("send_file")
   }
 
   {
+     request req;
+     response res;
+
+     req.url = "/jpg2";
+
+     app.handle(req, res);
+
+
+     REQUIRE(404 == res.code);
+   }
+}
+
+TEST_CASE("multipart")
+{
+  std::string test_string = "--CROW-BOUNDARY\r\nContent-Disposition: form-data; name=\"hello\"\r\n\r\nworld\r\n--CROW-BOUNDARY\r\nContent-Disposition: form-data; name=\"world\"\r\n\r\nhello\r\n--CROW-BOUNDARY\r\nContent-Disposition: form-data; name=\"multiline\"\r\n\r\ntext\ntext\ntext\r\n--CROW-BOUNDARY--\r\n";
+
+  SimpleApp app;
+
+  CROW_ROUTE(app, "/multipart")
+  ([](const crow::request& req, crow::response& res) 
+  {
+    multipart::message msg(req);
+    res.add_header("Content-Type", "multipart/form-data; boundary=CROW-BOUNDARY");
+    res.body = msg.dump();
+    res.end();
+  });
+
+  app.validate();
+
+  {
     request req;
     response res;
 
-    req.url = "/jpg2";
+    req.url = "/multipart";
+    req.add_header("Content-Type", "multipart/form-data; boundary=CROW-BOUNDARY");
+    req.body = test_string;
 
     app.handle(req, res);
 
-    REQUIRE(404 == res.code);
+    REQUIRE(test_string == res.body);
   }
 }
