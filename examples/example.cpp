@@ -163,6 +163,14 @@ int main()
         return std::string(512*1024, ' ');
     });
 
+    // Take a multipart/form-data request and print out its body
+    CROW_ROUTE(app,"/multipart")
+    ([](const crow::request& req){
+        crow::multipart::message msg(req);
+        CROW_LOG_INFO << "body of the first part " << msg.parts[0].body;
+        return "it works!";
+    });
+
     // enables all log
     app.loglevel(crow::LogLevel::DEBUG);
     //crow::logger::setHandler(std::make_shared<ExampleLogHandler>());
