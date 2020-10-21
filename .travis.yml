@@ -4,6 +4,10 @@ cache: ccache
 
 dist: focal
 
+branches:
+  only:
+    - master
+
 compiler:
   - gcc
   - clang
