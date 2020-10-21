@@ -70,7 +70,7 @@ namespace crow
             return router_.new_rule_tagged<Tag>(std::move(rule));
         }
 
-        ///Set the port that Crow will hadnle requests on
+        ///Set the port that Crow will handle requests on
         self_t& port(std::uint16_t port)
         {
             port_ = port;
