@@ -1280,6 +1280,8 @@ TEST_CASE("multipart")
 
 TEST_CASE("stream_response")
 {
+    static char buf[2048];
+    static char buf2[16384];
 
     SimpleApp app;
 
@@ -1290,26 +1292,38 @@ TEST_CASE("stream_response")
       std::string key_response;
       for (unsigned int i = 0; i<1000000; i++)
         key_response += keyword_;
+
       res.body = key_response;
       res.end();
     });
 
     app.validate();
 
+    auto _ = async(launch::async,
+                   [&] { app.bindaddr(LOCALHOST_ADDRESS).port(45451).run(); });
+    app.wait_for_server_start();
+    asio::io_service is;
+    std::string sendmsg;
+
+
+    sendmsg = "GET /test\r\n\r\n";
     {
-        std::string keyword_ = "hello";
-        std::string key_response;
-        for (unsigned int i = 0; i<1000000; i++)
-          key_response += keyword_;
 
-        request req;
-        response res;
+      std::string keyword_ = "hello";
+      std::string key_response;
+      for (unsigned int i = 0; i<1000000; i++)
+        key_response += keyword_;
 
-        req.url = "/test";
+      asio::ip::tcp::socket c(is);
+      c.connect(asio::ip::tcp::endpoint(
+          asio::ip::address::from_string(LOCALHOST_ADDRESS), 45451));
+      c.send(asio::buffer(sendmsg));
+      c.receive(asio::buffer(buf, 2048));
+      for (unsigned int i = 0; i<305; i++)
+        c.receive(asio::buffer(buf2, 16384));
+      //c.close();
 
-        app.handle(req, res);
-
-        REQUIRE(key_response == res.body);
+      CHECK(key_response.substr(4997070, 50) == std::string(buf2).substr(16334, 50));
     }
-
+    app.stop();
 }
