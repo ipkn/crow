@@ -1217,6 +1217,20 @@ TEST_CASE("send_file")
 
   app.validate();
 
+  //File not found check
+  {
+    request req;
+    response res;
+
+    req.url = "/jpg2";
+
+    app.handle(req, res);
+
+
+    REQUIRE(404 == res.code);
+  }
+
+  //Headers check
   {
     request req;
     response res;
@@ -1234,17 +1248,8 @@ TEST_CASE("send_file")
             res.headers.find("Content-Length")->second);
   }
 
-  {
-     request req;
-     response res;
+  //TODO add content check
 
-     req.url = "/jpg2";
-
-     app.handle(req, res);
-
-
-     REQUIRE(404 == res.code);
-   }
 }
 
 TEST_CASE("multipart")
