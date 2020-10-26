@@ -39,9 +39,9 @@ TEST_CASE("Rule")
   response res;
 
   // executing handler
-  REQUIRE(0 == x);
+  CHECK(0 == x);
   r.handle(request(), res, routing_params());
-  REQUIRE(1 == x);
+  CHECK(1 == x);
 
   // registering handler with request argument
   r([&x](const crow::request&) {
@@ -52,9 +52,9 @@ TEST_CASE("Rule")
   r.validate();
 
   // executing handler
-  REQUIRE(1 == x);
+  CHECK(1 == x);
   r.handle(request(), res, routing_params());
-  REQUIRE(2 == x);
+  CHECK(2 == x);
 }
 
 TEST_CASE("ParameterTagging")
@@ -62,16 +62,16 @@ TEST_CASE("ParameterTagging")
   static_assert(black_magic::is_valid("<int><int><int>"), "valid url");
   static_assert(!black_magic::is_valid("<int><int<<int>"), "invalid url");
   static_assert(!black_magic::is_valid("nt>"), "invalid url");
-  REQUIRE(1 == black_magic::get_parameter_tag("<int>"));
-  REQUIRE(2 == black_magic::get_parameter_tag("<uint>"));
-  REQUIRE(3 == black_magic::get_parameter_tag("<float>"));
-  REQUIRE(3 == black_magic::get_parameter_tag("<double>"));
-  REQUIRE(4 == black_magic::get_parameter_tag("<str>"));
-  REQUIRE(4 == black_magic::get_parameter_tag("<string>"));
-  REQUIRE(5 == black_magic::get_parameter_tag("<path>"));
-  REQUIRE(6 * 6 + 6 + 1 == black_magic::get_parameter_tag("<int><int><int>"));
-  REQUIRE(6 * 6 + 6 + 2 == black_magic::get_parameter_tag("<uint><int><int>"));
-  REQUIRE(6 * 6 + 6 * 3 + 2 ==
+  CHECK(1 == black_magic::get_parameter_tag("<int>"));
+  CHECK(2 == black_magic::get_parameter_tag("<uint>"));
+  CHECK(3 == black_magic::get_parameter_tag("<float>"));
+  CHECK(3 == black_magic::get_parameter_tag("<double>"));
+  CHECK(4 == black_magic::get_parameter_tag("<str>"));
+  CHECK(4 == black_magic::get_parameter_tag("<string>"));
+  CHECK(5 == black_magic::get_parameter_tag("<path>"));
+  CHECK(6 * 6 + 6 + 1 == black_magic::get_parameter_tag("<int><int><int>"));
+  CHECK(6 * 6 + 6 + 2 == black_magic::get_parameter_tag("<uint><int><int>"));
+  CHECK(6 * 6 + 6 * 3 + 2 ==
           black_magic::get_parameter_tag("<uint><double><int>"));
 
   // url definition parsed in compile time, build into *one number*, and given
@@ -102,7 +102,7 @@ TEST_CASE("PathRouting")
 
     app.handle(req, res);
 
-    REQUIRE(200 == res.code);
+    CHECK(200 == res.code);
   }
   {
     request req;
@@ -111,7 +111,7 @@ TEST_CASE("PathRouting")
     req.url = "/file/";
 
     app.handle(req, res);
-    REQUIRE(404 == res.code);
+    CHECK(404 == res.code);
   }
   {
     request req;
@@ -120,7 +120,7 @@ TEST_CASE("PathRouting")
     req.url = "/path";
 
     app.handle(req, res);
-    REQUIRE(404 != res.code);
+    CHECK(404 != res.code);
   }
   {
     request req;
@@ -129,7 +129,7 @@ TEST_CASE("PathRouting")
     req.url = "/path/";
 
     app.handle(req, res);
-    REQUIRE(200 == res.code);
+    CHECK(200 == res.code);
   }
 }
 
@@ -184,7 +184,7 @@ TEST_CASE("RoutingTest")
 
     app.handle(req, res);
 
-    REQUIRE(404 == res.code);
+    CHECK(404 == res.code);
   }
 
   {
@@ -195,9 +195,9 @@ TEST_CASE("RoutingTest")
 
     app.handle(req, res);
 
-    REQUIRE(200 == res.code);
+    CHECK(200 == res.code);
 
-    REQUIRE(1001999 == B);
+    CHECK(1001999 == B);
   }
 
   {
@@ -208,10 +208,10 @@ TEST_CASE("RoutingTest")
 
     app.handle(req, res);
 
-    REQUIRE(200 == res.code);
+    CHECK(200 == res.code);
 
-    REQUIRE(-100 == A);
-    REQUIRE(1999 == B);
+    CHECK(-100 == A);
+    CHECK(1999 == B);
   }
   {
     request req;
@@ -222,12 +222,12 @@ TEST_CASE("RoutingTest")
 
     app.handle(req, res);
 
-    REQUIRE(200 == res.code);
+    CHECK(200 == res.code);
 
-    REQUIRE(5000 == A);
-    REQUIRE(3 == B);
-    REQUIRE(-2.71828 == C);
-    REQUIRE("hellhere" == D);
+    CHECK(5000 == A);
+    CHECK(3 == B);
+    CHECK(-2.71828 == C);
+    CHECK("hellhere" == D);
   }
   {
     request req;
@@ -238,21 +238,21 @@ TEST_CASE("RoutingTest")
 
     app.handle(req, res);
 
-    REQUIRE(200 == res.code);
+    CHECK(200 == res.code);
 
-    REQUIRE(-5 == A);
-    REQUIRE(999 == B);
-    REQUIRE(3.141592 == C);
-    REQUIRE("hello_there" == D);
-    REQUIRE("a/b/c/d" == E);
+    CHECK(-5 == A);
+    CHECK(999 == B);
+    CHECK(3.141592 == C);
+    CHECK("hello_there" == D);
+    CHECK("a/b/c/d" == E);
   }
 }
 
 TEST_CASE("simple_response_routing_params")
 {
-  REQUIRE(100 == response(100).code);
-  REQUIRE(200 == response("Hello there").code);
-  REQUIRE(500 == response(500, "Internal Error?").code);
+  CHECK(100 == response(100).code);
+  CHECK(200 == response("Hello there").code);
+  CHECK(500 == response(500, "Internal Error?").code);
 
   routing_params rp;
   rp.int_params.push_back(1);
@@ -260,11 +260,11 @@ TEST_CASE("simple_response_routing_params")
   rp.uint_params.push_back(2);
   rp.double_params.push_back(3);
   rp.string_params.push_back("hello");
-  REQUIRE(1 == rp.get<int64_t>(0));
-  REQUIRE(5 == rp.get<int64_t>(1));
-  REQUIRE(2 == rp.get<uint64_t>(0));
-  REQUIRE(3 == rp.get<double>(0));
-  REQUIRE("hello" == rp.get<string>(0));
+  CHECK(1 == rp.get<int64_t>(0));
+  CHECK(5 == rp.get<int64_t>(1));
+  CHECK(2 == rp.get<uint64_t>(0));
+  CHECK(3 == rp.get<double>(0));
+  CHECK("hello" == rp.get<string>(0));
 }
 
 TEST_CASE("handler_with_response")
@@ -309,7 +309,7 @@ TEST_CASE("http_method")
     req.url = "/";
     app.handle(req, res);
 
-    REQUIRE("2" == res.body);
+    CHECK("2" == res.body);
   }
   {
     request req;
@@ -319,7 +319,7 @@ TEST_CASE("http_method")
     req.method = "POST"_method;
     app.handle(req, res);
 
-    REQUIRE("1" == res.body);
+    CHECK("1" == res.body);
   }
 
   {
@@ -329,7 +329,7 @@ TEST_CASE("http_method")
     req.url = "/get_only";
     app.handle(req, res);
 
-    REQUIRE("get" == res.body);
+    CHECK("get" == res.body);
   }
 
   {
@@ -340,7 +340,7 @@ TEST_CASE("http_method")
     req.method = "PATCH"_method;
     app.handle(req, res);
 
-    REQUIRE("patch" == res.body);
+    CHECK("patch" == res.body);
   }
 
   {
@@ -351,7 +351,7 @@ TEST_CASE("http_method")
     req.method = "PURGE"_method;
     app.handle(req, res);
 
-    REQUIRE("purge" == res.body);
+    CHECK("purge" == res.body);
   }
 
   {
@@ -362,7 +362,7 @@ TEST_CASE("http_method")
     req.method = "POST"_method;
     app.handle(req, res);
 
-    REQUIRE("get" != res.body);
+    CHECK("get" != res.body);
   }
 
   {
@@ -373,7 +373,7 @@ TEST_CASE("http_method")
     req.method = "POST"_method;
     app.handle(req, res);
 
-    REQUIRE(405 == res.code);
+    CHECK(405 == res.code);
   }
 }
 
@@ -433,7 +433,7 @@ TEST_CASE("multi_server")
     c.send(asio::buffer(sendmsg));
 
     size_t recved = c.receive(asio::buffer(buf, 2048));
-    REQUIRE('A' == buf[recved - 1]);
+    CHECK('A' == buf[recved - 1]);
   }
 
   {
@@ -447,7 +447,7 @@ TEST_CASE("multi_server")
     }
 
     size_t recved = c.receive(asio::buffer(buf, 2048));
-    REQUIRE('B' == buf[recved - 1]);
+    CHECK('B' == buf[recved - 1]);
   }
 
   app1.stop();
@@ -491,51 +491,51 @@ TEST_CASE("json_read")
 
   auto x = json::load(R"({"message":"hello, world"})");
   if (!x) FAIL_CHECK("fail to parse");
-  REQUIRE("hello, world" == x["message"]);
-  REQUIRE(1 == x.size());
-  REQUIRE(false == x.has("mess"));
+  CHECK("hello, world" == x["message"]);
+  CHECK(1 == x.size());
+  CHECK(false == x.has("mess"));
   REQUIRE_THROWS(x["mess"]);
   // TODO returning false is better than exception
   // ASSERT_THROW(3 == x["message"]);
-  REQUIRE(12 == x["message"].size());
+  CHECK(12 == x["message"].size());
 
   std::string s =
       R"({"int":3,     "ints"  :[1,2,3,4,5],	"bigint":1234567890	})";
   auto y = json::load(s);
-  REQUIRE(3 == y["int"]);
-  REQUIRE(3.0 == y["int"]);
-  REQUIRE(3.01 != y["int"]);
-  REQUIRE(5 == y["ints"].size());
-  REQUIRE(1 == y["ints"][0]);
-  REQUIRE(2 == y["ints"][1]);
-  REQUIRE(3 == y["ints"][2]);
-  REQUIRE(4 == y["ints"][3]);
-  REQUIRE(5 == y["ints"][4]);
-  REQUIRE(1u == y["ints"][0]);
-  REQUIRE(1.f == y["ints"][0]);
+  CHECK(3 == y["int"]);
+  CHECK(3.0 == y["int"]);
+  CHECK(3.01 != y["int"]);
+  CHECK(5 == y["ints"].size());
+  CHECK(1 == y["ints"][0]);
+  CHECK(2 == y["ints"][1]);
+  CHECK(3 == y["ints"][2]);
+  CHECK(4 == y["ints"][3]);
+  CHECK(5 == y["ints"][4]);
+  CHECK(1u == y["ints"][0]);
+  CHECK(1.f == y["ints"][0]);
 
   int q = (int)y["ints"][1];
-  REQUIRE(2 == q);
+  CHECK(2 == q);
   q = y["ints"][2].i();
-  REQUIRE(3 == q);
-  REQUIRE(1234567890 == y["bigint"]);
+  CHECK(3 == q);
+  CHECK(1234567890 == y["bigint"]);
 
   std::string s2 = R"({"bools":[true, false], "doubles":[1.2, -3.4]})";
   auto z = json::load(s2);
-  REQUIRE(2 == z["bools"].size());
-  REQUIRE(2 == z["doubles"].size());
-  REQUIRE(true == z["bools"][0].b());
-  REQUIRE(false == z["bools"][1].b());
-  REQUIRE(1.2 == z["doubles"][0].d());
-  REQUIRE(-3.4 == z["doubles"][1].d());
+  CHECK(2 == z["bools"].size());
+  CHECK(2 == z["doubles"].size());
+  CHECK(true == z["bools"][0].b());
+  CHECK(false == z["bools"][1].b());
+  CHECK(1.2 == z["doubles"][0].d());
+  CHECK(-3.4 == z["doubles"][1].d());
 
   std::string s3 = R"({"uint64": 18446744073709551615})";
   auto z1 = json::load(s3);
-  REQUIRE(18446744073709551615ull == z1["uint64"].u());
+  CHECK(18446744073709551615ull == z1["uint64"].u());
 
   std::ostringstream os;
   os << z1["uint64"];
-  REQUIRE("18446744073709551615" == os.str());
+  CHECK("18446744073709551615" == os.str());
 }
 
 TEST_CASE("json_read_real")
@@ -583,12 +583,12 @@ TEST_CASE("json_read_real")
                         "0.8016815476190476"};
   for (auto x : v) {
     CROW_LOG_DEBUG << x;
-    REQUIRE(json::load(x).d() == boost::lexical_cast<double>(x));
+    CHECK(json::load(x).d() == boost::lexical_cast<double>(x));
   }
 
   auto ret = json::load(
       R"---({"balloons":[{"mode":"ellipse","left":0.036303908355795146,"right":0.18320417789757412,"top":0.05319940476190476,"bottom":0.15224702380952382,"index":"0"},{"mode":"ellipse","left":0.3296201145552561,"right":0.47921580188679247,"top":0.05873511904761905,"bottom":0.1577827380952381,"index":"1"},{"mode":"ellipse","left":0.4996841307277628,"right":0.6425412735849056,"top":0.052113095238095236,"bottom":0.12830357142857143,"index":"2"},{"mode":"ellipse","left":0.7871041105121294,"right":0.954220013477089,"top":0.05869047619047619,"bottom":0.1625,"index":"3"},{"mode":"ellipse","left":0.8144794474393531,"right":0.9721613881401617,"top":0.1399404761904762,"bottom":0.24470238095238095,"index":"4"},{"mode":"ellipse","left":0.04527459568733154,"right":0.2096950808625337,"top":0.35267857142857145,"bottom":0.42791666666666667,"index":"5"},{"mode":"ellipse","left":0.855731974393531,"right":0.9352467991913747,"top":0.3816220238095238,"bottom":0.4282886904761905,"index":"6"},{"mode":"ellipse","left":0.39414167789757415,"right":0.5316079851752021,"top":0.3809375,"bottom":0.4571279761904762,"index":"7"},{"mode":"ellipse","left":0.03522995283018868,"right":0.1915641846361186,"top":0.6164136904761904,"bottom":0.7192708333333333,"index":"8"},{"mode":"ellipse","left":0.05675117924528302,"right":0.21308541105121293,"top":0.7045386904761904,"bottom":0.8016815476190476,"index":"9"}]})---");
-  REQUIRE(ret);
+  CHECK(ret);
 }
 
 TEST_CASE("json_read_unescaping")
@@ -599,17 +599,17 @@ TEST_CASE("json_read_unescaping")
       FAIL_CHECK("fail to parse");
       return;
     }
-    REQUIRE(6 == x["data"].size());
-    REQUIRE("한\n\t\r" == x["data"]);
+    CHECK(6 == x["data"].size());
+    CHECK("한\n\t\r" == x["data"]);
   }
   {
     // multiple r_string instance
     auto x = json::load(R"({"data":"\ud55c\n\t\r"})");
     auto a = x["data"].s();
     auto b = x["data"].s();
-    REQUIRE(6 == a.size());
-    REQUIRE(6 == b.size());
-    REQUIRE(6 == x["data"].size());
+    CHECK(6 == a.size());
+    CHECK(6 == b.size());
+    CHECK(6 == x["data"].size());
   }
 }
 
@@ -617,35 +617,35 @@ TEST_CASE("json_write")
 {
   json::wvalue x;
   x["message"] = "hello world";
-  REQUIRE(R"({"message":"hello world"})" == json::dump(x));
+  CHECK(R"({"message":"hello world"})" == json::dump(x));
   x["message"] = std::string("string value");
-  REQUIRE(R"({"message":"string value"})" == json::dump(x));
+  CHECK(R"({"message":"string value"})" == json::dump(x));
   x["message"]["x"] = 3;
-  REQUIRE(R"({"message":{"x":3}})" == json::dump(x));
+  CHECK(R"({"message":{"x":3}})" == json::dump(x));
   x["message"]["y"] = 5;
-  REQUIRE((R"({"message":{"x":3,"y":5}})" == json::dump(x) ||
+  CHECK((R"({"message":{"x":3,"y":5}})" == json::dump(x) ||
            R"({"message":{"y":5,"x":3}})" == json::dump(x)));
   x["message"] = 5.5;
-  REQUIRE(R"({"message":5.5})" == json::dump(x));
+  CHECK(R"({"message":5.5})" == json::dump(x));
   x["message"] = 1234567890;
-  REQUIRE(R"({"message":1234567890})" == json::dump(x));
+  CHECK(R"({"message":1234567890})" == json::dump(x));
 
   json::wvalue y;
   y["scores"][0] = 1;
   y["scores"][1] = "king";
   y["scores"][2] = 3.5;
-  REQUIRE(R"({"scores":[1,"king",3.5]})" == json::dump(y));
+  CHECK(R"({"scores":[1,"king",3.5]})" == json::dump(y));
 
   y["scores"][2][0] = "real";
   y["scores"][2][1] = false;
   y["scores"][2][2] = true;
-  REQUIRE(R"({"scores":[1,"king",["real",false,true]]})" == json::dump(y));
+  CHECK(R"({"scores":[1,"king",["real",false,true]]})" == json::dump(y));
 
   y["scores"]["a"]["b"]["c"] = nullptr;
-  REQUIRE(R"({"scores":{"a":{"b":{"c":null}}}})" == json::dump(y));
+  CHECK(R"({"scores":{"a":{"b":{"c":null}}}})" == json::dump(y));
 
   y["scores"] = std::vector<int>{1, 2, 3};
-  REQUIRE(R"({"scores":[1,2,3]})" == json::dump(y));
+  CHECK(R"({"scores":[1,2,3]})" == json::dump(y));
 }
 
 TEST_CASE("json_copy_r_to_w_to_r")
@@ -655,23 +655,23 @@ TEST_CASE("json_copy_r_to_w_to_r")
   json::wvalue w{r};
   json::rvalue x =
       json::load(json::dump(w));  // why no copy-ctor wvalue -> rvalue?
-  REQUIRE(2 == x["smallint"]);
-  REQUIRE(2147483647 == x["bigint"]);
-  REQUIRE(23.43 == x["fp"]);
-  REQUIRE(23.43 == x["fpsc"]);
-  REQUIRE("a string" == x["str"]);
-  REQUIRE(x["trueval"].b());
+  CHECK(2 == x["smallint"]);
+  CHECK(2147483647 == x["bigint"]);
+  CHECK(23.43 == x["fp"]);
+  CHECK(23.43 == x["fpsc"]);
+  CHECK("a string" == x["str"]);
+  CHECK(x["trueval"].b());
   REQUIRE_FALSE(x["falseval"].b());
-  REQUIRE(json::type::Null == x["nullval"].t());
-  REQUIRE(4u == x["listval"].size());
-  REQUIRE(1 == x["listval"][0]);
-  REQUIRE(2 == x["listval"][1]);
-  REQUIRE("foo" == x["listval"][2]);
-  REQUIRE("bar" == x["listval"][3]);
-  REQUIRE(23 == x["obj"]["member"]);
-  REQUIRE("member" == x["obj"]["member"].key());
-  REQUIRE("baz" == x["obj"]["other"]);
-  REQUIRE("other" == x["obj"]["other"].key());
+  CHECK(json::type::Null == x["nullval"].t());
+  CHECK(4u == x["listval"].size());
+  CHECK(1 == x["listval"][0]);
+  CHECK(2 == x["listval"][1]);
+  CHECK("foo" == x["listval"][2]);
+  CHECK("bar" == x["listval"][3]);
+  CHECK(23 == x["obj"]["member"]);
+  CHECK("member" == x["obj"]["member"].key());
+  CHECK("baz" == x["obj"]["other"]);
+  CHECK("other" == x["obj"]["other"].key());
 }
 
 TEST_CASE("template_basic")
@@ -680,7 +680,7 @@ TEST_CASE("template_basic")
   crow::mustache::context ctx;
   ctx["name"] = "killer tomatoes";
   auto result = t.render(ctx);
-  REQUIRE("attack of killer tomatoes" == result);
+  CHECK("attack of killer tomatoes" == result);
 }
 
 TEST_CASE("template_load")
@@ -691,7 +691,7 @@ TEST_CASE("template_load")
   crow::mustache::context ctx;
   ctx["name"] = "killer tomatoes";
   auto result = t.render(ctx);
-  REQUIRE("attack of killer tomatoes" == result);
+  CHECK("attack of killer tomatoes" == result);
   unlink("test.mustache");
 }
 
@@ -874,15 +874,15 @@ TEST_CASE("middleware_context")
   }
   {
     auto& out = test_middleware_context_vector;
-    REQUIRE(1 == x);
-    REQUIRE(7 == out.size());
-    REQUIRE("1 before" == out[0]);
-    REQUIRE("2 before" == out[1]);
-    REQUIRE("3 before" == out[2]);
-    REQUIRE("handle" == out[3]);
-    REQUIRE("3 after" == out[4]);
-    REQUIRE("2 after" == out[5]);
-    REQUIRE("1 after" == out[6]);
+    CHECK(1 == x);
+    CHECK(7 == out.size());
+    CHECK("1 before" == out[0]);
+    CHECK("2 before" == out[1]);
+    CHECK("3 before" == out[2]);
+    CHECK("handle" == out[3]);
+    CHECK("3 after" == out[4]);
+    CHECK("2 after" == out[5]);
+    CHECK("1 after" == out[6]);
   }
   std::string sendmsg2 = "GET /break\r\n\r\n";
   {
@@ -897,11 +897,11 @@ TEST_CASE("middleware_context")
   }
   {
     auto& out = test_middleware_context_vector;
-    REQUIRE(4 == out.size());
-    REQUIRE("1 before" == out[0]);
-    REQUIRE("2 before" == out[1]);
-    REQUIRE("2 after" == out[2]);
-    REQUIRE("1 after" == out[3]);
+    CHECK(4 == out.size());
+    CHECK("1 before" == out[0]);
+    CHECK("2 before" == out[1]);
+    CHECK("2 after" == out[2]);
+    CHECK("1 after" == out[3]);
   }
   app.stop();
 }
@@ -948,10 +948,10 @@ TEST_CASE("middleware_cookieparser")
     c.close();
   }
   {
-    REQUIRE("value1" == value1);
-    REQUIRE("val=ue2" == value2);
-    REQUIRE("val\"ue3" == value3);
-    REQUIRE("val\"ue4" == value4);
+    CHECK("value1" == value1);
+    CHECK("val=ue2" == value2);
+    CHECK("val\"ue3" == value3);
+    CHECK("val\"ue4" == value4);
   }
   app.stop();
 }
@@ -981,7 +981,7 @@ TEST_CASE("bug_quick_repeated_request")
           c.send(asio::buffer(sendmsg));
 
           size_t received = c.receive(asio::buffer(buf, 2048));
-          REQUIRE("hello" == std::string(buf + received - 5, buf + received));
+          CHECK("hello" == std::string(buf + received - 5, buf + received));
         }
         c.close();
       }));
@@ -1025,7 +1025,7 @@ TEST_CASE("simple_url_params")
     stringstream ss;
     ss << last_url_params;
 
-    REQUIRE("[  ]" == ss.str());
+    CHECK("[  ]" == ss.str());
   }
   // check single presence
   sendmsg = "GET /params?foobar\r\n\r\n";
@@ -1037,9 +1037,9 @@ TEST_CASE("simple_url_params")
     c.receive(asio::buffer(buf, 2048));
     c.close();
 
-    REQUIRE(last_url_params.get("missing") == nullptr);
-    REQUIRE(last_url_params.get("foobar") != nullptr);
-    REQUIRE(last_url_params.get_list("missing").empty());
+    CHECK(last_url_params.get("missing") == nullptr);
+    CHECK(last_url_params.get("foobar") != nullptr);
+    CHECK(last_url_params.get_list("missing").empty());
   }
   // check multiple presence
   sendmsg = "GET /params?foo&bar&baz\r\n\r\n";
@@ -1051,10 +1051,10 @@ TEST_CASE("simple_url_params")
     c.receive(asio::buffer(buf, 2048));
     c.close();
 
-    REQUIRE(last_url_params.get("missing") == nullptr);
-    REQUIRE(last_url_params.get("foo") != nullptr);
-    REQUIRE(last_url_params.get("bar") != nullptr);
-    REQUIRE(last_url_params.get("baz") != nullptr);
+    CHECK(last_url_params.get("missing") == nullptr);
+    CHECK(last_url_params.get("foo") != nullptr);
+    CHECK(last_url_params.get("bar") != nullptr);
+    CHECK(last_url_params.get("baz") != nullptr);
   }
   // check single value
   sendmsg = "GET /params?hello=world\r\n\r\n";
@@ -1066,7 +1066,7 @@ TEST_CASE("simple_url_params")
     c.receive(asio::buffer(buf, 2048));
     c.close();
 
-    REQUIRE(string(last_url_params.get("hello")) == "world");
+    CHECK(string(last_url_params.get("hello")) == "world");
   }
   // check multiple value
   sendmsg = "GET /params?hello=world&left=right&up=down\r\n\r\n";
@@ -1078,9 +1078,9 @@ TEST_CASE("simple_url_params")
     c.receive(asio::buffer(buf, 2048));
     c.close();
 
-    REQUIRE(string(last_url_params.get("hello")) == "world");
-    REQUIRE(string(last_url_params.get("left")) == "right");
-    REQUIRE(string(last_url_params.get("up")) == "down");
+    CHECK(string(last_url_params.get("hello")) == "world");
+    CHECK(string(last_url_params.get("left")) == "right");
+    CHECK(string(last_url_params.get("up")) == "down");
   }
   // check multiple value, multiple types
   sendmsg = "GET /params?int=100&double=123.45&boolean=1\r\n\r\n";
@@ -1092,10 +1092,10 @@ TEST_CASE("simple_url_params")
     c.receive(asio::buffer(buf, 2048));
     c.close();
 
-    REQUIRE(boost::lexical_cast<int>(last_url_params.get("int")) == 100);
-    REQUIRE(boost::lexical_cast<double>(last_url_params.get("double")) ==
+    CHECK(boost::lexical_cast<int>(last_url_params.get("int")) == 100);
+    CHECK(boost::lexical_cast<double>(last_url_params.get("double")) ==
             123.45);
-    REQUIRE(boost::lexical_cast<bool>(last_url_params.get("boolean")));
+    CHECK(boost::lexical_cast<bool>(last_url_params.get("boolean")));
   }
   // check single array value
   sendmsg = "GET /params?tmnt[]=leonardo\r\n\r\n";
@@ -1108,9 +1108,9 @@ TEST_CASE("simple_url_params")
     c.receive(asio::buffer(buf, 2048));
     c.close();
 
-    REQUIRE(last_url_params.get("tmnt") == nullptr);
-    REQUIRE(last_url_params.get_list("tmnt").size() == 1);
-    REQUIRE(string(last_url_params.get_list("tmnt")[0]) == "leonardo");
+    CHECK(last_url_params.get("tmnt") == nullptr);
+    CHECK(last_url_params.get_list("tmnt").size() == 1);
+    CHECK(string(last_url_params.get_list("tmnt")[0]) == "leonardo");
   }
   // check multiple array value
   sendmsg =
@@ -1124,10 +1124,10 @@ TEST_CASE("simple_url_params")
     c.receive(asio::buffer(buf, 2048));
     c.close();
 
-    REQUIRE(last_url_params.get_list("tmnt").size() == 3);
-    REQUIRE(string(last_url_params.get_list("tmnt")[0]) == "leonardo");
-    REQUIRE(string(last_url_params.get_list("tmnt")[1]) == "donatello");
-    REQUIRE(string(last_url_params.get_list("tmnt")[2]) == "raphael");
+    CHECK(last_url_params.get_list("tmnt").size() == 3);
+    CHECK(string(last_url_params.get_list("tmnt")[0]) == "leonardo");
+    CHECK(string(last_url_params.get_list("tmnt")[1]) == "donatello");
+    CHECK(string(last_url_params.get_list("tmnt")[2]) == "raphael");
   }
   app.stop();
 }
@@ -1173,28 +1173,28 @@ TEST_CASE("route_dynamic")
     response res;
     req.url = "/";
     app.handle(req, res);
-    REQUIRE(x == 2);
+    CHECK(x == 2);
   }
   {
     request req;
     response res;
     req.url = "/set_int/42";
     app.handle(req, res);
-    REQUIRE(x == 42);
+    CHECK(x == 42);
   }
   {
     request req;
     response res;
     req.url = "/set5";
     app.handle(req, res);
-    REQUIRE(x == 5);
+    CHECK(x == 5);
   }
   {
     request req;
     response res;
     req.url = "/set4";
     app.handle(req, res);
-    REQUIRE(x == 4);
+    CHECK(x == 4);
   }
 }
 
@@ -1227,7 +1227,7 @@ TEST_CASE("send_file")
     app.handle(req, res);
 
 
-    REQUIRE(404 == res.code);
+    CHECK(404 == res.code);
   }
 
   //Headers check
@@ -1242,9 +1242,9 @@ TEST_CASE("send_file")
     struct stat statbuf;
     stat("tests/img/cat.jpg", &statbuf);
 
-    REQUIRE(200 == res.code);
-    REQUIRE("image/jpeg" == res.headers.find("Content-Type")->second);
-    REQUIRE(to_string(statbuf.st_size) ==
+    CHECK(200 == res.code);
+    CHECK("image/jpeg" == res.headers.find("Content-Type")->second);
+    CHECK(to_string(statbuf.st_size) ==
             res.headers.find("Content-Length")->second);
   }
 
@@ -1279,7 +1279,7 @@ TEST_CASE("multipart")
 
     app.handle(req, res);
 
-    REQUIRE(test_string == res.body);
+    CHECK(test_string == res.body);
   }
 }
 
