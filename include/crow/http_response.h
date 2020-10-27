@@ -217,26 +217,28 @@ namespace crow
             void write_streamed_string(std::string& is, Adaptor& adaptor)
             {
                 std::string buf;
-                buf.reserve(16384);
+                std::vector<asio::const_buffer> buffers;
 
-                //TODO this can be optimized
-                while (is.length() > 0)
+                while (is.length() > 16384)
                 {
-                    std::vector<asio::const_buffer> buffers;
-                    if (is.length() > 16384)
-                    {
-                        buf = is.substr(0, 16384);
-                        is = is.substr(16384);
-                    }
-                    else
-                    {
-                        buf = std::string();
-                        buf = is;
-                        is.clear();
-                    }
-                    buffers.push_back(boost::asio::buffer(buf));
-                    write_buffer_list(buffers, adaptor);
+                    buf.reserve(16384);
+                    buf = is.substr(0, 16384);
+                    is = is.substr(16384);
+                    push_and_write(buffers, buf, adaptor);
                 }
+                //Collect whatever is left (less thank 16KB) and send it down the socket
+                buf.reserve(is.length());
+                buf = is;
+                is.clear();
+                push_and_write(buffers, buf, adaptor);
+            }
+
+            template<typename Adaptor>
+            inline void push_and_write(std::vector<asio::const_buffer>& buffers, std::string& buf, Adaptor& adaptor)
+            {
+                buffers.clear();
+                buffers.push_back(boost::asio::buffer(buf));
+                write_buffer_list(buffers, adaptor);
             }
 
             template<typename Adaptor>
