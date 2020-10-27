@@ -32,20 +32,30 @@ namespace crow
 #ifdef CROW_ENABLE_SSL
     using ssl_context_t = boost::asio::ssl::context;
 #endif
+    ///The main server application
+
+    ///
+    /// Use `SimpleApp` or `App<Middleware1, Middleware2, etc...>`
     template <typename ... Middlewares>
     class Crow
     {
     public:
+        ///This crow application
         using self_t = Crow;
+        ///The HTTP server
         using server_t = Server<Crow, SocketAdaptor, Middlewares...>;
 #ifdef CROW_ENABLE_SSL
+        ///An HTTP server that runs on SSL with an SSLAdaptor
         using ssl_server_t = Server<Crow, SSLAdaptor, Middlewares...>;
 #endif
         Crow()
         {
         }
 
+        ///Process an Upgrade request
 
+        ///
+        ///Currently used to upgrrade an HTTP connection to a WebSocket connection
         template <typename Adaptor>
         void handle_upgrade(const request& req, response& res, Adaptor&& adaptor)
         {
@@ -58,11 +68,13 @@ namespace crow
             router_.handle(req, res);
         }
 
+        ///Create a dynamic route using a rule (**Use CROW_ROUTE instead**)
         DynamicRule& route_dynamic(std::string&& rule)
         {
             return router_.new_rule_dynamic(std::move(rule));
         }
 
+        ///Create a route using a rule (**Use CROW_ROUTE instead**)
         template <uint64_t Tag>
         auto route(std::string&& rule)
             -> typename std::result_of<decltype(&Router::new_rule_tagged<Tag>)(Router, std::string&&)>::type
@@ -106,11 +118,39 @@ namespace crow
             return *this;
         }
 
+        ///Set the server's log level
+
+        ///
+        /// Possible values are:
+        /// crow::LogLevel::Debug       (0)
+        /// crow::LogLevel::Info        (1)
+        /// crow::LogLevel::Warning     (2)
+        /// crow::LogLevel::Error       (3)
+        /// crow::LogLevel::Critical    (4)
+        self_t& loglevel(crow::LogLevel level)
+        {
+            crow::logger::setLogLevel(level);
+            return *this;
+        }
+
+        ///Set a custom duration and function to run on every tick
+        template <typename Duration, typename Func>
+        self_t& tick(Duration d, Func f) {
+            tick_interval_ = std::chrono::duration_cast<std::chrono::milliseconds>(d);
+            tick_function_ = f;
+            return *this;
+        }
+
+        ///A wrapper for `validate()` in the router
+
+        ///
+        ///Go through the rules, upgrade them if possible, and add them to the list of rules
         void validate()
         {
             router_.validate();
         }
 
+        ///Notify anything using `wait_for_server_start()` to proceed
         void notify_server_start()
         {
             std::unique_lock<std::mutex> lock(start_mutex_);
@@ -165,13 +205,10 @@ namespace crow
             router_.debug_print();
         }
 
-        self_t& loglevel(crow::LogLevel level)
-        {
-            crow::logger::setLogLevel(level);
-            return *this;
-        }
 
 #ifdef CROW_ENABLE_SSL
+
+        ///use certificate and key files for SSL
         self_t& ssl_file(const std::string& crt_filename, const std::string& key_filename)
         {
             use_ssl_ = true;
@@ -187,6 +224,7 @@ namespace crow
             return *this;
         }
 
+        ///use .pem file for SSL
         self_t& ssl_file(const std::string& pem_filename)
         {
             use_ssl_ = true;
@@ -252,13 +290,7 @@ namespace crow
             return utility::get_element_by_type<T, Middlewares...>(middlewares_);
         }
 
-        template <typename Duration, typename Func>
-        self_t& tick(Duration d, Func f) {
-            tick_interval_ = std::chrono::duration_cast<std::chrono::milliseconds>(d);
-            tick_function_ = f;
-            return *this;
-        }
-
+        ///Wait until the server has properly started
         void wait_for_server_start()
         {
             std::unique_lock<std::mutex> lock(start_mutex_);
