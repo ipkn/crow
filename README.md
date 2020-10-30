@@ -2,7 +2,7 @@
 
 Crow is a C++ microframework for web. (inspired by Python Flask)
 
-[![Travis Build](https://travis-ci.org/mrozigor/crow.svg?branch=master)](https://travis-ci.org/mrozigor/crow)
+[![Build Status](https://travis-ci.com/mrozigor/crow.svg?branch=master)](https://travis-ci.com/mrozigor/crow)
 [![Coverage Status](https://coveralls.io/repos/github/mrozigor/crow/badge.svg?branch=master)](https://coveralls.io/github/mrozigor/crow?branch=master)
 [![Gitter](https://badges.gitter.im/crowfork/community.svg)](https://gitter.im/crowfork/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
