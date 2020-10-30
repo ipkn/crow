@@ -64,12 +64,15 @@ namespace crow
             {
                 return body_.substr(action.start, action.end - action.start);
             }
-            auto find_context(const std::string& name, const std::vector<context*>& stack)->std::pair<bool, context&>
+            auto find_context(const std::string& name, const std::vector<context*>& stack, bool shouldUseOnlyFirstStackValue = false)->std::pair<bool, context&>
             {
                 if (name == ".")
                 {
                     return {true, *stack.back()};
                 }
+                static json::wvalue empty_str;
+                empty_str = "";
+
                 int dotPosition = name.find(".");
                 if (dotPosition == (int)name.npos)
                 {
@@ -110,6 +113,9 @@ namespace crow
                             }
                             else
                             {
+                                if (shouldUseOnlyFirstStackValue) {
+                                    return {false, empty_str};
+                                }
                                 found = false;
                                 break;
                             }
@@ -120,8 +126,6 @@ namespace crow
 
                 }
 
-                static json::wvalue empty_str;
-                empty_str = "";
                 return {false, empty_str};
             }
 
@@ -141,6 +145,27 @@ namespace crow
                         default: out += *it; break;
                     }
                 }
+            }
+
+          bool isTagInsideObjectBlock(const int& current, const std::vector<context*>& stack)
+            {
+                int openedBlock = 0;
+                int totalBlocksBefore = 0;
+                for (int i = current; i > 0; --i) {
+                    ++totalBlocksBefore;
+                    auto& action = actions_[i - 1];
+
+                    if (action.t == ActionType::OpenBlock) {
+                        if (openedBlock == 0 && (*stack.rbegin())->t() == json::type::Object) {
+                            return true;
+                        }
+                        --openedBlock;
+                    } else if (action.t == ActionType::CloseBlock) {
+                        ++openedBlock;
+                    }
+                }
+
+                return false;
             }
 
             void render_internal(int actionBegin, int actionEnd, std::vector<context*>& stack, std::string& out, int indent)
@@ -171,7 +196,11 @@ namespace crow
                         case ActionType::UnescapeTag:
                         case ActionType::Tag:
                             {
-                                auto optional_ctx = find_context(tag_name(action), stack);
+                                bool shouldUseOnlyFirstStackValue = false;
+                                if (isTagInsideObjectBlock(current, stack)) {
+                                    shouldUseOnlyFirstStackValue = true;
+                                }
+                                auto optional_ctx = find_context(tag_name(action), stack, shouldUseOnlyFirstStackValue);
                                 auto& ctx = optional_ctx.second;
                                 switch(ctx.t())
                                 {
