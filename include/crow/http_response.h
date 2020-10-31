@@ -221,13 +221,13 @@ namespace crow
 
                 while (is.length() > 16384)
                 {
-                    buf.reserve(16384);
+                    //buf.reserve(16385);
                     buf = is.substr(0, 16384);
                     is = is.substr(16384);
                     push_and_write(buffers, buf, adaptor);
                 }
-                //Collect whatever is left (less thank 16KB) and send it down the socket
-                buf.reserve(is.length());
+                //Collect whatever is left (less than 16KB) and send it down the socket
+                //buf.reserve(is.length());
                 buf = is;
                 is.clear();
                 push_and_write(buffers, buf, adaptor);
