@@ -54,4 +54,4 @@ after_success:
   - cd ..
   - if [ "$PUSH_COVERAGE" == "ON" ]; then coveralls -i include --exclude-pattern .*/http_parser_merged.h --exclude-pattern .*/TinySHA1.hpp --gcov-options '\-lp'; fi
   - chmod +x generateDocumentationAndDeploy.sh
-  - if [ "$TRAVIS_BUILD_DOCS" == "ON" ]; then ./generateDocumentationAndDeploy.sh; fi
+  - if [ "$TRAVIS_BUILD_DOCS" == "ON" ]; then ./scripts/generateDocumentationAndDeploy.sh; fi

@@ -1,4 +1,4 @@
-![Crow logo](http://i.imgur.com/wqivvjK.jpg)
+![Crow logo](https://pixeldrain.com/api/file/DMc7xYye)
 
 Crow is a C++ microframework for web. (inspired by Python Flask)
 
@@ -90,7 +90,7 @@ CROW_ROUTE(app, "/add_json")
 
 ## How to Build
 
-If you just want to use crow, generate `crow_all.h` (use script `amalgamate/merge_all.py`) and include it.
+If you just want to use crow, generate `crow_all.h` (use script `scripts/merge_all.py`) and include it.
 
 ### Requirements
 
