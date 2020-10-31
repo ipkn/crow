@@ -10,9 +10,6 @@ for testfile in glob.glob("*.json"):
     for test in testdoc["tests"]:
         if "lambda" in test["data"]:
             continue
-        if "Dotted Names - Context Precedence" in test["name"]:
-            # Temporarily disabled - fix
-            continue
 
         open('data', 'w').write(json.dumps(test["data"]))
         open('template', 'w').write(test["template"])
