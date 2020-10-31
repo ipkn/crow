@@ -53,5 +53,5 @@ script: make -j4 && ctest -V -j4
 after_success:
   - cd ..
   - if [ "$PUSH_COVERAGE" == "ON" ]; then coveralls -i include --exclude-pattern .*/http_parser_merged.h --exclude-pattern .*/TinySHA1.hpp --gcov-options '\-lp'; fi
-  - chmod +x generateDocumentationAndDeploy.sh
+  - chmod +x scripts/generateDocumentationAndDeploy.sh
   - if [ "$TRAVIS_BUILD_DOCS" == "ON" ]; then ./scripts/generateDocumentationAndDeploy.sh; fi
