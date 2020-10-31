@@ -1200,8 +1200,43 @@ TEST_CASE("route_dynamic")
   }
 }
 
+TEST_CASE("multipart")
+{
+  std::string test_string = "--CROW-BOUNDARY\r\nContent-Disposition: form-data; name=\"hello\"\r\n\r\nworld\r\n--CROW-BOUNDARY\r\nContent-Disposition: form-data; name=\"world\"\r\n\r\nhello\r\n--CROW-BOUNDARY\r\nContent-Disposition: form-data; name=\"multiline\"\r\n\r\ntext\ntext\ntext\r\n--CROW-BOUNDARY--\r\n";
+
+  SimpleApp app;
+
+  CROW_ROUTE(app, "/multipart")
+  ([](const crow::request& req, crow::response& res)
+  {
+    multipart::message msg(req);
+    res.add_header("Content-Type", "multipart/form-data; boundary=CROW-BOUNDARY");
+    res.body = msg.dump();
+    res.end();
+  });
+
+  app.validate();
+
+  {
+    request req;
+    response res;
+
+    req.url = "/multipart";
+    req.add_header("Content-Type", "multipart/form-data; boundary=CROW-BOUNDARY");
+    req.body = test_string;
+
+    app.handle(req, res);
+
+    CHECK(test_string == res.body);
+  }
+}
+
 TEST_CASE("send_file")
 {
+
+  struct stat statbuf;
+  stat("tests/img/cat.jpg", &statbuf);
+
   SimpleApp app;
 
   CROW_ROUTE(app, "/jpg")
@@ -1241,48 +1276,14 @@ TEST_CASE("send_file")
 
     app.handle(req, res);
 
-    struct stat statbuf;
-    stat("tests/img/cat.jpg", &statbuf);
-
     CHECK(200 == res.code);
     CHECK("image/jpeg" == res.headers.find("Content-Type")->second);
     CHECK(to_string(statbuf.st_size) ==
             res.headers.find("Content-Length")->second);
   }
 
-  //TODO add content check
+  //TODO test content
 
-}
-
-TEST_CASE("multipart")
-{
-  std::string test_string = "--CROW-BOUNDARY\r\nContent-Disposition: form-data; name=\"hello\"\r\n\r\nworld\r\n--CROW-BOUNDARY\r\nContent-Disposition: form-data; name=\"world\"\r\n\r\nhello\r\n--CROW-BOUNDARY\r\nContent-Disposition: form-data; name=\"multiline\"\r\n\r\ntext\ntext\ntext\r\n--CROW-BOUNDARY--\r\n";
-
-  SimpleApp app;
-
-  CROW_ROUTE(app, "/multipart")
-  ([](const crow::request& req, crow::response& res) 
-  {
-    multipart::message msg(req);
-    res.add_header("Content-Type", "multipart/form-data; boundary=CROW-BOUNDARY");
-    res.body = msg.dump();
-    res.end();
-  });
-
-  app.validate();
-
-  {
-    request req;
-    response res;
-
-    req.url = "/multipart";
-    req.add_header("Content-Type", "multipart/form-data; boundary=CROW-BOUNDARY");
-    req.body = test_string;
-
-    app.handle(req, res);
-
-    CHECK(test_string == res.body);
-  }
 }
 
 TEST_CASE("stream_response")
@@ -1295,7 +1296,7 @@ TEST_CASE("stream_response")
     {
       std::string keyword_ = "hello";
       std::string key_response;
-      for (unsigned int i = 0; i<1000000; i++)
+      for (unsigned int i = 0; i<250000; i++)
         key_response += keyword_;
 
       res.body = key_response;
@@ -1304,6 +1305,7 @@ TEST_CASE("stream_response")
 
     app.validate();
 
+    //running the test on a separate thread to allow the client to sleep
     std::thread runTest([&app](){
 
     auto _ = async(launch::async,
@@ -1312,36 +1314,58 @@ TEST_CASE("stream_response")
     asio::io_service is;
     std::string sendmsg;
 
-    static char buf[2048];
-    static char buf2[16384];
-
+    //Total bytes received
+    unsigned int received = 0;
     sendmsg = "GET /test\r\n\r\n";
     {
+      asio::streambuf b;
 
       std::string keyword_ = "hello";
       std::string key_response;
-      for (unsigned int i = 0; i<1000000; i++)
-        key_response += keyword_;
 
       asio::ip::tcp::socket c(is);
       c.connect(asio::ip::tcp::endpoint(
           asio::ip::address::from_string(LOCALHOST_ADDRESS), 45451));
       c.send(asio::buffer(sendmsg));
-      c.receive(asio::buffer(buf, 2048));
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-      for (unsigned int i = 0; i<305; i++)
+      //consuming the headers, since we don't need those for the test
+      static char buf[2048];
+      c.receive(asio::buffer(buf, 2048));
+
+      //creating the string to compare against
+      for (unsigned int i = 0; i<250000; i++)
+        key_response += keyword_;
+
+      //"hello" is 5 bytes, (5*250000)/16384 = 76.2939
+      for (unsigned int i = 0; i<76; i++)
       {
-        c.receive(asio::buffer(buf2, 16385));
-        //CHECK(strlen(buf2) == 16384);
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        asio::streambuf::mutable_buffers_type bufs = b.prepare(16384);
+        size_t n = c.receive(bufs);
+        b.commit(n);
+        received += n;
+        std::istream is(&b);
+        std::string s;
+        is >> s;
+        CHECK(key_response.substr(received-n, n) == s);
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
       }
-      //c.close();
 
-      CHECK(key_response.substr(4980686, 50) == std::string(buf2).substr(16334, 50));
-      std::cout << "Buffer1: " << buf << std::endl;
-      std::cout << "Buffer2: " << std::string(buf2).substr(16334, 50) << std::endl;
+      //handle the 0.2 and any errors in the earlier loop
+      while (c.available() > 0)
+      {
+          asio::streambuf::mutable_buffers_type bufs = b.prepare(16384);
+          size_t n = c.receive(bufs);
+          b.commit(n);
+          received += n;
+          std::istream is(&b);
+          std::string s;
+          is >> s;
+          CHECK(key_response.substr(received-n, n) == s);
+          std::this_thread::sleep_for(std::chrono::milliseconds(20));
+      }
+
+
     }
     app.stop();
     });
