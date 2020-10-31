@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #get mime.types file from the nginx repository at nginx/conf/mime.types
 #typical output filename: mime_types.h
