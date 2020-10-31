@@ -39,3 +39,11 @@ build*/
 
 #Doxygen
 html/
+
+#QT-Creator
+*.config
+*.creator*
+*.cflags
+*.cxxflags
+*.files
+*.includes
