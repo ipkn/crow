@@ -18,6 +18,7 @@ namespace crow
             Payload,
         };
 
+        ///A base class for websocket connection.
 		struct connection
 		{
             virtual void send_binary(const std::string& msg) = 0;
@@ -32,10 +33,35 @@ namespace crow
             void* userdata_;
 		};
 
+        //  0               1               2               3
+        //  0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
+        // +-+-+-+-+-------+-+-------------+-------------------------------+
+        // |F|R|R|R| opcode|M| Payload len |    Extended payload length    |
+        // |I|S|S|S|  (4)  |A|     (7)     |             (16/64)           |
+        // |N|V|V|V|       |S|             |   (if payload len==126/127)   |
+        // | |1|2|3|       |K|             |                               |
+        // +-+-+-+-+-------+-+-------------+ - - - - - - - - - - - - - - - +
+        // |     Extended payload length continued, if payload len == 127  |
+        // + - - - - - - - - - - - - - - - +-------------------------------+
+        // |                               |Masking-key, if MASK set to 1  |
+        // +-------------------------------+-------------------------------+
+        // | Masking-key (continued)       |          Payload Data         |
+        // +-------------------------------- - - - - - - - - - - - - - - - +
+        // :                     Payload Data continued ...                :
+        // + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+        // |                     Payload Data continued ...                |
+        // +---------------------------------------------------------------+
+
+        ///A websocket connection.
 		template <typename Adaptor>
         class Connection : public connection
         {
 			public:
+                /// Constructor for a connection.
+
+                ///
+                /// Requires a request with an "Upgrade: websocket" header.<br>
+                /// Automatically handles the handshake.
 				Connection(const crow::request& req, Adaptor&& adaptor, 
 						std::function<void(crow::websocket::connection&)> open_handler,
 						std::function<void(crow::websocket::connection&, const std::string&, bool)> message_handler,
@@ -72,18 +98,24 @@ namespace crow
                     start(crow::utility::base64encode((char*)digest, 20));
 				}
 
+                /// Send data through the socket.
                 template<typename CompletionHandler>
                 void dispatch(CompletionHandler handler)
                 {
                     adaptor_.get_io_service().dispatch(handler);
                 }
 
+                /// Send data through the socket and return immediately.
                 template<typename CompletionHandler>
                 void post(CompletionHandler handler)
                 {
                     adaptor_.get_io_service().post(handler);
                 }
 
+                /// Send a "Pong" message.
+
+                ///
+                /// Usually automatically invoked as a response to a "Ping" message.
                 void send_pong(const std::string& msg)
                 {
                     dispatch([this, msg]{
@@ -95,6 +127,7 @@ namespace crow
                     });
                 }
 
+                /// Send a binary encoded message.
                 void send_binary(const std::string& msg) override
                 {
                     dispatch([this, msg]{
@@ -105,6 +138,7 @@ namespace crow
                     });
                 }
 
+                /// Send a plaintext message.
                 void send_text(const std::string& msg) override
                 {
                     dispatch([this, msg]{
@@ -115,6 +149,10 @@ namespace crow
                     });
                 }
 
+                /// Send a close signal.
+
+                ///
+                /// Sets a flag to destroy the object once the message is sent.
                 void close(const std::string& msg) override
                 {
                     dispatch([this, msg]{
@@ -134,6 +172,7 @@ namespace crow
 
             protected:
 
+                /// Generate the websocket headers using an opcode and the message size (in bytes).
                 std::string build_header(int opcode, size_t size)
                 {
                     char buf[2+8] = "\x80\x00";
@@ -157,6 +196,10 @@ namespace crow
                     }
                 }
 
+                /// Send the HTTP upgrade response.
+
+                ///
+                /// Finishes the handshake process, then starts reading messages from the socket.
                 void start(std::string&& hello)
                 {
                     static std::string header = "HTTP/1.1 101 Switching Protocols\r\n"
@@ -174,6 +217,13 @@ namespace crow
                     do_read();
                 }
 
+                /// Read a websocket message.
+
+                ///
+                /// Involves:<br>
+                /// Handling headers (opcodes, size).<br>
+                /// Unmasking the payload.<br>
+                /// Reading the actual payload.<br>
                 void do_read()
                 {
                     is_reading = true;
@@ -454,6 +504,10 @@ namespace crow
                     fragment_.clear();
                 }
 
+                /// Send the buffers' data through the socket.
+
+                ///
+                /// Also destroyes the object if the Close flag is set.
                 void do_write()
                 {
                     if (sending_buffers_.empty())
@@ -485,6 +539,7 @@ namespace crow
                     }
                 }
 
+                ///Destroy the Connection.
                 void check_destroy()
                 {
                     //if (has_sent_close_ && has_recv_close_)
