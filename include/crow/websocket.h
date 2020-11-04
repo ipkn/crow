@@ -250,8 +250,11 @@ namespace crow
                                         }
 #endif
 
-                                        if (!ec && ((mini_header_ & 0x80) == 0x80))
+                                        if (!ec)
                                         {
+                                            if ((mini_header_ & 0x80) == 0x80)
+                                                has_mask_ = true;
+
                                             if ((mini_header_ & 0x7f) == 127)
                                             {
                                                 state_ = WebSocketReadState::Len64;
@@ -350,34 +353,42 @@ namespace crow
                             }
                             break;
                         case WebSocketReadState::Mask:
-                                boost::asio::async_read(adaptor_.socket(), boost::asio::buffer((char*)&mask_, 4), 
-                                    [this](const boost::system::error_code& ec, std::size_t 
-#ifdef CROW_ENABLE_DEBUG 
-                                        bytes_transferred
-#endif
-                                    )
-                                    {
-                                        is_reading = false;
+                            if (has_mask_)
+                            {
+                                    boost::asio::async_read(adaptor_.socket(), boost::asio::buffer((char*)&mask_, 4),
+                                        [this](const boost::system::error_code& ec, std::size_t
 #ifdef CROW_ENABLE_DEBUG
-                                        if (!ec && bytes_transferred != 4)
+                                            bytes_transferred
+#endif
+                                        )
                                         {
-                                            throw std::runtime_error("WebSocket:Mask:async_read fail:asio bug?");
-                                        }
+                                            is_reading = false;
+#ifdef CROW_ENABLE_DEBUG
+                                            if (!ec && bytes_transferred != 4)
+                                            {
+                                                throw std::runtime_error("WebSocket:Mask:async_read fail:asio bug?");
+                                            }
 #endif
 
-                                        if (!ec)
-                                        {
-                                            state_ = WebSocketReadState::Payload;
-                                            do_read();
-                                        }
-                                        else
-                                        {
-                                            close_connection_ = true;
-                                            if (error_handler_)
-                                                error_handler_(*this);
-                                            adaptor_.close();
-                                        }
-                                    });
+                                            if (!ec)
+                                            {
+                                                state_ = WebSocketReadState::Payload;
+                                                do_read();
+                                            }
+                                            else
+                                            {
+                                                close_connection_ = true;
+                                                if (error_handler_)
+                                                    error_handler_(*this);
+                                                adaptor_.close();
+                                            }
+                                        });
+                            }
+                            else
+                            {
+                                state_ = WebSocketReadState::Payload;
+                                do_read();
+                            }
                             break;
                         case WebSocketReadState::Payload:
                             {
@@ -415,21 +426,30 @@ namespace crow
                     }
                 }
 
+                /// Check if the FIN bit is set.
                 bool is_FIN()
                 {
                     return mini_header_ & 0x8000;
                 }
 
+                /// Extract the opcode from the header.
                 int opcode()
                 {
                     return (mini_header_ & 0x0f00) >> 8;
                 }
 
+                /// Process the payload fragment.
+
+                ///
+                /// Unmasks the fragment, checks the opcode, merges fragments into 1 message body, and calls the appropriate handler.
                 void handle_fragment()
                 {
-                    for(decltype(fragment_.length()) i = 0; i < fragment_.length(); i ++)
+                    if (has_mask_)
                     {
-                        fragment_[i] ^= ((char*)&mask_)[i%4];
+                        for(decltype(fragment_.length()) i = 0; i < fragment_.length(); i ++)
+                        {
+                            fragment_[i] ^= ((char*)&mask_)[i%4];
+                        }
                     }
                     switch(opcode())
                     {
@@ -539,7 +559,7 @@ namespace crow
                     }
                 }
 
-                ///Destroy the Connection.
+                /// Destroy the Connection.
                 void check_destroy()
                 {
                     //if (has_sent_close_ && has_recv_close_)
@@ -564,6 +584,7 @@ namespace crow
                 uint64_t remaining_length_{0};
                 bool close_connection_{false};
                 bool is_reading{false};
+                bool has_mask_{false};
                 uint32_t mask_;
                 uint16_t mini_header_;
                 bool has_sent_close_{false};
