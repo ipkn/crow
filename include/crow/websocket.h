@@ -112,6 +112,21 @@ namespace crow
                     adaptor_.get_io_service().post(handler);
                 }
 
+                /// Send a "Ping" message.
+
+                ///
+                /// Usually invoked to check if the other point is still online.
+                void send_ping(const std::string& msg)
+                {
+                    dispatch([this, msg]{
+                        char buf[3] = "\x89\x00";
+                        buf[1] += msg.size();
+                        write_buffers_.emplace_back(buf, buf+2);
+                        write_buffers_.emplace_back(msg);
+                        do_write();
+                    });
+                }
+
                 /// Send a "Pong" message.
 
                 ///
