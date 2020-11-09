@@ -23,6 +23,8 @@ namespace crow
 		{
             virtual void send_binary(const std::string& msg) = 0;
             virtual void send_text(const std::string& msg) = 0;
+            virtual void send_ping(const std::string& msg) = 0;
+            virtual void send_pong(const std::string& msg) = 0;
             virtual void close(const std::string& msg = "quit") = 0;
             virtual ~connection(){}
 
@@ -33,8 +35,8 @@ namespace crow
             void* userdata_;
 		};
 
-        //  0               1               2               3
-        //  0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
+        //  0               1               2               3               -byte
+        //  0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 -bit
         // +-+-+-+-+-------+-+-------------+-------------------------------+
         // |F|R|R|R| opcode|M| Payload len |    Extended payload length    |
         // |I|S|S|S|  (4)  |A|     (7)     |             (16/64)           |
@@ -116,7 +118,7 @@ namespace crow
 
                 ///
                 /// Usually invoked to check if the other point is still online.
-                void send_ping(const std::string& msg)
+                void send_ping(const std::string& msg) override
                 {
                     dispatch([this, msg]{
                         char buf[3] = "\x89\x00";
@@ -131,7 +133,7 @@ namespace crow
 
                 ///
                 /// Usually automatically invoked as a response to a "Ping" message.
-                void send_pong(const std::string& msg)
+                void send_pong(const std::string& msg) override
                 {
                     dispatch([this, msg]{
                         char buf[3] = "\x8A\x00";
@@ -246,8 +248,9 @@ namespace crow
                     {
                         case WebSocketReadState::MiniHeader:
                             {
+                                mini_header_ = 0;
                                 //boost::asio::async_read(adaptor_.socket(), boost::asio::buffer(&mini_header_, 1), 
-                                adaptor_.socket().async_read_some(boost::asio::buffer(&mini_header_, 2), 
+                                adaptor_.socket().async_read_some(boost::asio::buffer(&mini_header_, 2),
                                     [this](const boost::system::error_code& ec, std::size_t 
 #ifdef CROW_ENABLE_DEBUG
                                         bytes_transferred
