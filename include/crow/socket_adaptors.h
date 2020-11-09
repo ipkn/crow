@@ -108,11 +108,6 @@ namespace crow
 
         bool is_open()
         {
-            return raw_socket().is_open();
-        }
-
-        bool is_open()
-        {
             return ssl_socket_ ? raw_socket().is_open() : false;
         }
 
