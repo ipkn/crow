@@ -54,7 +54,7 @@ namespace crow
         // |                     Payload Data continued ...                |
         // +---------------------------------------------------------------+
 
-        ///A websocket connection.
+        /// A websocket connection.
 		template <typename Adaptor>
         class Connection : public connection
         {
@@ -121,9 +121,8 @@ namespace crow
                 void send_ping(const std::string& msg) override
                 {
                     dispatch([this, msg]{
-                        char buf[3] = "\x89\x00";
-                        buf[1] += msg.size();
-                        write_buffers_.emplace_back(buf, buf+2);
+                        auto header = build_header(0x9, msg.size());
+                        write_buffers_.emplace_back(std::move(header));
                         write_buffers_.emplace_back(msg);
                         do_write();
                     });
@@ -136,9 +135,8 @@ namespace crow
                 void send_pong(const std::string& msg) override
                 {
                     dispatch([this, msg]{
-                        char buf[3] = "\x8A\x00";
-                        buf[1] += msg.size();
-                        write_buffers_.emplace_back(buf, buf+2);
+                        auto header = build_header(0xA, msg.size());
+                        write_buffers_.emplace_back(std::move(header));
                         write_buffers_.emplace_back(msg);
                         do_write();
                     });
