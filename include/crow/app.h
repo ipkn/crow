@@ -121,12 +121,12 @@ namespace crow
         ///Set the server's log level
 
         ///
-        /// Possible values are:
-        /// crow::LogLevel::Debug       (0)
-        /// crow::LogLevel::Info        (1)
-        /// crow::LogLevel::Warning     (2)
-        /// crow::LogLevel::Error       (3)
-        /// crow::LogLevel::Critical    (4)
+        /// Possible values are:<br>
+        /// crow::LogLevel::Debug       (0)<br>
+        /// crow::LogLevel::Info        (1)<br>
+        /// crow::LogLevel::Warning     (2)<br>
+        /// crow::LogLevel::Error       (3)<br>
+        /// crow::LogLevel::Critical    (4)<br>
         self_t& loglevel(crow::LogLevel level)
         {
             crow::logger::setLogLevel(level);
