@@ -165,7 +165,7 @@ namespace crow
             route<crow::black_magic::get_parameter_tag("/static/<path>")>("/static/<path>")
             ([](const crow::request&, crow::response& res, std::string file_path)
             {
-              res.set_static_file_info(file_path);
+              res.set_static_file_info("static/"+file_path);
               res.end();
             });
             validate();
