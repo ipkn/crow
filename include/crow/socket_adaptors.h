@@ -108,31 +108,43 @@ namespace crow
 
         bool is_open()
         {
-            return raw_socket().is_open();
+            return ssl_socket_ ? raw_socket().is_open() : false;
         }
 
         void close()
         {
-            boost::system::error_code ec;
-            raw_socket().close(ec);
+            if (is_open())
+            {
+                boost::system::error_code ec;
+                raw_socket().close(ec);
+            }
         }
 
         void shutdown_readwrite()
         {
-            boost::system::error_code ec;
-            raw_socket().shutdown(boost::asio::socket_base::shutdown_type::shutdown_both, ec);
+            if (is_open())
+            {
+                boost::system::error_code ec;
+                raw_socket().shutdown(boost::asio::socket_base::shutdown_type::shutdown_both, ec);
+            }
         }
 
         void shutdown_write()
         {
-            boost::system::error_code ec;
-            raw_socket().shutdown(boost::asio::socket_base::shutdown_type::shutdown_send, ec);
+            if (is_open())
+            {
+                boost::system::error_code ec;
+                raw_socket().shutdown(boost::asio::socket_base::shutdown_type::shutdown_send, ec);
+            }
         }
 
         void shutdown_read()
         {
-            boost::system::error_code ec;
-            raw_socket().shutdown(boost::asio::socket_base::shutdown_type::shutdown_receive, ec);
+            if (is_open())
+            {
+                boost::system::error_code ec;
+                raw_socket().shutdown(boost::asio::socket_base::shutdown_type::shutdown_receive, ec);
+            }
         }
 
         boost::asio::io_service& get_io_service()
