@@ -58,7 +58,7 @@ else()
 		${PROJECT_SOURCE_DIR}/include
 		${CMAKE_CURRENT_BINARY_DIR}/crow_all.h
 		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-		DEPENDS ${PROJECT_SOURCE_DIR}/include/*.h ${PROJECT_SOURCE_DIR}/include/crow/*.h
+		DEPENDS ${PROJECT_SOURCE_DIR}/include/*.h ${PROJECT_SOURCE_DIR}/include/crow/*.h ${PROJECT_SOURCE_DIR}/include/crow/middlewares/*.h
   )
 
 	add_custom_target(amalgamation ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/crow_all.h)
