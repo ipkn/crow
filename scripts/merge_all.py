@@ -5,18 +5,46 @@ from glob import glob
 from os import path as pt
 import re
 from collections import defaultdict
-import sys
+import sys, getopt
 
-if len(sys.argv) != 3:
-    print("Usage: {} <CROW_HEADERS_DIRECTORY_PATH> <CROW_OUTPUT_HEADER_PATH>".format(sys.argv[0]))
+if len(sys.argv) < 3:
+    print("Usage: {} <CROW_HEADERS_DIRECTORY_PATH> <CROW_OUTPUT_HEADER_PATH> (-i(include) OR -e(exclude) item1,item2...)".format(sys.argv[0]))
+    print("Available middlewares are in `include/crow/middlewares`. Do NOT type the `.h` when including or excluding")
     sys.exit(1)
 
 header_path = sys.argv[1]
 output_path = sys.argv[2]
 
+middlewares = [x.rsplit('/', 1)[-1][:-2] for x in glob(pt.join(header_path, 'crow/middlewares/*.h*'))]
+
+
+middlewares_actual = []
+if len(sys.argv) > 3:
+    opts, args = getopt.getopt(sys.argv[3:],"i:e:",["include=","exclude="])
+    if (len(opts) > 1):
+        print("Error:Cannot simultaneously include and exclude middlewares.")
+        sys.exit(1)
+    if (opts[0][0] in ("-i", "--include")):
+        middleware_list = opts[0][1].split(',')
+        for item in middlewares:
+            if (item in middleware_list):
+                middlewares_actual.append(item)
+    elif (opts[0][0] in ("-e", "--exclude")):
+        middleware_list = opts[0][1].split(',')
+        for item in middlewares:
+            if (item not in middleware_list):
+                middlewares_actual.append(item)
+    else:
+        print("ERROR:Unknown argument " + opts[0][0])
+        sys.exit(1)
+else:
+    middlewares_actual = middlewares
+print("Middlewares: " + str(middlewares_actual))
+
 re_depends = re.compile('^#include "(.*)"', re.MULTILINE)
 headers = [x.rsplit('/', 1)[-1] for x in glob(pt.join(header_path, '*.h*'))]
 headers += ['crow/' + x.rsplit('/', 1)[-1] for x in glob(pt.join(header_path, 'crow/*.h*'))]
+headers += [('crow/middlewares/' + x + '.h') for x in middlewares_actual]
 print(headers)
 edges = defaultdict(list)
 for header in headers:

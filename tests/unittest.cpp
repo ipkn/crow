@@ -10,6 +10,7 @@
 
 #include "catch.hpp"
 #include "crow.h"
+#include "crow/middlewares/cookie_parser.h"
 
 using namespace std;
 using namespace crow;
