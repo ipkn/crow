@@ -161,7 +161,16 @@ namespace crow
         ///Run the server
         void run()
         {
+#ifndef CROW_DISABLE_STATIC_DIR
+            route<crow::black_magic::get_parameter_tag(CROW_STATIC_ENDPOINT)>(CROW_STATIC_ENDPOINT)
+            ([](const crow::request&, crow::response& res, std::string file_path_partial)
+            {
+              res.set_static_file_info(CROW_STATIC_DIRECTORY + file_path_partial);
+              res.end();
+            });
             validate();
+#endif
+
 #ifdef CROW_ENABLE_SSL
             if (use_ssl_)
             {
