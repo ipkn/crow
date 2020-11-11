@@ -8,7 +8,8 @@ from collections import defaultdict
 import sys, getopt
 
 if len(sys.argv) < 3:
-    print("Usage: {} <CROW_HEADERS_DIRECTORY_PATH> <CROW_OUTPUT_HEADER_PATH> <-i(include) OR -e(exclude) item1,item2...>".format(sys.argv[0]))
+    print("Usage: {} <CROW_HEADERS_DIRECTORY_PATH> <CROW_OUTPUT_HEADER_PATH> (-i(include) OR -e(exclude) item1,item2...)".format(sys.argv[0]))
+    print("Available middlewares are in `include/crow/middlewares`. Do NOT type the `.h` when including or excluding")
     sys.exit(1)
 
 header_path = sys.argv[1]
