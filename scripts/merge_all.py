@@ -14,7 +14,7 @@ if len(sys.argv) < 3:
 header_path = sys.argv[1]
 output_path = sys.argv[2]
 
-middlewares = [x.rsplit('/', 1)[-1][:-2] for x in glob(pt.join(header_path, 'middlewares/*.h*'))]
+middlewares = [x.rsplit('/', 1)[-1][:-2] for x in glob(pt.join(header_path, 'crow/middlewares/*.h*'))]
 
 
 middlewares_actual = []
@@ -36,13 +36,14 @@ if len(sys.argv) > 3:
     else:
         print("ERROR:Unknown argument " + opts[0][0])
         sys.exit(1)
-
+else:
+    middlewares_actual = middlewares
 print("Middlewares: " + str(middlewares_actual))
 
 re_depends = re.compile('^#include "(.*)"', re.MULTILINE)
 headers = [x.rsplit('/', 1)[-1] for x in glob(pt.join(header_path, '*.h*'))]
 headers += ['crow/' + x.rsplit('/', 1)[-1] for x in glob(pt.join(header_path, 'crow/*.h*'))]
-headers += [('middlewares/' + x + '.h') for x in middlewares_actual]
+headers += [('crow/middlewares/' + x + '.h') for x in middlewares_actual]
 print(headers)
 edges = defaultdict(list)
 for header in headers:
