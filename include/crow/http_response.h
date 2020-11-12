@@ -134,7 +134,7 @@ namespace crow
   * middlware must call res.set_static_file_info(filename)
   * you must add route starting with /your/restricted/path/<string>
   */
-#if !defined(_WIN32)
+
         struct static_file_info{
             std::string path = "";
             struct stat statbuf;
@@ -187,7 +187,7 @@ namespace crow
                 write_streamed_string(body, adaptor);
             }
         }
-#endif
+
 /* static file support end */
         private:
             bool completed_{};
