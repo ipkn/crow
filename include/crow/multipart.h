@@ -48,7 +48,7 @@ namespace crow
                 std::stringstream str;
                 std::string delimiter = dd + boundary;
 
-                for (uint i=0 ; i<parts.size(); i++)
+                for (unsigned i=0 ; i<parts.size(); i++)
                 {
                     str << delimiter << crlf;
                     str << dump(i);

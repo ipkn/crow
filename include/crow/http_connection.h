@@ -627,7 +627,7 @@ namespace crow
 
         boost::array<char, 4096> buffer_;
 
-        const uint res_stream_threshold_ = 1048576;
+        const unsigned res_stream_threshold_ = 1048576;
 
         HTTPParser<Connection> parser_;
         request req_;
