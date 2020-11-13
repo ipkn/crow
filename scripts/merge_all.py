@@ -2,7 +2,8 @@
 
 """Merges all the header files."""
 from glob import glob
-from os import path as pt
+from os import path as pt, name as osname
+from os.path import sep
 import re
 from collections import defaultdict
 import sys, getopt
@@ -15,7 +16,7 @@ if len(sys.argv) < 3:
 header_path = sys.argv[1]
 output_path = sys.argv[2]
 
-middlewares = [x.rsplit('/', 1)[-1][:-2] for x in glob(pt.join(header_path, 'crow/middlewares/*.h*'))]
+middlewares = [x.rsplit(sep, 1)[-1][:-2] for x in glob(pt.join(header_path, ('crow'+sep+'middlewares'+sep+'*.h*')))]
 
 
 middlewares_actual = []
@@ -42,20 +43,24 @@ else:
 print("Middlewares: " + str(middlewares_actual))
 
 re_depends = re.compile('^#include "(.*)"', re.MULTILINE)
-headers = [x.rsplit('/', 1)[-1] for x in glob(pt.join(header_path, '*.h*'))]
-headers += ['crow/' + x.rsplit('/', 1)[-1] for x in glob(pt.join(header_path, 'crow/*.h*'))]
-headers += [('crow/middlewares/' + x + '.h') for x in middlewares_actual]
+headers = [x.rsplit(sep, 1)[-1] for x in glob(pt.join(header_path, '*.h*'))]
+headers += ['crow'+sep + x.rsplit(sep, 1)[-1] for x in glob(pt.join(header_path, 'crow'+sep+'*.h*'))]
+headers += [('crow'+sep+'middlewares'+sep + x + '.h') for x in middlewares_actual]
 print(headers)
 edges = defaultdict(list)
 for header in headers:
     d = open(pt.join(header_path, header)).read()
     match = re_depends.findall(d)
     for m in match:
+        actual_m = m
+        if (osname == 'nt'): #Windows
+            actual_m = m.replace('/', '\\')
         # m should included before header
-        edges[m].append(header)
+        edges[actual_m].append(header)
 
 visited = defaultdict(bool)
 order = []
+
 
 
 def dfs(x):
