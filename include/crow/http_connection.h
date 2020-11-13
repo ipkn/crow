@@ -465,7 +465,7 @@ namespace crow
             buffers_.emplace_back(crlf.data(), crlf.size());
             
         }
-#if !defined(_WIN32)
+
         void do_write_static()
         {
             is_writing = true;
@@ -476,15 +476,7 @@ namespace crow
             res.clear();
             buffers_.clear();
         }
-#else //TODO support windows
-        void do_write_static(){
-            CROW_LOG_INFO << "windows static file support is not ready";
-            res.code = 500;
-            res.end();
-            res.clear();
-            buffers_.clear();
-        }
-#endif
+
         void do_write_general()
         {
             if (res.body.length() < res_stream_threshold_)
