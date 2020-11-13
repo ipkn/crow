@@ -12,9 +12,8 @@
 #include "crow/socket_adaptors.h"
 #include "crow/logging.h"
 #include "crow/mime_types.h"
-#if !defined(_WIN32)
 #include <sys/stat.h>
-#endif
+
 
 namespace crow
 {
