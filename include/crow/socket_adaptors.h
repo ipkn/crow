@@ -14,6 +14,7 @@ namespace crow
     using namespace boost;
     using tcp = asio::ip::tcp;
 
+    ///A wrapper for the asio::ip::tcp::socket and asio::ssl::stream
     struct SocketAdaptor
     {
         using context = void;
@@ -27,11 +28,13 @@ namespace crow
             return GET_IO_SERVICE(socket_);
         }
 
+        /// Get the TCP socket handling data trasfers, regardless of what layer is handling transfers on top of the socket.
         tcp::socket& raw_socket()
         {
             return socket_;
         }
 
+        /// Get the object handling data transfers, this can be either a TCP socket or an SSL stream (if SSL is enabled).
         tcp::socket& socket()
         {
             return socket_;

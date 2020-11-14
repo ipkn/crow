@@ -12,7 +12,7 @@ namespace crow
 {
     namespace detail 
     {
-        ///Fast timer queue for fixed tick value.
+        /// Fast timer queue for fixed tick value.
         class dumb_timer_queue
         {
         public:
@@ -31,6 +31,7 @@ namespace crow
                     self->dq_[index].second = nullptr;
             }
 
+            /// Add a function to the queue.
             key add(std::function<void()> f)
             {
                 dq_.emplace_back(std::chrono::steady_clock::now(), std::move(f));
@@ -40,6 +41,7 @@ namespace crow
                 return {this, ret};
             }
 
+            /// Process the queue: take functions out in time intervals and execute them.
             void process()
             {
                 if (!io_service_)

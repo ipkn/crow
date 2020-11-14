@@ -353,7 +353,7 @@ namespace crow
             }
            prepare_buffers();
             CROW_LOG_INFO << "Response: " << this << ' ' << req_.raw_url << ' ' << res.code << ' ' << close_connection_;
-            if (res.file_info.path.size())
+            if (res.is_static_type())
             {
                 do_write_static();
             }else {
