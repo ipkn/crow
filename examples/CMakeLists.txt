@@ -26,12 +26,12 @@ add_custom_command(OUTPUT ws.html
 )
 add_custom_target(example_ws_copy ALL DEPENDS ws.html)
 
-add_executable(example example.cpp)
-target_link_libraries(example ${Boost_LIBRARIES})
-target_link_libraries(example ${CMAKE_THREAD_LIBS_INIT})
+add_executable(basic_example example.cpp)
+target_link_libraries(basic_example ${Boost_LIBRARIES})
+target_link_libraries(basic_example ${CMAKE_THREAD_LIBS_INIT})
 
 if (Tcmalloc_FOUND)
-  target_link_libraries(example ${Tcmalloc_LIBRARIES})
+  target_link_libraries(basic_example ${Tcmalloc_LIBRARIES})
 endif(Tcmalloc_FOUND)
 
 add_executable(example_with_all example_with_all.cpp)
