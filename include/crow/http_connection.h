@@ -178,6 +178,8 @@ namespace crow
 #ifdef CROW_ENABLE_DEBUG
     static std::atomic<int> connectionCount;
 #endif
+
+    /// An HTTP connection.
     template <typename Adaptor, typename Handler, typename ... Middlewares>
     class Connection
     {
@@ -216,6 +218,7 @@ namespace crow
 #endif
         }
 
+        /// The TCP socket on top of which the connection is established.
         decltype(std::declval<Adaptor>().raw_socket())& socket()
         {
             return adaptor_.raw_socket();
@@ -336,6 +339,7 @@ namespace crow
             }
         }
 
+        /// Call the after handle middleware and send the write the response to the connection.
         void complete_request()
         {
             CROW_LOG_INFO << "Response: " << this << ' ' << req_.raw_url << ' ' << res.code << ' ' << close_connection_;

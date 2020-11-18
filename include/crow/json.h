@@ -108,7 +108,7 @@ namespace crow
 
         namespace detail 
         {
-
+            /// A read string implementation with comparison functionality.
             struct r_string 
                 : boost::less_than_comparable<r_string>,
                 boost::less_than_comparable<r_string, std::string>,
@@ -166,8 +166,8 @@ namespace crow
                 using iterator = const char*;
                 using const_iterator = const char*;
 
-                char* s_;
-                mutable char* e_;
+                char* s_; ///< Start.
+                mutable char* e_; ///< End.
                 uint8_t owned_{0};
                 friend std::ostream& operator << (std::ostream& os, const r_string& s)
                 {
@@ -210,6 +210,11 @@ namespace crow
             }
         }
 
+        /// JSON read value.
+
+        ///
+        /// Value can mean any json value, including a JSON object.
+        /// Read means this class is used to primarily read strings into a JSON value.
         class rvalue
         {
             static const int cached_bit = 2;
@@ -289,6 +294,7 @@ namespace crow
                 return (int)i();
             }
 
+            /// The type of the JSON value.
             type t() const
             {
 #ifndef CROW_JSON_NO_ERROR_CHECK
@@ -300,6 +306,7 @@ namespace crow
                 return t_;
             }
 
+            /// The number type of the JSON value.
             num_type nt() const
             {
 #ifndef CROW_JSON_NO_ERROR_CHECK
@@ -311,6 +318,7 @@ namespace crow
                 return nt_;
             }
 
+            /// The integer value.
             int64_t i() const
             {
 #ifndef CROW_JSON_NO_ERROR_CHECK
@@ -327,6 +335,7 @@ namespace crow
                 return boost::lexical_cast<int64_t>(start_, end_-start_);
             }
 
+            /// The unsigned integer value.
             uint64_t u() const
             {
 #ifndef CROW_JSON_NO_ERROR_CHECK
@@ -341,6 +350,7 @@ namespace crow
                 return boost::lexical_cast<uint64_t>(start_, end_-start_);
             }
 
+            /// The double precision floating-point number value.
             double d() const
             {
 #ifndef CROW_JSON_NO_ERROR_CHECK
@@ -350,6 +360,7 @@ namespace crow
                 return boost::lexical_cast<double>(start_, end_-start_);
             }
 
+            /// The boolean value.
             bool b() const
             {
 #ifndef CROW_JSON_NO_ERROR_CHECK
@@ -359,6 +370,18 @@ namespace crow
                 return t() == type::True;
             }
 
+            /// The string value.
+            detail::r_string s() const
+            {
+#ifndef CROW_JSON_NO_ERROR_CHECK
+                if (t() != type::String)
+                    throw std::runtime_error("value is not string");
+#endif
+                unescape();
+                return detail::r_string{start_, end_};
+            }
+
+            /// Convert escaped string character to their original form ("\\n" -> '\n').
             void unescape() const
             {
                 if (*(start_-1))
@@ -422,16 +445,6 @@ namespace crow
                     *end_ = 0;
                     *(start_-1) = 0;
                 }
-            }
-
-            detail::r_string s() const
-            {
-#ifndef CROW_JSON_NO_ERROR_CHECK
-                if (t() != type::String)
-                    throw std::runtime_error("value is not string");
-#endif
-                unescape();
-                return detail::r_string{start_, end_};
             }
 
             bool has(const char* str) const
@@ -615,7 +628,7 @@ namespace crow
                 lremain_ --;
             }
 
-            // determines num_type from the string
+            /// determines num_type from the string.
             void determine_num_type()
             {
                 if (t_ != type::Number)
@@ -1142,26 +1155,31 @@ namespace crow
             return load(str.data(), str.size());
         }
 
+        /// JSON write value.
+
+        ///
+        /// Value can mean any json value, including a JSON object.
+        /// Write means this class is used to primarily assemble JSON objects using keys and values and export those into a string.
         class wvalue
         {
             friend class crow::mustache::template_t;
         public:
             type t() const { return t_; }
         private:
-            type t_{type::Null};
-            num_type nt{num_type::Null};
+            type t_{type::Null}; ///< The type of the value.
+            num_type nt{num_type::Null}; ///< The specific type of the number if \ref t_ is a number.
             union {
               double d;
               int64_t si;
               uint64_t ui {};
-            } num;
-            std::string s;
-            std::unique_ptr<std::vector<wvalue>> l;
-            std::unique_ptr<std::unordered_map<std::string, wvalue>> o;
+            } num; ///< Value if type is a number.
+            std::string s; ///< Value if type is a string.
+            std::unique_ptr<std::vector<wvalue>> l; ///< Value if type is a list.
+            std::unique_ptr<std::unordered_map<std::string, wvalue>> o; ///< Value if type is a JSON object.
         public:
 
             wvalue() {}
-
+            /// Create a write value from a read value (useful for editing JSON strings).
             wvalue(const rvalue& r)
             {
                 t_ = r.t();
@@ -1215,6 +1233,7 @@ namespace crow
                 return *this;
             }
 
+            /// Used for compatibility, same as \ref reset()
             void clear()
             {
                 reset();

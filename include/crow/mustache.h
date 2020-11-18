@@ -49,6 +49,7 @@ namespace crow
             {}
         };
 
+        /// A mustache template object.
         class template_t 
         {
         public:

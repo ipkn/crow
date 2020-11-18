@@ -4,6 +4,7 @@ Crow is a C++ microframework for web. (inspired by Python Flask)
 
 [![Build Status](https://travis-ci.com/mrozigor/crow.svg?branch=master)](https://travis-ci.com/mrozigor/crow)
 [![Coverage Status](https://coveralls.io/repos/github/mrozigor/crow/badge.svg?branch=master)](https://coveralls.io/github/mrozigor/crow?branch=master)
+[![Documentation](https://img.shields.io/badge/-Documentation-informational)](https://mrozigor.github.io/crow)
 [![Gitter](https://badges.gitter.im/crowfork/community.svg)](https://gitter.im/crowfork/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 ```c++
@@ -38,6 +39,8 @@ int main()
  - Websocket support
 
 ## Still in development
+ - [Informational webpage](https://mrozigor.github.io/crow) (what is crow, guides, examples, etc..)
+ - [HTTP/2 support](https://github.com/mrozigor/crow/issues/8)
  - ~~Built-in ORM~~
    - Check [sqlpp11](https://github.com/rbock/sqlpp11) if you want one.
 

@@ -17,6 +17,10 @@
 
 namespace crow
 {
+    /// A base class for all rules.
+
+    /// Used to provide a common interface for code dealing with different types of rules.
+    /// A Rule provides a URL, allowed HTTP methods, and handlers.
     class BaseRule
     {
     public:
@@ -267,6 +271,10 @@ namespace crow
         }
     }
 
+    /// A rule dealing with websockets.
+
+    /// Provides the interface for the user to put in the necessary handlers for a websocket to work.
+    ///
     class WebSocketRule : public BaseRule
     {
         using self_t = WebSocketRule;
@@ -340,6 +348,9 @@ namespace crow
         std::function<bool(const crow::request&)> accept_handler_;
     };
 
+    /// Allows the user to assign parameters using functions.
+    ///
+    /// `rule.name("name").methods(HTTPMethod::POST)`
     template <typename T>
     struct RuleParameterTraits
     {
@@ -373,6 +384,7 @@ namespace crow
 
     };
 
+    /// A rule that can change its parameters during runtime.
     class DynamicRule : public BaseRule, public RuleParameterTraits<DynamicRule>
     {
     public:
@@ -447,6 +459,7 @@ namespace crow
 
     };
 
+    /// Default rule created when CROW_ROUTE is called.
     template <typename ... Args>
     class TaggedRule : public BaseRule, public RuleParameterTraits<TaggedRule<Args...>>
     {
@@ -560,6 +573,7 @@ namespace crow
 
     const int RULE_SPECIAL_REDIRECT_SLASH = 1;
 
+    /// A search tree.
     class Trie
     {
     public:
@@ -888,6 +902,7 @@ public:
         std::vector<Node> nodes_;
     };
 
+    /// Handles matching requests to existing rules and upgrade requests.
     class Router
     {
     public:
@@ -931,7 +946,7 @@ public:
                         per_methods_[method].trie.add(rule, per_methods_[method].rules.size() - 1);
 
                         // directory case:
-                        //   request to `/about' url matches `/about/' rule
+                        //   request to '/about' url matches '/about/' rule
                         if (has_trailing_slash)
                         {
                             per_methods_[method].trie.add(rule_without_trailing_slash, RULE_SPECIAL_REDIRECT_SLASH);
