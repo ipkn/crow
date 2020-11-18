@@ -1,4 +1,4 @@
-#include "../build/crow_all.h"
+#include "crow_all.h"
 
 #include <sstream>
 
