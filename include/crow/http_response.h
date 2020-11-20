@@ -26,10 +26,10 @@ namespace crow
         template <typename Adaptor, typename Handler, typename ... Middlewares>
         friend class crow::Connection;
 
-        int code{200}; /// The Status code for the response.
-        std::string body; /// The actual payload containing the response data.
-        json::wvalue json_value; /// if the response body is JSON, this would be it.
-        ci_map headers; /// HTTP headers.
+        int code{200}; ///< The Status code for the response.
+        std::string body; ///< The actual payload containing the response data.
+        json::wvalue json_value; ///< if the response body is JSON, this would be it.
+        ci_map headers; ///< HTTP headers.
 
         /// Set the value of an existing header in the response.
         void set_header(std::string key, std::string value)

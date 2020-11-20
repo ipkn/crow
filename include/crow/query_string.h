@@ -287,6 +287,7 @@ inline char * qs_scanvalue(const char * key, const char * qs, char * val, size_t
 
 namespace crow 
 {
+    /// A class to represent any data coming after the `?` in the request URL into key-value pairs.
     class query_string
     {
     public:

@@ -24,6 +24,7 @@ namespace crow
             return i >= len ? throw OutOfRange(i, len) : i;
         }
 
+        /// A constant string implementation.
         class const_str
         {
             const char * const begin_;

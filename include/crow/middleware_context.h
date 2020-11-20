@@ -8,6 +8,8 @@ namespace crow
 {
     namespace detail
     {
+
+
         template <typename ... Middlewares>
         struct partial_context
             : public black_magic::pop_back<Middlewares...>::template rebind<partial_context>
@@ -24,6 +26,8 @@ namespace crow
             }
         };
 
+
+
         template <>
         struct partial_context<>
         {
@@ -31,8 +35,12 @@ namespace crow
             using partial = partial_context;
         };
 
+
+
         template <int N, typename Context, typename Container, typename CurrentMW, typename ... Middlewares>
         bool middleware_call_helper(Container& middlewares, request& req, response& res, Context& ctx);
+
+
 
         template <typename ... Middlewares>
         struct context : private partial_context<Middlewares...>
