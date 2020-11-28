@@ -60,9 +60,15 @@ git config user.email "travis@travis-ci.org"
 # stayed the same and will only update the changed files. So the gh-pages branch
 # can be safely cleaned, and it is sure that everything pushed later is the new
 # documentation.
-cp index.html ..
+#cp index.html ..
 rm -rf *
-mv ../index.html .
+#mv ../index.html .
+
+# Copy the mkdocs documentation to the work directory and generate the mkdocs 
+# 'site' directory
+cp ../../mkdocs.yml .
+cp -r ../../docs .
+mkdocs build
 
 # Need to create a .nojekyll file to allow filenames starting with an underscore
 # to be seen on the gh-pages site. Therefore creating an empty .nojekyll file.
@@ -76,12 +82,21 @@ echo 'Generating Doxygen code documentation...'
 # Redirect both stderr and stdout to the log file AND the console.
 doxygen $DOXYFILE 2>&1 | tee doxygen.log
 
+# Rename mkdocs' output folder to 'html' to retain compatibility with the 
+# existing index.html and the rest of this code.
+# Also remove any remaining documentation files.
+mv  site/* .
+rm -r site
+rm mkdocs.yml
+rm -r docs
+
 ################################################################################
 ##### Upload the documentation to the gh-pages branch of the repository.   #####
 # Only upload if Doxygen successfully created the documentation.
-# Check this by verifying that the html directory and the file html/index.html
-# both exist. This is a good indication that Doxygen did it's work.
-if [ -d "html" ] && [ -f "html/index.html" ]; then
+# Check this by verifying that the reference directory (for doxygen) and 
+# the file index.html (for mkdocs) both exist. 
+# This is a good indication that Doxygen and Mkdocs did their work.
+if [ -d "reference" ] && [ -f "index.html" ]; then
 
     echo 'Uploading documentation to the gh-pages branch...'
     # Add everything in this directory (the Doxygen code documentation) to the
