@@ -4,7 +4,7 @@ Crow supports returning Static files as responses in 2 ways.
 
 ##Implicit
 Crow implicitly returns any static files placed in a `static` directory and any subdirectories, as long as the user calls the endpoint `/static/path/to/file`.<br><br>
-The static folder or endpoint can be changed by defining the macros `CROW_STATIC_DRIECTORY "alternative_directory/"` and `CROW_STATIC_ENDPOINT "/alternative_endpoint/<path>"`.<br>
+The static folder or endpoint can be changed by defining the macros `CROW_STATIC_DIRECTORY "alternative_directory/"` and `CROW_STATIC_ENDPOINT "/alternative_endpoint/<path>"`.<br>
 static directory changes the directory in the server's filesystem, while the endpoint changes the URL that the client needs to access.
 
 ##Explicit

@@ -1,10 +1,9 @@
-This page explains how to set Crow up for use with your porject.
+This page explains how to set Crow up for use with your project.
 
 
 ##Requirements
- - C++ compiler with good C++14 support.
+ - C++ compiler with C++14 support.
     - Continuous Testing on g++-9.3 and clang-7.0, AMD64 (x86_64) and Arm64 v8
-	- C++11 should also work.
  - boost library (1.70 or later).
  - (optional) CMake and Python3 to build tests and/or examples.
  - (optional) Linking with jemalloc/tcmalloc is recommended for speed.
