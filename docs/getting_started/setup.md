@@ -46,12 +46,12 @@ To build a crow Project, do the following:
 ###GCC (G++)
  - Release: `g++ main.cpp -lpthread -lboost_system`.
  - Debug: `g++ main.cpp -ggdb -lpthread -lboost_system -D CROW_ENABLE_DEBUG`.
- - SSL: `g++ main.cpp -lssl -lpthread -lboost_system -D CROW_ENABLE_SSL`.
+ - SSL: `g++ main.cpp -lssl -lcrypto -lpthread -lboost_system -D CROW_ENABLE_SSL`.
 
 ###Clang
  - Release: `clang++ main.cpp -lpthread -lboost_system`.
  - Debug: `clang++ main.cpp -g -lpthread -lboost_system -DCROW_ENABLE_DEBUG`.
- - SSL: `clang++ main.cpp -lssl -lpthread -lboost_system -DCROW_ENABLE_SSL`.
+ - SSL: `clang++ main.cpp -lssl -lcrypto -lpthread -lboost_system -DCROW_ENABLE_SSL`.
 
 ###Microsoft Visual Studio
 ***Help needed***
