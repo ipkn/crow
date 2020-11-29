@@ -68,7 +68,7 @@ rm -rf *
 # 'site' directory
 cp ../../mkdocs.yml .
 cp -r ../../docs .
-mkdocs build
+mkdocs build -v
 
 # Need to create a .nojekyll file to allow filenames starting with an underscore
 # to be seen on the gh-pages site. Therefore creating an empty .nojekyll file.
