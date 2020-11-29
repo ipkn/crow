@@ -1,0 +1,61 @@
+site_name: Crow
+
+# Repository
+repo_name: mrozigor/crow
+repo_url: https://github.com/mrozigor/crow
+edit_uri: ""
+
+theme: 
+    name: material
+    palette:
+        - scheme: Crow
+    font: false
+    language: 'en'
+    features:
+        navigation.tabs
+    favicon: 'assets/favicon.svg'
+    logo: 'assets/favicon.svg'
+    icon:
+        repo: fontawesome/brands/github-square
+
+markdown_extensions:
+    - pymdownx.highlight
+    - pymdownx.superfences
+    - pymdownx.inlinehilite
+    - pymdownx.keys
+    
+nav:
+    - Home: index.md
+    - Getting Started:
+        - Setup: getting_started/setup.md
+        - Your First Application: getting_started/your_first_application.md
+    - Guides:
+        - Different parts of Crow:
+            - App: guides/app.md
+            - Routes: guides/routes.md
+            - Logging: guides/logging.md
+            - JSON: guides/json.md
+            - Templating (Mustache): guides/templating.md
+            - Multipart: guides/multipart.md
+            - Middleware: guides/middleware.md
+            - SSL: guides/ssl.md
+            - Static Files: guides/static.md
+            - Websockets: guides/websockets.md
+        - Server setup:
+            - Proxies: guides/proxies.md
+            - Systemd run on startup: guides/syste.md
+    - API Reference:
+        - API Reference: '/reference/index.html'
+        
+extra:
+    social:
+        - icon: fontawesome/brands/github
+          link: https://github.com/mrozigor/crow
+        - icon: fontawesome/brands/gitter
+          link: https://gitter.im/crowfork/community
+        
+extra_css:
+    - 'stylesheets/colors.css'
+    - 'stylesheets/latofonts.css'
+
+copyright: 'Copyright &copy; 2020 Farook Al-Sammarraie'

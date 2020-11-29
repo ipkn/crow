@@ -1,12 +1,39 @@
-![Crow logo](https://pixeldrain.com/api/file/DMc7xYye)
+<p align="center"><img src="https://pixeldrain.com/api/file/DMc7xYye" width=600></p>
 
-Crow is a C++ microframework for web. (inspired by Python Flask)
+<h4 align="center">A Fast and Easy to use microframework for the web.</h4>
+<p align="center">
+<a href="https://travis-ci.com/mrozigor/crow"><img src="https://travis-ci.com/mrozigor/crow.svg?branch=master" alt="Build Status"></a>
+<a href="https://coveralls.io/github/mrozigor/crow?branch=master"><img src="https://coveralls.io/repos/github/mrozigor/crow/badge.svg?branch=master" alt="Coverage Status"></a>
+<a href="https://mrozigor.github.io/crow"><img src="https://img.shields.io/badge/-Documentation-informational" alt="Documentation"></a>
+<a href="https://gitter.im/crowfork/community?utm_source=badge&amp;utm_medium=badge&amp;utm_campaign=pr-badge"><img src="https://badges.gitter.im/crowfork/community.svg" alt="Gitter"></a>
+</p>
 
-[![Build Status](https://travis-ci.com/mrozigor/crow.svg?branch=master)](https://travis-ci.com/mrozigor/crow)
-[![Coverage Status](https://coveralls.io/repos/github/mrozigor/crow/badge.svg?branch=master)](https://coveralls.io/github/mrozigor/crow?branch=master)
-[![Documentation](https://img.shields.io/badge/-Documentation-informational)](https://mrozigor.github.io/crow)
-[![Gitter](https://badges.gitter.im/crowfork/community.svg)](https://gitter.im/crowfork/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
+## Description
+
+Crow is a C++ microframework for running web services. It uses routing similar to Python's Flask which makes it easy to use. It is also extremely fast, beating multiple existing C++ frameworks as well as non C++ frameworks.
+
+### Features
+ - Easy Routing (similar to flask).
+ - Type-safe Handlers.
+ - Blazingly fast (see [this benchmark](https://github.com/ipkn/crow-benchmark) and [this benchmark](https://github.com/guteksan/REST-CPP-benchmark)).
+ - Built in JSON support.
+ - [Mustache](http://mustache.github.io/) based templating library (`crow::mustache`).
+ - Header only library (single header file available).
+ - Middleware support for extensions.
+ - HTTP/1.1 and Websocket support.
+ - Multi-part request and response support.
+ - Uses modern C++ (11/14)
+
+### Still in development
+ - [HTTP/2 support](https://github.com/mrozigor/crow/issues/8)
+
+## Documentation
+Available [here](https://mrozigor.github.io/crow).
+
+## Examples
+
+#### Hello World
 ```c++
 #include "crow.h"
 
@@ -22,32 +49,8 @@ int main()
 }
 ```
 
-## Features
-
- - Easy routing
-   - Similiar to Flask
-   - Type-safe Handlers (see Example)
- - Very Fast
-   - ![Benchmark Result in one chart](https://docs.google.com/spreadsheets/d/1KidO9XpuwCRZ2p_JRDJj2aep61H8Sh_KDOhApizv4LE/pubchart?oid=2041467789&format=image)
-   - More data on [crow-benchmark](https://github.com/ipkn/crow-benchmark)
- - Fast built-in JSON parser (crow::json)
-   - You can also use [json11](https://github.com/dropbox/json11) or [rapidjson](https://github.com/miloyip/rapidjson) for better speed or readability
- - [Mustache](http://mustache.github.io/) based templating library (crow::mustache)
- - Header only
- - All-in-one header file available
- - Middleware support
- - Websocket support
-
-## Still in development
- - [Informational webpage](https://mrozigor.github.io/crow) (what is crow, guides, examples, etc..)
- - [HTTP/2 support](https://github.com/mrozigor/crow/issues/8)
- - ~~Built-in ORM~~
-   - Check [sqlpp11](https://github.com/rbock/sqlpp11) if you want one.
-
-## Examples
-
 #### JSON Response
-```c++
+```cpp
 CROW_ROUTE(app, "/json")
 ([]{
     crow::json::wvalue x;
@@ -57,7 +60,7 @@ CROW_ROUTE(app, "/json")
 ```
 
 #### Arguments
-```c++
+```cpp
 CROW_ROUTE(app,"/hello/<int>")
 ([](int count){
     if (count > 100)
@@ -68,7 +71,7 @@ CROW_ROUTE(app,"/hello/<int>")
 });
 ```
 Handler arguments type check at compile time
-```c++
+```cpp
 // Compile error with message "Handler type is mismatched with URL paramters"
 CROW_ROUTE(app,"/another/<int>")
 ([](int a, int b){
@@ -77,7 +80,7 @@ CROW_ROUTE(app,"/another/<int>")
 ```
 
 #### Handling JSON Requests
-```c++
+```cpp
 CROW_ROUTE(app, "/add_json")
 .methods("POST"_method)
 ([](const crow::request& req){
@@ -91,47 +94,17 @@ CROW_ROUTE(app, "/add_json")
 });
 ```
 
-## How to Build
+More examples can be found [here](https://github.com/mrozigor/crow/tree/master/examples).
 
-If you just want to use crow, generate `crow_all.h` (use script `scripts/merge_all.py`) and include it.
+## Setting Up / Building
+Available [here](https://mrozigor.github.io/crow/getting_started/setup).
 
-### Requirements
-
- - C++ compiler with good C++14 support.
-    - Tested on g++-9.3 and clang-7.0, AMD64 (x86_64) and Arm64 v8
- - boost 1.7 library.
- - (optional) CMake to build tests and/or examples.
- - (optional) Linking with tcmalloc/jemalloc is recommended for speed.
-
-### Building (Tests, Examples)
-
-Out-of-source build with CMake is recommended.
-
-```
-mkdir build
-cd build
-cmake ..
-make
-```
-
-You can run tests with following commands:
-```
-ctest
-```
-
-### Installing missing dependencies
-
-#### Ubuntu
-    sudo apt-get install build-essential libtcmalloc-minimal4 && sudo ln -s /usr/lib/libtcmalloc_minimal.so.4 /usr/lib/libtcmalloc_minimal.so
-
-#### OSX
-    brew install boost google-perftools
 
 ### Attributions
 
 Crow uses the following libraries.
 
-    http-parser
+    http-parser (used for converting http strings to crow::request objects)
 
     https://github.com/nodejs/http-parser
 
@@ -160,7 +133,7 @@ Crow uses the following libraries.
     IN THE SOFTWARE. 
 
 
-    qs_parse
+    qs_parse (used for reading query string parameters)
 
     https://github.com/bartgrantham/qs_parse
 
@@ -175,7 +148,7 @@ Crow uses the following libraries.
     all copies or substantial portions of the Software.
 
 
-    TinySHA1
+    TinySHA1 (used during the websocket handshake, not for security)
 
     https://github.com/mohaps/TinySHA1
 

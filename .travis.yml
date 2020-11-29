@@ -30,14 +30,12 @@ addons:
     packages:
       - libboost-all-dev
       - doxygen
-      - doxygen-doc
-      - doxygen-latex
-      - doxygen-gui
+      - mkdocs
       - graphviz
 
 before_install:
   - if [ "$TRAVIS_COMPILER" == "gcc" -a "$TRAVIS_CPU_ARCH" == "amd64" ]; then export PUSH_COVERAGE=ON; fi
-  - if [ "$TRAVIS_BRANCH" == "master" -a "$TRAVIS_PULL_REQUEST" == "false" -a "$PUSH_COVERAGE" == "ON" ]; then export TRAVIS_BUILD_DOCS=ON; fi
+  - if [ "$TRAVIS_BRANCH" == "master" -a "$TRAVIS_PULL_REQUEST" == "false" -a "$PUSH_COVERAGE" == "ON" ]; then export TRAVIS_BUILD_DOCS=ON; pip install mkdocs-material; fi
 
 install:
   - if [ "$PUSH_COVERAGE" == "ON" ]; then pip install --user cpp-coveralls; fi
