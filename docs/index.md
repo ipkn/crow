@@ -4,7 +4,7 @@
 <h4 align="center">A Fast and Easy to use microframework for the web.</h4>
 <p align="center">
 <a href="https://travis-ci.com/crowcpp/crow"><img src="https://travis-ci.com/crowcpp/crow.svg?branch=master" alt="Build Status"></a>
-<a href="https://coveralls.io/github/crowcpp/crow?branch=master"><img src="https://coveralls.io/repos/github/crowcpp/crow/badge.svg?branch=master" alt="Coverage Status"></a>
+<a href="https://coveralls.io/github/CrowCpp/crow?branch=master"><img src="https://coveralls.io/repos/github/CrowCpp/crow/badge.svg?branch=master" alt="Coverage Status"></a>
 <a href="https://crowcpp.github.io/crow"><img src="https://img.shields.io/badge/-Documentation-informational" alt="Documentation"></a>
 <a href="https://gitter.im/crowfork/community?utm_source=badge&amp;utm_medium=badge&amp;utm_campaign=pr-badge"><img src="https://badges.gitter.im/crowfork/community.svg" alt="Gitter"></a>
 </p>
