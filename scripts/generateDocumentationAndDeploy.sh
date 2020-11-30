@@ -61,7 +61,7 @@ git config user.email "travis@travis-ci.org"
 # can be safely cleaned, and it is sure that everything pushed later is the new
 # documentation.
 #cp index.html ..
-rm -rf *
+find . -type d,f ! -iname "CNAME" -delete
 #mv ../index.html .
 
 # Copy the mkdocs documentation to the work directory and generate the mkdocs 
