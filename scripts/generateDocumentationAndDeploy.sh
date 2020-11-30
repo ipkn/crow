@@ -60,9 +60,9 @@ git config user.email "travis@travis-ci.org"
 # stayed the same and will only update the changed files. So the gh-pages branch
 # can be safely cleaned, and it is sure that everything pushed later is the new
 # documentation.
-#cp index.html ..
-find . -type d,f ! -iname "CNAME" -delete
-#mv ../index.html .
+cp CNAME ..
+rm -rf *
+mv ../CNAME .
 
 # Copy the mkdocs documentation to the work directory and generate the mkdocs 
 # 'site' directory
