@@ -20,7 +20,7 @@ This page explains how to set Crow up for use with your project.
 Download boost from [here](https://www.boost.org/) and install it
 
 ##Downloading
-Either run `git clone https://github.com/mrozigor/crow.git` or download `crow_all.h` from the releases section. You can also download a zip of the project on github.
+Either run `git clone https://github.com/crowcpp/crow.git` or download `crow_all.h` from the releases section. You can also download a zip of the project on github.
 
 ##Includes folder
 1. Copy the `/includes` folder to your project's root folder.

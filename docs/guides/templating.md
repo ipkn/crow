@@ -15,7 +15,7 @@ The HTML page (including the mustache tags). It is usually loaded into `crow::mu
 For more information on how to formulate a template, see [this mustache manual](http://mustache.github.io/mustache.5.html).
 
 ###Context
-A JSON object containing the tags as keys and their values. `crow::mustache::context` is actually a [crow::json::wvalue](/guides/json#wvalue).
+A JSON object containing the tags as keys and their values. `crow::mustache::context` is actually a [crow::json::wvalue](../json#wvalue).
 
 ##Returning a template
 To return a mustache template, you need to load a page using `#!cpp auto page = crow::mustache::load("path/to/template.html");`, keep in mind that the path is relative to the templates directory.<br>

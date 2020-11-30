@@ -25,5 +25,5 @@ app.bindaddr(192.168.1.2)
 ```
 <br><br>
 
-For more info on middlewares, check out [this page](/guides/middleware).<br><br>
-For more info on what functions are available to a Crow app, go [here](/reference/classcrow_1_1_crow.html).
+For more info on middlewares, check out [this page](../middleware).<br><br>
+For more info on what functions are available to a Crow app, go [here](../../reference/classcrow_1_1_crow.html).

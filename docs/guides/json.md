@@ -24,6 +24,6 @@ The types of values that `wvalue` can take are as follows:<br>
 - `Object`: from type `crow::json::wvalue`.<br>
 This last type means that `wvalue` can have keys, this is done by simply assigning a value to whatever string key you like, something like `#!cpp wval["key1"] = val1;`. Keep in mind that val1 can be any of the above types.<br><br>
 
-A JSON wvalue can be returned directly inside a route handler, this will cause the `content-type` header to automatically be set to `Application/json` and the JSON value will be converted to string and placed in the response body. For more information go to [Routes](/guides/routes).<br><br>
+A JSON wvalue can be returned directly inside a route handler, this will cause the `content-type` header to automatically be set to `Application/json` and the JSON value will be converted to string and placed in the response body. For more information go to [Routes](../routes).<br><br>
 
-For more info on write values go [here](/reference/classcrow_1_1json_1_1wvalue.html).
+For more info on write values go [here](../../reference/classcrow_1_1json_1_1wvalue.html).

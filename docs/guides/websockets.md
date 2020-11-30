@@ -28,4 +28,4 @@ CROW_ROUTE(app, "/ws")
             });
 ```
 <br><br>
-For more info go [here](/reference/classcrow_1_1_web_socket_rule.html).
+For more info go [here](../../reference/classcrow_1_1_web_socket_rule.html).
