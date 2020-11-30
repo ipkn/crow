@@ -3,12 +3,11 @@ site_name: Crow
 # Repository
 repo_name: mrozigor/crow
 repo_url: https://github.com/mrozigor/crow
+site_url: https://mrozigor.github.io/crow
 edit_uri: ""
 
 theme: 
     name: material
-    palette:
-        - scheme: Crow
     font: false
     language: 'en'
     features:
@@ -45,7 +44,7 @@ nav:
             - Proxies: guides/proxies.md
             - Systemd run on startup: guides/syste.md
     - API Reference:
-        - API Reference: '/reference/index.html'
+        - API Reference: 'reference/index.html'
         
 extra:
     social:
