@@ -17,4 +17,4 @@ A message can be created either by defining the headers, boundary, and individua
 Once a multipart message has been made, the individual parts can be accessed throught `mpmes.parts`, `parts` is an `std::vector`, so accessing the individual parts should be straightforward.<br>
 In order to access the individual part's name or filename, something like `#!cpp mpmes.parts[0].headers[0].params["name"]` sould do the trick.<br><br>
 
-For more info on Multipart messages, go [here](/reference/namespacecrow_1_1multipart.html)
+For more info on Multipart messages, go [here](../../reference/namespacecrow_1_1multipart.html)

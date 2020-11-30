@@ -27,7 +27,7 @@ Handlers can also use information from the request by adding it as a parameter `
 
 You can also access the url parameters in the handler using `#!cpp req.url_params.get("param_name");`. If the parameter doesn't exist, `nullptr` is returned.<br><br>
 
-For more information on `crow::request` go [here](/reference/structcrow_1_1request.html).<br><br>
+For more information on `crow::request` go [here](../../reference/structcrow_1_1request.html).<br><br>
 
 ###Response
 Crow also provides the ability to define a response in the parameters by using `#!cpp ([](const crow::request& req, crow::response& res){...})`.<br>
@@ -37,9 +37,9 @@ Please note that in order to return a response defined as a parameter you'll nee
 
 Alternatively, you can define the response in the body and return it (`#!cpp ([](){return crow::response()})`).<br>
 
-For more information on `crow::response` go [here](/reference/structcrow_1_1response.html).<br><br>
+For more information on `crow::response` go [here](../../reference/structcrow_1_1response.html).<br><br>
 
 ###return statement
 A `crow::response` is very strictly tied to a route. If you can have something in a response constructor, you can return it in a handler.<br><br>
 The main return type is `std::string`. although you could also return a `crow::json::wvalue` directly. ***(Support for more data types including third party libraries is coming soon)***<br><br>
-For more information on the specific constructors for a `crow::response` go [here](/reference/structcrow_1_1response.html).
+For more information on the specific constructors for a `crow::response` go [here](../../reference/structcrow_1_1response.html).
