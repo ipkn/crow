@@ -124,6 +124,11 @@ namespace crow
             }
         }
 
+        void end(const int& _code) {
+            code = _code;
+            end();
+        }
+
         /// Same as end() except it adds a body part right before ending.
         void end(const std::string& body_part)
         {

@@ -13,12 +13,11 @@ struct ExampleMiddleware
 {
     std::string message;
 
-    ExampleMiddleware() 
+    ExampleMiddleware() : message(std::string("foo"))
     {
-        message = "foo";
     }
 
-    void setMessage(std::string newMsg)
+    void setMessage(const std::string &newMsg)
     {
         message = newMsg;
     }
