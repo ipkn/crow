@@ -6,6 +6,7 @@
 
 namespace crow
 {
+    /// Hashing function for ci_map (unordered_multimap).
     struct ci_hash
     {
         size_t operator()(const std::string& key) const
@@ -22,6 +23,7 @@ namespace crow
         }
     };
 
+    /// Equals function for ci_map (unordered_multimap).
     struct ci_key_eq
     {
         bool operator()(const std::string& l, const std::string& r) const

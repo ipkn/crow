@@ -1,0 +1,10 @@
+/* Webfont: Lato-Medium */@font-face {
+    font-family: 'Lato';
+    src: url('Lato-Medium.ttf') format('truetype');
+    font-style: normal;
+    font-weight: normal;
+    text-rendering: optimizeLegibility;
+}
+body, input {
+  font-family: "Lato", -apple-system, Helvetica, Arial, sans-serif;
+}

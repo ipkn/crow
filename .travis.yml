@@ -21,8 +21,8 @@ env:
     - secure: "CQRYHWlg/WDu5DBUeDwGo+rPeOofN08DhiLUNlLtZjMWaRyP0Cop1qVaFs8ESOkYiWek2MdpvjZud+7hL+yx2ogvNx4SfHpUMCDKYgcX+YQ9MmYwabvoKq8N6KVXE3lbPp549TonHdDuNCWNKRniNjYtrij5J+IiIiT8/6Txo2p9RWk6YSUTdXJ9YrfuWMtRuF5uo9SHGyujv8pOJKedrwWoSBbHT44jnwfHMVe/C8jgjwlrJ9N3iXOtsG6sj+UTS8vOpL+jpBONEbBfHgSFU57I7IFNdPQbSObpVwG9geOAHT7IQQyQ9hp2AJoFxxVURB5SzqztDDpQ0XIF76vuH9tA/fF2pwDsLRmcLR8JU1TCmQgvnlYD0+Or9S1Dq0tQME5AP+21Hk2zVcGdbgQP7XWix758F0vpOXa4PXw8TmAjP2jKyAMHlzR3icr3+OmKSK3uXMMt2HSMOJQ+JvFxr//DM493i/VGyeY25/zu3A9RstiE+1d82Fi9xKOmMf4smvSkjOgT0b727jqNbNe6CvEKQUmqHabzYRQzUVz6WPVDHBxZP7AiKmZIVQXYnDsVXywStkSoxxY5En6XKpq0GR3bIVtUMORgZPoZi7Jni+/4EckcYH8g9mpsQf9tPRcOZ2WIvt5gqp2MZuwBLBRcbxihuECfBscqdeA0oDU5AZw="
     - GH_REPO_NAME: crow
     - DOXYFILE: $TRAVIS_BUILD_DIR/Doxyfile
-    - GH_REPO_REF: github.com/mrozigor/crow.git
-    - THEME_REPO_REF: github.com/mrozigor/darxygen.git
+    - GH_REPO_REF: github.com/crowcpp/crow.git
+    - THEME_REPO_REF: github.com/crowcpp/darxygen.git
 
 
 addons:
@@ -30,14 +30,12 @@ addons:
     packages:
       - libboost-all-dev
       - doxygen
-      - doxygen-doc
-      - doxygen-latex
-      - doxygen-gui
+      - mkdocs
       - graphviz
 
 before_install:
   - if [ "$TRAVIS_COMPILER" == "gcc" -a "$TRAVIS_CPU_ARCH" == "amd64" ]; then export PUSH_COVERAGE=ON; fi
-  - if [ "$TRAVIS_BRANCH" == "master" -a "$TRAVIS_PULL_REQUEST" == "false" -a "$PUSH_COVERAGE" == "ON" ]; then export TRAVIS_BUILD_DOCS=ON; fi
+  - if [ "$TRAVIS_BRANCH" == "master" -a "$TRAVIS_PULL_REQUEST" == "false" -a "$PUSH_COVERAGE" == "ON" ]; then export TRAVIS_BUILD_DOCS=ON; pip install mkdocs-material; fi
 
 install:
   - if [ "$PUSH_COVERAGE" == "ON" ]; then pip install --user cpp-coveralls; fi

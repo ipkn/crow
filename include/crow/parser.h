@@ -10,6 +10,10 @@
 
 namespace crow
 {
+    /// A wrapper for `nodejs/http-parser`.
+
+    /// Used to generate a \ref crow.request from the TCP socket buffer.
+    ///
     template <typename Handler>
     struct HTTPParser : public http_parser
     {
@@ -93,6 +97,7 @@ namespace crow
         }
 
         // return false on error
+        /// Parse a buffer into the different sections of an HTTP request.
         bool feed(const char* buffer, int length)
         {
             const static http_parser_settings settings_{
@@ -137,6 +142,7 @@ namespace crow
             handler_->handle();
         }
 
+        /// Take the parsed HTTP request data and convert it to a \ref crow.request
         request to_request() const
         {
             return request{(HTTPMethod)method, std::move(raw_url), std::move(url), std::move(url_params), std::move(headers), std::move(body)};
@@ -159,9 +165,9 @@ namespace crow
         std::string header_field;
         std::string header_value;
         ci_map headers;
-        query_string url_params;
+        query_string url_params; ///< What comes after the `?` in the URL.
         std::string body;
 
-        Handler* handler_;
+        Handler* handler_; ///< This is currently an HTTP connection object (\ref crow.Connection).
     };
 }
