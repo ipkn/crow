@@ -26,12 +26,12 @@ namespace crow
     struct request
     {
         HTTPMethod method;
-        std::string raw_url; /// The full URL containing the host.
-        std::string url; /// The Endpoint.
-        query_string url_params; /// The parameters associated with the request. (everything after the `?`)
+        std::string raw_url; ///< The full URL containing the host.
+        std::string url; ///< The Endpoint.
+        query_string url_params; ///< The parameters associated with the request. (everything after the `?`)
         ci_map headers;
         std::string body;
-        std::string remoteIpAddress; /// The IP address from which the request was sent.
+        std::string remoteIpAddress; ///< The IP address from which the request was sent.
 
         void* middleware_context{};
         boost::asio::io_service* io_service{};
