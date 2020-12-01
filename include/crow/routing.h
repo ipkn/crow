@@ -534,7 +534,7 @@ namespace crow
                     #else
                     [f]
                     #endif
-                    (const crow::request& req, crow::response& res, Args ... args) {
+                    (crow::response& res, Args ... args) {
                         f(res, args...);
                     });
             }
