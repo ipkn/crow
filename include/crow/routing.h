@@ -531,31 +531,31 @@ namespace crow
             !black_magic::CallHelper<Func, black_magic::S<Args...>>::value &&
             !black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value &&
             black_magic::CallHelper<Func, black_magic::S<crow::response&, Args...>>::value,
-            void>::type
-            operator()(Func&& f)
-            {
-                static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
-                black_magic::CallHelper<Func, black_magic::S<crow::response&, Args...>>::value
-                ,
-                "Handle type is mismatched with URL parameters");
-                static_assert(std::is_same<void, decltype(f(std::declval<crow::response&>(), std::declval<Args>()...))>::value,
-                "Handler function with response argument should have void return type");
-                
-                handler_ = (
-                    #ifdef CROW_CAN_USE_CPP14
-                    [f = std::move(f)]
-                    #else
-                    [f]
-                    #endif
-                    (crow::response& res, Args ... args) {
-                        f(res, args...);
-                    });
-            }
-            template <typename Func>
-            typename std::enable_if<
-            !black_magic::CallHelper<Func, black_magic::S<Args...>>::value&&
+        void>::type
+        operator()(Func&& f)
+        {
+          static_assert(black_magic::CallHelper<Func, black_magic::S<Args...>>::value ||
+              black_magic::CallHelper<Func, black_magic::S<crow::response&, Args...>>::value
+              ,
+              "Handler type is mismatched with URL parameters");
+          static_assert(std::is_same<void, decltype(f(std::declval<crow::response&>(), std::declval<Args>()...))>::value,
+                        "Handler function with response argument should have void return type");
+          handler_without_request = (
+#ifdef CROW_CAN_USE_CPP14
+                [f = std::move(f)]
+#else
+                [f]
+#endif
+                (crow::response& res, Args ... args){
+                  f(res, args...);
+                });
+        }
+
+        template <typename Func>
+        typename std::enable_if<
+            !black_magic::CallHelper<Func, black_magic::S<Args...>>::value &&
             !black_magic::CallHelper<Func, black_magic::S<crow::request, Args...>>::value &&
-            !black_magic::CallHelper<Func, black_magic::S<crow::response, Args...>>::value,
+            !black_magic::CallHelper<Func, black_magic::S<crow::response&, Args...>>::value,
             void>::type
         operator()(Func&& f)
         {
@@ -594,6 +594,7 @@ namespace crow
 
     private:
         std::function<void(const crow::request&, crow::response&, Args...)> handler_;
+        std::function<void(crow::response&, Args...)> handler_without_request;
 
     };
 
