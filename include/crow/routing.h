@@ -540,13 +540,13 @@ namespace crow
               "Handler type is mismatched with URL parameters");
           static_assert(std::is_same<void, decltype(f(std::declval<crow::response&>(), std::declval<Args>()...))>::value,
                         "Handler function with response argument should have void return type");
-          handler_without_request = (
+          handler_ = (
 #ifdef CROW_CAN_USE_CPP14
                 [f = std::move(f)]
 #else
                 [f]
 #endif
-                (crow::response& res, Args ... args){
+                (const crow::request& req, crow::response& res, Args ... args){
                   f(res, args...);
                 });
         }
@@ -594,7 +594,6 @@ namespace crow
 
     private:
         std::function<void(const crow::request&, crow::response&, Args...)> handler_;
-        std::function<void(crow::response&, Args...)> handler_without_request;
 
     };
 
