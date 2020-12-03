@@ -13,7 +13,7 @@ struct ExampleMiddleware
 {
     std::string message;
 
-    ExampleMiddleware() : message(std::string("foo"))
+    ExampleMiddleware() : message("foo")
     {
     }
 
@@ -83,7 +83,7 @@ int main()
 
     // To see it in action submit {ip}:18080/add/1/2 and you should receive 3 (exciting, isn't it)
     CROW_ROUTE(app,"/add/<int>/<int>")
-    ([](const crow::request& /*req*/, crow::response& res, int a, int b){
+    ([](crow::response& res, int a, int b){
         std::ostringstream os;
         os << a+b;
         res.write(os.str());
