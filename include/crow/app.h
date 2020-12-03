@@ -96,6 +96,13 @@ namespace crow
             return *this;
         }
 
+        ///Set the server name (default Crow/0.2)
+        self_t& server_name(std::string server_name)
+        {
+            server_name_ = server_name;
+            return *this;
+        }
+
         ///The IP address that Crow will handle requests on (default is 0.0.0.0)
         self_t& bindaddr(std::string bindaddr)
         {
@@ -174,7 +181,7 @@ namespace crow
 #ifdef CROW_ENABLE_SSL
             if (use_ssl_)
             {
-                ssl_server_ = std::move(std::unique_ptr<ssl_server_t>(new ssl_server_t(this, bindaddr_, port_, &middlewares_, concurrency_, &ssl_context_)));
+                ssl_server_ = std::move(std::unique_ptr<ssl_server_t>(new ssl_server_t(this, bindaddr_, port_, server_name_, &middlewares_, concurrency_, &ssl_context_)));
                 ssl_server_->set_tick_function(tick_interval_, tick_function_);
                 notify_server_start();
                 ssl_server_->run();
@@ -182,7 +189,7 @@ namespace crow
             else
 #endif
             {
-                server_ = std::move(std::unique_ptr<server_t>(new server_t(this, bindaddr_, port_, &middlewares_, concurrency_, nullptr)));
+                server_ = std::move(std::unique_ptr<server_t>(new server_t(this, bindaddr_, port_, server_name_, &middlewares_, concurrency_, nullptr)));
                 server_->set_tick_function(tick_interval_, tick_function_);
                 notify_server_start();
                 server_->run();
@@ -311,6 +318,7 @@ namespace crow
     private:
         uint16_t port_ = 80;
         uint16_t concurrency_ = 1;
+        std::string server_name_ = "Crow/0.2";
         std::string bindaddr_ = "0.0.0.0";
         Router router_;
 
