@@ -30,8 +30,7 @@ You can also access the url parameters in the handler using `#!cpp req.url_param
 For more information on `crow::request` go [here](../../reference/structcrow_1_1request.html).<br><br>
 
 ###Response
-Crow also provides the ability to define a response in the parameters by using `#!cpp ([](const crow::request& req, crow::response& res){...})`.<br>
-If you don't want to use the request you can write `#!cpp ([](const crow::request& , crow::response& res){...})`.<br><br>
+Crow also provides the ability to define a response in the parameters by using `#!cpp ([](crow::response& res){...})`.<br>
 
 Please note that in order to return a response defined as a parameter you'll need to use `res.end();`.<br><br>
 
