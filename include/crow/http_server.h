@@ -26,12 +26,13 @@ namespace crow
     class Server
     {
     public:
-    Server(Handler* handler, std::string bindaddr, uint16_t port, std::tuple<Middlewares...>* middlewares = nullptr, uint16_t concurrency = 1, typename Adaptor::context* adaptor_ctx = nullptr)
+    Server(Handler* handler, std::string bindaddr, uint16_t port, std::string server_name = "Crow/0.2", std::tuple<Middlewares...>* middlewares = nullptr, uint16_t concurrency = 1, typename Adaptor::context* adaptor_ctx = nullptr)
             : acceptor_(io_service_, tcp::endpoint(boost::asio::ip::address::from_string(bindaddr), port)),
             signals_(io_service_, SIGINT, SIGTERM),
             tick_timer_(io_service_),
             handler_(handler),
             concurrency_(concurrency == 0 ? 1 : concurrency),
+            server_name_(server_name),
             port_(port),
             bindaddr_(bindaddr),
             middlewares_(middlewares),
@@ -218,7 +219,7 @@ namespace crow
 
         Handler* handler_;
         uint16_t concurrency_{1};
-        std::string server_name_ = "Crow/0.2";
+        std::string server_name_;
         uint16_t port_;
         std::string bindaddr_;
         unsigned int roundrobin_index_{};

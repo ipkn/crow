@@ -89,6 +89,7 @@ int main()
     //crow::logger::setHandler(std::make_shared<ExampleLogHandler>());
 
     app.port(18080)
+        .server_name("CrowCpp")
         .multithreaded()
         .run();
 }
