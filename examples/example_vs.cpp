@@ -13,7 +13,7 @@ struct ExampleMiddleware
 {
     std::string message;
 
-    ExampleMiddleware() : message(std::string("foo"))
+    ExampleMiddleware() : message("foo")
     {
     }
 
@@ -77,7 +77,7 @@ int main()
     });
 
     app.route_dynamic("/add/<int>/<int>")
-    ([](const crow::request& req, crow::response& res, int a, int b){
+    ([](crow::response& res, int a, int b){
         std::ostringstream os;
         os << a+b;
         res.write(os.str());
