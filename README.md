@@ -1,4 +1,4 @@
-<p align="center"><img src="https://pixeldrain.com/api/file/DMc7xYye" width=600></p>
+<p align="center"><img src="https://crowcpp.org/assets/crowlogo.svg" width=600></p>
 
 <h4 align="center">A Fast and Easy to use microframework for the web.</h4>
 <p align="center">
