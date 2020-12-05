@@ -64,3 +64,5 @@ else()
 
 	add_custom_target(amalgamation ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/crow_all.h)
 endif()
+
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/crow_all.h DESTINATION include)
