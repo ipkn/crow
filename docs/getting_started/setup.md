@@ -98,6 +98,18 @@ make
 ```
 Running Cmake will create `crow_all.h` file and place it in the build directory.
 
+##Installing Crow
+
+if you wish to use crow globally without copying `crow_all.h` in your projects, you can install `crow` on your machine by using `make install` command instead of `make` after `cmake..`. Thus, the procedure will look like
+
+```
+mkdir build
+cd build
+cmake ..
+make install
+```
+`make install` will copy `crow_all.h` automatically in your `/usr/local/include` thus making it available globally for use.<br>
+
 You can run tests with following commands:
 ```
 ctest -V
