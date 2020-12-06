@@ -105,7 +105,7 @@ ctest -V
 
 ##Installing Crow
 
-if you wish to use crow globally without copying `crow_all.h` in your projects, you can install Crow on your machine with the procedure below.
+if you wish to use Crow globally without copying `crow_all.h` in your projects, you can install Crow on your machine with the procedure below.
 
 ```
 mkdir build
