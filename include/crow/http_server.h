@@ -173,6 +173,16 @@ namespace crow
                 io_service->stop();
         }
 
+        void signal_clear()
+        {
+            signals_.clear();
+        }
+
+        void signal_add(int signal_number)
+        {
+            signals_.add(signal_number);
+        }
+
     private:
         asio::io_service& pick_io_service()
         {
