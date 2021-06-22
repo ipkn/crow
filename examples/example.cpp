@@ -1,5 +1,5 @@
 #include "crow.h"
-
+#include "middleware.h"
 #include <sstream>
 
 class ExampleLogHandler : public crow::ILogHandler {

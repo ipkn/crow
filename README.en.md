@@ -1,5 +1,7 @@
 ![Crow logo](http://i.imgur.com/wqivvjK.jpg)
-Crow is C++ microframework for web. (inspired by Python Flask)[fork by Asciphx]
+Crow is C++ microframework for web. Support Mac, Linux, windows, three platforms, the fastest development speed, the quickest and the strongest, the next step is to support database, static resources, and ORM.
+
+(inspired by Python Flask)[fork by Asciphx]
 
 [![Travis Build](https://travis-ci.org/ipkn/crow.svg?branch=master)](https://travis-ci.org/ipkn/crow)
 [![Coverage Status](https://coveralls.io/repos/ipkn/crow/badge.svg?branch=master)](https://coveralls.io/r/ipkn/crow?branch=master)

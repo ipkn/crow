@@ -2,28 +2,6 @@
 #include <boost/algorithm/string/trim.hpp>
 #include "crow/http_request.h"
 #include "crow/http_response.h"
-// Any middleware requires following 3 members:
-
-// struct Ctx;
-//      storing data for the middleware; can be read from another middleware or handlers
-
-// before_handle
-//      called before handling the request.
-//      if res.end() is called, the operation is halted. 
-//      (still call after_handle of this middleware)
-//      2 signatures:
-//      void before_handle(Req& req, Res& res, Ctx& ctx)
-//          if you only need to access this middlewares Ctx.
-//      template <typename AllContext>
-//      void before_handle(Req& req, Res& res, Ctx& ctx, AllContext& all_ctx)
-//          you can access another middlewares' Ctx by calling `all_ctx.template get<MW>()'
-//          ctx == all_ctx.template get<CurrentMiddleware>()
-
-// after_handle
-//      called after handling the request.
-//      void after_handle(Req& req, Res& res, Ctx& ctx)
-//      template <typename AllContext>
-//      void after_handle(Req& req, Res& res, Ctx& ctx, AllContext& all_ctx)
 namespace crow {
   struct Cors {
 	struct Ctx {};
@@ -115,3 +93,23 @@ namespace crow {
 	void after_handle(Req& req,Res& res,Ctx& ctx) {}
   };
 }
+// Any middleware requires following 3 members:
+// struct Ctx;
+//      storing data for the middleware; can be read from another middleware or handlers
+// before_handle
+//      called before handling the request.
+//      if res.end() is called, the operation is halted. 
+//      (still call after_handle of this middleware)
+//      2 signatures:
+//      void before_handle(Req& req, Res& res, Ctx& ctx)
+//          if you only need to access this middlewares Ctx.
+//      template <typename AllContext>
+//      void before_handle(Req& req, Res& res, Ctx& ctx, AllContext& all_ctx)
+//          you can access another middlewares' Ctx by calling `all_ctx.template get<MW>()'
+//          ctx == all_ctx.template get<CurrentMiddleware>()
+
+// after_handle
+//      called after handling the request.
+//      void after_handle(Req& req, Res& res, Ctx& ctx)
+//      template <typename AllContext>
+//      void after_handle(Req& req, Res& res, Ctx& ctx, AllContext& all_ctx)

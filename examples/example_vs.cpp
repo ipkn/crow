@@ -1,9 +1,10 @@
 #include "crow.h"
+#include "middleware.h"
 #include <sstream>
 using namespace crow;
 class ExampleLogHandler : public ILogHandler {
   public:void log(std::string message,LogLevel level) override {
-	//            cerr << "ExampleLogHandler -> " << message;
+	//cerr << "ExampleLogHandler -> " << message;
   }
 };
 int main() {
@@ -22,7 +23,6 @@ int main() {
   app.route_dynamic("/path/")([](){
 	return "Trailing slash test case..";
   });
-  // simple json response
   app.route_dynamic("/json")([]{
 	json::wvalue x;
 	x["message"]="Hello, World!";
