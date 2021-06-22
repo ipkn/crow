@@ -28,11 +28,23 @@ int main(){
 - [Mustache](http://mustache.github.io/)基于模板库（crow:：mustache）
 - 仅页眉的每一项功能 [`crow_all.h`](https://github.com/ipkn/crow/releases/download/v0.1/crow_all.h) with every features ([Download from here](https://github.com/ipkn/crow/releases/download/v0.1/crow_all.h))
 - 中间件支持，Websocket支持
+- 支持静态资源,并且默认在'static/'目录
 ## 仍在开发中
 -~~内置ORM~~
 -检查[sqlpp11](https://github.com/rbock/sqlpp11)如果你想要的话。
 
 ## 示例
+
+#### SSR 服务端渲染
+```c++
+  CROW_ROUTE(app,"/")([] {
+	char name[256];gethostname(name,256);
+	mustache::Ctx x;x["servername"]=name;
+	auto page=mustache::load("index.html");
+	return page.render(x);
+  });
+```
+
 #### JSON响应
 ```c++
 CROW_ROUTE(app, "/json")([]{
@@ -82,7 +94,7 @@ CROW_ROUTE(app, "/add_json").methods("POST"_method)
 - 构建示例的CMake
 - 建议与tcmalloc/jemalloc链接以提高速度。
 - 现在支持VS2019，功能有限（只有url的运行时检查可用。）
-- 支持静态资源,并且默认在'static/'目录
+- 
 ### 建筑（测试、示例）
 建议使用CMake进行源代码外构建。
 ```

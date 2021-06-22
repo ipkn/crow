@@ -32,12 +32,23 @@ int main(){
  - Provide an amalgamated header file [`crow_all.h`](https://github.com/ipkn/crow/releases/download/v0.1/crow_all.h) with every features ([Download from here](https://github.com/ipkn/crow/releases/download/v0.1/crow_all.h))
  - Middleware support
  - Websocket support
+ - Support static resources and the default is in the 'static/' directory
 
 ## Still in development
  - ~~Built-in ORM~~
    - Check [sqlpp11](https://github.com/rbock/sqlpp11) if you want one.
 
 ## Examples
+
+#### SSR server rendering
+```c++
+  CROW_ROUTE(app,"/")([] {
+	char name[256];gethostname(name,256);
+	mustache::Ctx x;x["servername"]=name;
+	auto page=mustache::load("index.html");
+	return page.render(x);
+  });
+```
 
 #### JSON Response
 ```c++
@@ -89,7 +100,7 @@ If you just want to use crow, copy amalgamate/crow_all.h and include it.
  - CMake for build examples
  - Linking with tcmalloc/jemalloc is recommended for speed.
  - Now supporting VS2019 with limited functionality (only run-time check for url is available.)
- - Support static resources and the default is in the 'static/' directory
+
 ### Building (Tests, Examples)
 Out-of-source build with CMake is recommended.
 ```
