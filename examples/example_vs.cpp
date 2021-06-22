@@ -19,14 +19,9 @@ int main() {
 	auto page=mustache::load("index.html");
 	return page.render(x);
   });
-  app.route_dynamic("/fav")([](const Req&,Res& res) {
-	res.set_static_file_info("favicon.ico");res.end();
-  });
+  //Single path access to files
   app.route_dynamic("/cat")([](const Req&,Res& res) {
-	res.set_static_file_info("cat.jpg");res.end();
-  });
-  app.route_dynamic("/about")([]() {
-	return "About Crow example.";
+	res.set_static_file_info("1.jpg");res.end();
   });
   // a request to /path should be forwarded to /path/
   app.route_dynamic("/path/")([]() {
