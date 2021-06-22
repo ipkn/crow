@@ -431,20 +431,18 @@ namespace crow {
 	  return template_t(body);
 	}
 	namespace detail {
-	  inline std::string& get_template_base_directory_ref() {
-		static std::string template_base_directory="templates";
+	  inline std::string& get_static_base_directory_ref() {
+		static std::string template_base_directory=CROW_STATIC_DIRECTORY;
 		return template_base_directory;
 	  }
 	}
-
 	inline std::string default_loader(const std::string& filename) {
-	  std::string path=detail::get_template_base_directory_ref();
-	  if (!(path.back()=='/'||path.back()=='\\'))
-		path+='/';
+	  std::string path=detail::get_static_base_directory_ref();
+	  //For performance, just make sure the macro is correct
+	  //if (!(path.back()=='/'||path.back()=='\\'))path+='/';
 	  path+=filename;
 	  std::ifstream inf(path);
-	  if (!inf)
-		return {};
+	  if (!inf) return {};
 	  return {std::istreambuf_iterator<char>(inf), std::istreambuf_iterator<char>()};
 	}
 
@@ -454,14 +452,10 @@ namespace crow {
 		return loader;
 	  }
 	}
-
-	inline void set_base(const std::string& path) {
-	  auto& base=detail::get_template_base_directory_ref();
-	  base=path;
-	  if (base.back()!='\\'&&
-		  base.back()!='/') {
-		base+='/';
-	  }
+	//The path to run the program relative to the command line, not the path of the program
+	inline void set_directory(const std::string& path) {
+	  auto& base=detail::get_static_base_directory_ref();
+	  base=path;if (base.back()!='\\'&& base.back()!='/') base+='/';
 	}
 
 	inline void set_loader(std::function<std::string(std::string)> loader) {

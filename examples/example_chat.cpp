@@ -27,7 +27,7 @@ void broadcast(const string& msg)
 int main()
 {
     crow::SimpleApp app;
-    crow::mustache::set_base(".");
+    crow::mustache::set_directory(".");
 
     CROW_ROUTE(app, "/")
     ([]{

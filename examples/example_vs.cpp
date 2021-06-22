@@ -8,27 +8,36 @@ class ExampleLogHandler : public ILogHandler {
   }
 };
 int main() {
+  //This is the default and can be omitted, just for demonstration
+  mustache::set_directory("./static");
   App<ExampleMiddleware,Cors> app;
   app.get_middleware<ExampleMiddleware>().setMessage("hello");
-  CROW_ROUTE(app,"/")([]{
+  //SSR server rendering
+  CROW_ROUTE(app,"/")([] {
 	char name[256];gethostname(name,256);
 	mustache::Ctx x;x["servername"]=name;
 	auto page=mustache::load("index.html");
 	return page.render(x);
   });
-  app.route_dynamic("/about")([](){
+  app.route_dynamic("/fav")([](const Req&,Res& res) {
+	res.set_static_file_info("favicon.ico");res.end();
+  });
+  app.route_dynamic("/cat")([](const Req&,Res& res) {
+	res.set_static_file_info("cat.jpg");res.end();
+  });
+  app.route_dynamic("/about")([]() {
 	return "About Crow example.";
   });
   // a request to /path should be forwarded to /path/
-  app.route_dynamic("/path/")([](){
+  app.route_dynamic("/path/")([]() {
 	return "Trailing slash test case..";
   });
-  app.route_dynamic("/json")([]{
+  app.route_dynamic("/json")([] {
 	json::wvalue x;
 	x["message"]="Hello, World!";
 	return x;
   });
-  app.route_dynamic("/hello/<int>")([](int count){
+  app.route_dynamic("/hello/<int>")([](int count) {
 	if (count>100)
 	  return Res(400);
 	std::ostringstream os;
@@ -66,7 +75,7 @@ int main() {
 	for (const auto& countVal:count) os<<" - "<<countVal<<'\n';
 	return Res{os.str()};
   });
-  logger::setLogLevel(LogLevel::DEBUG);
+  logger::setLogLevel(LogLevel::INFO);
   //logger::setHandler(std::make_shared<ExampleLogHandler>());
   app.port(8080).multithreaded().run();
 }

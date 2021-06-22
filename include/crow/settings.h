@@ -14,11 +14,17 @@
 	Warning     = 2
 	Error       = 3
 	Critical    = 4
-
 	default to INFO
 */
 #ifndef CROW_LOG_LEVEL
 #define CROW_LOG_LEVEL 1
+#endif
+//Make sure you bring '/' with you at the end
+#ifndef CROW_STATIC_DIRECTORY
+#define CROW_STATIC_DIRECTORY "static/"
+#endif
+#ifndef CROW_STATIC_ENDPOINT
+#define CROW_STATIC_ENDPOINT "/<path>"
 #endif
 // compiler flags
 #if __cplusplus > 201502L
