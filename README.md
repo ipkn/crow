@@ -23,7 +23,7 @@ int main(){
    - Similiar to Flask
    - Type-safe Handlers (see Example)
  - Very Fast
-   - ![Benchmark Result in one chart](https://docs.google.com/spreadsheets/d/1KidO9XpuwCRZ2p_JRDJj2aep61H8Sh_KDOhApizv4LE/pubchart?oid=2041467789&format=image)
+   - ![https://docs.google.com/spreadsheets/d/1KidO9XpuwCRZ2p_JRDJj2aep61H8Sh_KDOhApizv4LE/pubchart?oid=2041467789&format=image](./Benchmark.png)
    - More data on [crow-benchmark](https://github.com/ipkn/crow-benchmark)
  - Fast built-in JSON parser (crow::json)
    - You can also use [json11](https://github.com/dropbox/json11) or [rapidjson](https://github.com/miloyip/rapidjson) for better speed or readability
