@@ -74,14 +74,14 @@ CROW_ROUTE(app, "/add_json").methods("POST"_method)
 ```
 
 ## 如何构建
-如果您只想使用crow，请复制mergale/crow\u all.h并包含它。
+如果您只想使用crow，请复制amalgamate/crow_all.h 并包含它。
 
 ### 要求
-C++编译器，支持C++ 11（用G+++测试= 4.8）
--任何版本的boost库
--构建示例的CMake
--建议与tcmalloc/jemalloc链接以提高速度。
--现在支持VS2019，功能有限（只有url的运行时检查可用。）
+- C++ 编译器，支持C++ 11（用G++测试>=4.8）
+- 任何版本的boost库
+- 构建示例的CMake
+- 建议与tcmalloc/jemalloc链接以提高速度。
+- 现在支持VS2019，功能有限（只有url的运行时检查可用。）
 
 ### 建筑（测试、示例）
 建议使用CMake进行源代码外构建。
@@ -152,7 +152,10 @@ qs_parse https://github.com/bartgrantham/qs_parse
 
 TinySHA1 https://github.com/mohaps/TinySHA1
 
-TinySHA1-SHA1算法的一个只包含报头的实现。基于boost：：uuid：：details中的实现
+TinySHA1-SHA1算法的一个只包含报头的实现。基于boost::uuid::details中的实现
 Cmohaps@gmail.com
 特此授予出于任何目的使用、复制、修改和分发本软件的许可，无论是否收费，前提是上述版权声明和本许可声明出现在所有副本中。
 本软件按“原样”提供，作者不承担与本软件有关的所有保证，包括对适销性和适用性的所有暗示保证。一
+
+## 特别的
+今天6月22日，是我的生日。因此，我宣布开源……
