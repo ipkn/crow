@@ -27,7 +27,7 @@ int main()
         }
         return "";
     });
-    context ctx(data);
+    Ctx ctx(data);
     cout << templ.render(ctx);
     return 0;
 }

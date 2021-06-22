@@ -6,7 +6,7 @@
 using namespace std;
 
 vector<string> msgs;
-vector<pair<crow::response*, decltype(chrono::steady_clock::now())>> ress;
+vector<pair<crow::Res*, decltype(chrono::steady_clock::now())>> ress;
 
 void broadcast(const string& msg)
 {
@@ -31,7 +31,7 @@ int main()
 
     CROW_ROUTE(app, "/")
     ([]{
-        crow::mustache::context ctx;
+        crow::mustache::Ctx ctx;
         return crow::mustache::load("example_chat.html").render();
     });
 
@@ -48,7 +48,7 @@ int main()
     });
 
     CROW_ROUTE(app, "/logs/<int>")
-    ([](const crow::request& /*req*/, crow::response& res, int after){
+    ([](const crow::Req& /*req*/, crow::Res& res, int after){
         CROW_LOG_INFO << "logs with last " << after;
         if (after < (int)msgs.size())
         {
@@ -62,7 +62,7 @@ int main()
         }
         else
         {
-            vector<pair<crow::response*, decltype(chrono::steady_clock::now())>> filtered;
+            vector<pair<crow::Res*, decltype(chrono::steady_clock::now())>> filtered;
             for(auto p : ress)
             {
                 if (p.first->is_alive() && chrono::steady_clock::now() - p.second < chrono::seconds(30))
@@ -78,7 +78,7 @@ int main()
 
     CROW_ROUTE(app, "/send")
         .methods("GET"_method, "POST"_method)
-    ([](const crow::request& req)
+    ([](const crow::Req& req)
     {
         CROW_LOG_INFO << "msg from client: " << req.body;
         broadcast(req.body);

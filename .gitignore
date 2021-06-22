@@ -33,6 +33,11 @@ build
 
 .directory
 crow_all.h
-
+# windows
+.vs/
+CppProperties.json
+CMakeSettings.json
+*.bat
 # conan.io
 build/
+.vscode/

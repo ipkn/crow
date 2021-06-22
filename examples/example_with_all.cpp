@@ -35,14 +35,14 @@ int main()
     CROW_ROUTE(app,"/hello/<int>")
     ([](int count){
         if (count > 100)
-            return crow::response(400);
+            return crow::Res(400);
         std::ostringstream os;
         os << count << " bottles of beer!";
-        return crow::response(os.str());
+        return crow::Res(os.str());
     });
 
     CROW_ROUTE(app,"/add/<int>/<int>")
-    ([](const crow::request& /*req*/, crow::response& res, int a, int b){
+    ([](const crow::Req& /*req*/, crow::Res& res, int a, int b){
         std::ostringstream os;
         os << a+b;
         res.write(os.str());
@@ -52,23 +52,23 @@ int main()
     // Compile error with message "Handler type is mismatched with URL paramters"
     //CROW_ROUTE(app,"/another/<int>")
     //([](int a, int b){
-        //return crow::response(500);
+        //return crow::Res(500);
     //});
 
     // more json example
     CROW_ROUTE(app, "/add_json")
-    ([](const crow::request& req){
+    ([](const crow::Req& req){
         auto x = crow::json::load(req.body);
         if (!x)
-            return crow::response(400);
+            return crow::Res(400);
         int sum = x["a"].i()+x["b"].i();
         std::ostringstream os;
         os << sum;
-        return crow::response{os.str()};
+        return crow::Res{os.str()};
     });
 
     CROW_ROUTE(app, "/params")
-    ([](const crow::request& req){
+    ([](const crow::Req& req){
         std::ostringstream os;
         os << "Params: " << req.url_params << "\n\n"; 
         os << "The key 'foo' was " << (req.url_params.get("foo") == nullptr ? "not " : "") << "found.\n";
@@ -81,7 +81,7 @@ int main()
         for(const auto& countVal : count) {
             os << " - " << countVal << '\n';
         }
-        return crow::response{os.str()};
+        return crow::Res{os.str()};
     });    
 
     // ignore all log
