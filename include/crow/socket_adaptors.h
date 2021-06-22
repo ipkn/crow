@@ -4,7 +4,8 @@
 #include <boost/asio/ssl.hpp>
 #endif
 #include "crow/settings.h"
-#if BOOST_VERSION >= 107000
+//By Asciphx, June 22, 2021
+#if BOOST_VERSION > 106900
 #define GET_IO_SERVICE(s) ((boost::asio::io_context&)(s).get_executor().context())
 #else
 #define GET_IO_SERVICE(s) ((s)->get_io_service())
@@ -14,8 +15,8 @@ namespace crow {
   using tcp=asio::ip::tcp;
   struct SocketAdaptor {
 	using Ctx=void;
-	SocketAdaptor(boost::asio::io_service& io_service,Ctx*): socket_(io_service) {}
-	boost::asio::io_service& get_io_service() {
+	SocketAdaptor(asio::io_service& io_service,Ctx*): socket_(io_service) {}
+	asio::io_service& get_io_service() {
 	  return GET_IO_SERVICE(socket_);
 	}
 	tcp::socket& raw_socket() {
@@ -35,13 +36,13 @@ namespace crow {
 	}
 
 	void close() {
-	  boost::system::error_code ec;
+	  system::error_code ec;
 	  socket_.close(ec);
 	}
 
 	template <typename F>
 	void start(F f) {
-	  f(boost::system::error_code());
+	  f(system::error_code());
 	}
 
 	tcp::socket socket_;
@@ -49,12 +50,12 @@ namespace crow {
 
 #ifdef CROW_ENABLE_SSL
   struct SSLAdaptor {
-	using Ctx=boost::asio::ssl::context;
-	using ssl_socket_t=boost::asio::ssl::stream<tcp::socket>;
-	SSLAdaptor(boost::asio::io_service& io_service,Ctx* ctx)
+	using Ctx=asio::ssl::context;
+	using ssl_socket_t=asio::ssl::stream<tcp::socket>;
+	SSLAdaptor(asio::io_service& io_service,Ctx* ctx)
 	  : ssl_socket_(new ssl_socket_t(io_service,*ctx)) {}
 
-	boost::asio::ssl::stream<tcp::socket>& socket() {
+	asio::ssl::stream<tcp::socket>& socket() {
 	  return *ssl_socket_;
 	}
 
@@ -72,23 +73,23 @@ namespace crow {
 	}
 
 	void close() {
-	  boost::system::error_code ec;
+	  system::error_code ec;
 	  raw_socket().close(ec);
 	}
 
-	boost::asio::io_service& get_io_service() {
+	asio::io_service& get_io_service() {
 	  return GET_IO_SERVICE(raw_socket());
 	}
 
 	template <typename F>
 	void start(F f) {
-	  ssl_socket_->async_handshake(boost::asio::ssl::stream_base::server,
-								   [f](const boost::system::error_code& ec) {
+	  ssl_socket_->async_handshake(asio::ssl::stream_base::server,
+								   [f](const system::error_code& ec) {
 		f(ec);
 	  });
 	}
 
-	std::unique_ptr<boost::asio::ssl::stream<tcp::socket>> ssl_socket_;
+	std::unique_ptr<asio::ssl::stream<tcp::socket>> ssl_socket_;
   };
 #endif
 }
