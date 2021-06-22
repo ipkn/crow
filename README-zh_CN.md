@@ -94,7 +94,7 @@ CROW_ROUTE(app, "/add_json").methods("POST"_method)
 - 构建示例的CMake
 - 建议与tcmalloc/jemalloc链接以提高速度。
 - 现在支持VS2019，功能有限（只有url的运行时检查可用。）
-- 
+
 ### 建筑（测试、示例）
 建议使用CMake进行源代码外构建。
 ```
