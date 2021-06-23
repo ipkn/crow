@@ -14,7 +14,7 @@ int main() {
   CROW_ROUTE(app,"/hello_compressed")([]() {
 	return "Hello World! This is compressed by default!";
   });
-  app.port(18080)
+  app.port(8080)
 	.use_compression(crow::compression::algorithm::DEFLATE)
 	//.use_compression(crow::compression::algorithm::GZIP)
 	.loglevel(crow::LogLevel::Debug)

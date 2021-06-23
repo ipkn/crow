@@ -1,50 +1,24 @@
 #include "crow.h"
 #include "middleware.h"
 #include <sstream>
-
-class ExampleLogHandler : public crow::ILogHandler {
+using namespace crow;
+class ExampleLogHandler : public ILogHandler {
   public:
-  void log(std::string /*message*/,crow::LogLevel /*level*/) override {
-	//            cerr << "ExampleLogHandler -> " << message;
-  }
-};
-
-struct ExampleMiddleware {
-  std::string message;
-
-  ExampleMiddleware() {
-	message="foo";
-  }
-
-  void setMessage(std::string newMsg) {
-	message=newMsg;
-  }
-
-  struct Ctx {};
-
-  void before_handle(crow::Req& /*req*/,crow::Res& /*res*/,Ctx& /*ctx*/) {
-	CROW_LOG_DEBUG<<" - MESSAGE: "<<message;
-  }
-
-  void after_handle(crow::Req& /*req*/,crow::Res& /*res*/,Ctx& /*ctx*/) {
-	// no-op
+  void log(std::string /*message*/,LogLevel /*level*/) override {
+	//cerr << "ExampleLogHandler -> " << message;
   }
 };
 
 int main() {
-  crow::App<ExampleMiddleware> app;
-
+  App<ExampleMiddleware,Cors> app;
   app.get_middleware<ExampleMiddleware>().setMessage("hello");
-
-  CROW_ROUTE(app,"/")
-	.name("hello")
-	([] {
-	return "Hello World!";
-  });
-
-  CROW_ROUTE(app,"/about")
-	([]() {
-	return "About Crow example.";
+  mustache::set_directory("./static");
+  //SSR server rendering
+  CROW_ROUTE(app,"/")([] {
+	char name[256];gethostname(name,256);
+	mustache::Ctx x;x["servername"]=name;
+	auto page=mustache::load("index.html");
+	return page.render(x);
   });
 
   // a request to /path should be forwarded to /path/
@@ -159,7 +133,7 @@ int main() {
   app.loglevel(crow::LogLevel::DEBUG);
   //crow::logger::setHandler(std::make_shared<ExampleLogHandler>());
 
-  app.port(18080)
+  app.port(8080)
 	.multithreaded()
 	.run();
 }

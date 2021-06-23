@@ -9,9 +9,9 @@ class ExampleLogHandler : public ILogHandler {
 };
 int main() {
   //This is the default and can be omitted, just for demonstration
-  mustache::set_directory("./static");
   App<ExampleMiddleware,Cors> app;
   app.get_middleware<ExampleMiddleware>().setMessage("hello");
+  mustache::set_directory("./static");
   //SSR server rendering
   CROW_ROUTE(app,"/")([] {
 	char name[256];gethostname(name,256);

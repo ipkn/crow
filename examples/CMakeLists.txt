@@ -1,6 +1,15 @@
 cmake_minimum_required(VERSION 2.8)
 project (crow_examples)
 
+add_executable(example_websocket websocket/example_ws.cpp)
+target_link_libraries(example_websocket ${Boost_LIBRARIES})
+target_link_libraries(example_websocket ${CMAKE_THREAD_LIBS_INIT} ${OPENSSL_LIBRARIES})
+add_custom_command(OUTPUT ws.html
+    COMMAND ${CMAKE_COMMAND} -E
+    copy ${PROJECT_SOURCE_DIR}/websocket/static/ws.html ${CMAKE_CURRENT_BINARY_DIR}/static/ws.html
+    DEPENDS ${PROJECT_SOURCE_DIR}/websocket/static/ws.html
+)
+add_custom_target(example_ws_copy ALL DEPENDS ws.html)
 if (MSVC)
 	add_executable(example_vs example_vs.cpp)
 	target_link_libraries(example_vs ${Boost_LIBRARIES})
@@ -9,23 +18,11 @@ else ()
 	add_executable(helloworld helloworld.cpp)
 	target_link_libraries(helloworld ${Boost_LIBRARIES})
 	target_link_libraries(helloworld ${CMAKE_THREAD_LIBS_INIT})
-
 if (OPENSSL_FOUND)
 	add_executable(example_ssl ssl/example_ssl.cpp)
 	target_link_libraries(example_ssl ${Boost_LIBRARIES})
 	target_link_libraries(example_ssl ${CMAKE_THREAD_LIBS_INIT} ${OPENSSL_LIBRARIES})
 endif()
-
-add_executable(example_websocket websocket/example_ws.cpp)
-target_link_libraries(example_websocket ${Boost_LIBRARIES})
-target_link_libraries(example_websocket ${CMAKE_THREAD_LIBS_INIT} ${OPENSSL_LIBRARIES})
-add_custom_command(OUTPUT ws.html
-    COMMAND ${CMAKE_COMMAND} -E
-    copy ${PROJECT_SOURCE_DIR}/websocket/templates/ws.html ${CMAKE_CURRENT_BINARY_DIR}/templates/ws.html
-    DEPENDS ${PROJECT_SOURCE_DIR}/websocket/templates/ws.html
-)
-add_custom_target(example_ws_copy ALL DEPENDS ws.html)
-
 add_executable(example example.cpp)
 #target_link_libraries(example crow)
 target_link_libraries(example ${Boost_LIBRARIES})

@@ -19,7 +19,7 @@ int main(){
 ```
 
 ## 特点
-- 简易布线，类似于烧瓶
+- 简易路由，类似于Python Flask
 - 类型安全处理程序（参见示例），非常快
  ![基准结果](./Benchmark.png)
 - 更多关于[crow benchmark]的数据(https://github.com/ipkn/crow-benchmark)
