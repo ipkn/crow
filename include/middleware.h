@@ -6,10 +6,10 @@ namespace crow {
   struct Cors {
 	struct Ctx {};
 	void before_handle(Req& req,Res& res,Ctx&) {
-	  res.set_header("Access-Control-Allow-Origin","*");
+	  res.set_header("Access-Control-Allow-Origin","*");//Cross domain request
 	  res.set_header("Access-Control-Allow-Headers","content-type,cache-control,x-requested-with,authorization");
 	  res.set_header("Access-Control-Allow-Credentials","true");
-	  res.set_header("cache-control","max-age=179,immutable");
+	  res.set_header("cache-control","max-age=314,immutable");//Static resource cache seconds,about five minutes
 	  res.set_header("X-Content-Type-Options","nosniff");
 	  if (req.method==HTTPMethod::OPTIONS) { res.code=204;res.end(); }
 	}

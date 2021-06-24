@@ -432,28 +432,33 @@ namespace crow {
 	  return template_t(body);
 	}
 
+	inline void set_directory(const std::string& path) {
+	  auto& base=detail::directory_;base=path;
+	  if (base.back()!='\\'&&base.back()!='/') base+='/';
+	}
+
 	inline std::string default_loader(const std::string& filename) {
 	  std::string path=detail::directory_+filename;
 	  std::ifstream inf(path);
 	  if (!inf) return {};
 	  return {std::istreambuf_iterator<char>(inf), std::istreambuf_iterator<char>()};
 	}
-	namespace detail {
-	  inline std::function<std::string(std::string)>& get_loader_ref() {
-		static std::function<std::string(std::string)> loader=default_loader;
-		return loader;
-	  }
+
+	inline std::function<std::string(std::string)>& get_loader_ref() {
+	  static std::function<std::string(std::string)> loader=default_loader;
+	  return loader;
 	}
+
 	inline void set_loader(std::function<std::string(std::string)> loader) {
-	  detail::get_loader_ref()=std::move(loader);
+	  get_loader_ref()=std::move(loader);
 	}
 
 	inline std::string load_text(const std::string& filename) {
-	  return detail::get_loader_ref()(filename);
+	  return get_loader_ref()(filename);
 	}
 
 	inline template_t load(const std::string& filename) {
-	  return compile(detail::get_loader_ref()(filename));
+	  return compile(get_loader_ref()(filename));
 	}
   }
 }

@@ -5,6 +5,8 @@
 #include <sstream>
 #include <vector>
 #include "crow.h"
+#include "mustache.h"
+#include "middleware.h"
 
 using namespace std;
 using namespace crow;
@@ -88,22 +90,22 @@ TEST(Rule) {
 }
 
 TEST(ParameterTagging) {
-  static_assert(magic::is_valid("<int><int><int>"),"valid url");
-  static_assert(!magic::is_valid("<int><int<<int>"),"invalid url");
-  static_assert(!magic::is_valid("nt>"),"invalid url");
-  ASSERT_EQUAL(1,magic::get_parameter_tag("<int>"));
-  ASSERT_EQUAL(2,magic::get_parameter_tag("<uint>"));
-  ASSERT_EQUAL(3,magic::get_parameter_tag("<float>"));
-  ASSERT_EQUAL(3,magic::get_parameter_tag("<double>"));
-  ASSERT_EQUAL(4,magic::get_parameter_tag("<str>"));
-  ASSERT_EQUAL(4,magic::get_parameter_tag("<string>"));
-  ASSERT_EQUAL(5,magic::get_parameter_tag("<path>"));
-  ASSERT_EQUAL(6*6+6+1,magic::get_parameter_tag("<int><int><int>"));
-  ASSERT_EQUAL(6*6+6+2,magic::get_parameter_tag("<uint><int><int>"));
-  ASSERT_EQUAL(6*6+6*3+2,magic::get_parameter_tag("<uint><double><int>"));
+  static_assert(spell::is_valid("<int><int><int>"),"valid url");
+  static_assert(!spell::is_valid("<int><int<<int>"),"invalid url");
+  static_assert(!spell::is_valid("nt>"),"invalid url");
+  ASSERT_EQUAL(1,spell::get_parameter_tag("<int>"));
+  ASSERT_EQUAL(2,spell::get_parameter_tag("<uint>"));
+  ASSERT_EQUAL(3,spell::get_parameter_tag("<float>"));
+  ASSERT_EQUAL(3,spell::get_parameter_tag("<double>"));
+  ASSERT_EQUAL(4,spell::get_parameter_tag("<str>"));
+  ASSERT_EQUAL(4,spell::get_parameter_tag("<string>"));
+  ASSERT_EQUAL(5,spell::get_parameter_tag("<path>"));
+  ASSERT_EQUAL(6*6+6+1,spell::get_parameter_tag("<int><int><int>"));
+  ASSERT_EQUAL(6*6+6+2,spell::get_parameter_tag("<uint><int><int>"));
+  ASSERT_EQUAL(6*6+6*3+2,spell::get_parameter_tag("<uint><double><int>"));
 
   // url definition parsed in compile time, build into *one number*, and given to template argument
-  static_assert(std::is_same<magic::S<uint64_t,double,int64_t>,magic::arguments<6*6+6*3+2>::type>::value,"tag to type container");
+  static_assert(std::is_same<spell::S<uint64_t,double,int64_t>,spell::arguments<6*6+6*3+2>::type>::value,"tag to type container");
 }
 
 TEST(PathRouting) {
@@ -685,8 +687,8 @@ int testmain() {
   return failed?-1:0;
 }
 
-TEST(magic) {
-  using namespace magic;
+TEST(spell) {
+  using namespace spell;
   static_assert(std::is_same<void,last_element_type<int,char,void>::type>::value,"last_element_type");
   static_assert(std::is_same<char,pop_back<int,char,void>::rebind<last_element_type>::type>::value,"pop_back");
   static_assert(std::is_same<int,pop_back<int,char,void>::rebind<pop_back>::rebind<last_element_type>::type>::value,"pop_back");

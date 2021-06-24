@@ -40,13 +40,13 @@ namespace crow {
 	explicit Res(int code): code(code) {}
 	Res(std::string body): body(std::move(body)) {}
 	Res(int code,std::string body): code(code),body(std::move(body)) {}
-	Res(json::value&& json_value):body(std::move(json_value).dump()) {
+	Res(json::value&& json_value):body(json_value.dump()) {
 	  set_header("Content-Type","application/json");
 	}
-	Res(const json::value& json_value): body(std::move(json_value).dump()) {
+	Res(const json::value& json_value): body(json_value.dump()) {
 	  set_header("Content-Type","application/json");
 	}
-	Res(int code,const json::value& json_value): code(code),body(std::move(json_value).dump()) {
+	Res(int code,const json::value& json_value): code(code),body(json_value.dump()) {
 	  set_header("Content-Type","application/json");
 	}
 	Res(Res&& r) { *this=std::move(r); }
@@ -106,7 +106,7 @@ namespace crow {
 	}
 	///Return a static file as the response body
 	void set_static_file_info(std::string path) {
-	  path_=path;
+	  path_=detail::directory_+path;
 	  statResult_=stat(path_.c_str(),&statbuf_);
 #ifdef CROW_ENABLE_COMPRESSION
 	  compressed=false;

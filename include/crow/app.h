@@ -177,7 +177,7 @@ namespace crow {
 #ifndef CROW_DISABLE_STATIC_DIR
       route<crow::spell::get_parameter_tag(CROW_STATIC_ENDPOINT)>(CROW_STATIC_ENDPOINT)
         ([](crow::Res& res,std::string file_path_partial) {
-        res.set_static_file_info(detail::directory_+file_path_partial);
+        res.set_static_file_info(file_path_partial);
         res.end();
       });
       validate();
