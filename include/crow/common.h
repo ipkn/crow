@@ -60,16 +60,16 @@ namespace crow {
 #ifndef CROW_MSVC_WORKAROUND
 constexpr crow::HTTPMethod operator "" _method(const char* str,size_t /*len*/) {
   return
-	crow::black_magic::is_equ_p(str,"GET",3)?crow::HTTPMethod::GET:
-	crow::black_magic::is_equ_p(str,"DELETE",6)?crow::HTTPMethod::DEL:
-	crow::black_magic::is_equ_p(str,"HEAD",4)?crow::HTTPMethod::HEAD:
-	crow::black_magic::is_equ_p(str,"POST",4)?crow::HTTPMethod::POST:
-	crow::black_magic::is_equ_p(str,"PUT",3)?crow::HTTPMethod::PUT:
-	crow::black_magic::is_equ_p(str,"OPTIONS",7)?crow::HTTPMethod::OPTIONS:
-	crow::black_magic::is_equ_p(str,"CONNECT",7)?crow::HTTPMethod::CONNECT:
-	crow::black_magic::is_equ_p(str,"TRACE",5)?crow::HTTPMethod::TRACE:
-	crow::black_magic::is_equ_p(str,"PATCH",5)?crow::HTTPMethod::PATCH:
-	crow::black_magic::is_equ_p(str,"PURGE",5)?crow::HTTPMethod::PURGE:
+	crow::spell::is_equ_p(str,"GET",3)?crow::HTTPMethod::GET:
+	crow::spell::is_equ_p(str,"DELETE",6)?crow::HTTPMethod::DEL:
+	crow::spell::is_equ_p(str,"HEAD",4)?crow::HTTPMethod::HEAD:
+	crow::spell::is_equ_p(str,"POST",4)?crow::HTTPMethod::POST:
+	crow::spell::is_equ_p(str,"PUT",3)?crow::HTTPMethod::PUT:
+	crow::spell::is_equ_p(str,"OPTIONS",7)?crow::HTTPMethod::OPTIONS:
+	crow::spell::is_equ_p(str,"CONNECT",7)?crow::HTTPMethod::CONNECT:
+	crow::spell::is_equ_p(str,"TRACE",5)?crow::HTTPMethod::TRACE:
+	crow::spell::is_equ_p(str,"PATCH",5)?crow::HTTPMethod::PATCH:
+	crow::spell::is_equ_p(str,"PURGE",5)?crow::HTTPMethod::PURGE:
 	throw std::runtime_error("invalid http method");
 }
 #endif

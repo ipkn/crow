@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <thread>
 #include <condition_variable>
-
 #include "crow/settings.h"
 #include "crow/logging.h"
 #include "crow/utility.h"
@@ -17,7 +16,7 @@
 #include "crow/middleware_context.h"
 #include "crow/http_request.h"
 #include "crow/http_server.h"
-#include "crow/dumb_timer_queue.h"
+#include "crow/detail.h"
 #ifdef CROW_ENABLE_COMPRESSION
 #include "crow/compression.h"
 #endif
@@ -25,36 +24,28 @@
 #ifdef CROW_MSVC_WORKAROUND
 #define CROW_ROUTE(app, url) app.route_dynamic(url)
 #else
-#define CROW_ROUTE(app, url) app.route<crow::black_magic::get_parameter_tag(url)>(url)
+#define CROW_ROUTE(app, url) app.route<crow::spell::get_parameter_tag(url)>(url)
 #endif
 #define CROW_CATCHALL_ROUTE(app) app.catchall_route()
 
 namespace crow {
   int detail::dumb_timer_queue::tick=5;
-
 #ifdef CROW_ENABLE_SSL
   using ssl_context_t=boost::asio::ssl::context;
 #endif
   ///The main server application
-
-  ///
   /// Use `SimpleApp` or `App<Middleware1, Middleware2, etc...>`
   template <typename ... Middlewares>
   class Crow {
     public:
-    ///This crow application
     using self_t=Crow;
-    ///The HTTP server
     using server_t=Server<Crow,SocketAdaptor,Middlewares...>;
 #ifdef CROW_ENABLE_SSL
     ///An HTTP server that runs on SSL with an SSLAdaptor
     using ssl_server_t=Server<Crow,SSLAdaptor,Middlewares...>;
 #endif
-    Crow() {}
-
+    Crow() { }
     ///Process an Upgrade Req
-
-    ///
     ///Currently used to upgrrade an HTTP connection to a WebSocket connection
     template <typename Adaptor>
     void handle_upgrade(const Req& req,Res& res,Adaptor&& adaptor) {
@@ -105,7 +96,7 @@ namespace crow {
       return *this;
     }
 
-    ///Set the server name (default Crow/0.3)
+    ///Set the server name (default Crow/0.4)
     self_t& server_name(std::string server_name) {
       server_name_=server_name;
       return *this;
@@ -116,12 +107,16 @@ namespace crow {
       bindaddr_=bindaddr;
       return *this;
     }
-
+    //Set static directory 
+    self_t& set_directory(std::string path) {
+      if (path.back()!='\\'&&path.back()!='/') path+='/';
+      detail::directory_=path;
+      return *this;
+    }
     ///Run the server on multiple threads using all available threads
     self_t& multithreaded() {
       return concurrency(std::thread::hardware_concurrency());
     }
-
     ///Run the server on multiple threads using a specific number
     self_t& concurrency(std::uint16_t concurrency) {
       if (concurrency<1)
@@ -158,7 +153,6 @@ namespace crow {
       return *this;
     }
 
-
     compression::algorithm compression_algorithm() {
       return comp_algorithm_;
     }
@@ -181,9 +175,9 @@ namespace crow {
     ///Run the server
     void run() {
 #ifndef CROW_DISABLE_STATIC_DIR
-      route<crow::black_magic::get_parameter_tag(CROW_STATIC_ENDPOINT)>(CROW_STATIC_ENDPOINT)
+      route<crow::spell::get_parameter_tag(CROW_STATIC_ENDPOINT)>(CROW_STATIC_ENDPOINT)
         ([](crow::Res& res,std::string file_path_partial) {
-        res.set_static_file_info(CROW_STATIC_DIRECTORY+file_path_partial);
+        res.set_static_file_info(detail::directory_+file_path_partial);
         res.end();
       });
       validate();
@@ -298,7 +292,7 @@ namespace crow {
     using context_t=detail::Ctx<Middlewares...>;
     template <typename T>
     typename T::Ctx& get_context(const Req& req) {
-      static_assert(black_magic::contains<T,Middlewares...>::value,"App doesn't have the specified middleware type.");
+      static_assert(spell::contains<T,Middlewares...>::value,"App doesn't have the specified middleware type.");
       auto& ctx=*reinterpret_cast<context_t*>(req.middleware_context);
       return ctx.template get<T>();
     }
@@ -319,7 +313,7 @@ namespace crow {
     private:
     uint16_t port_=80;
     uint16_t concurrency_=1;
-    std::string server_name_="Crow/0.3";
+    std::string server_name_="Crow/0.4";
     std::string bindaddr_="0.0.0.0";
     Router router_;
 

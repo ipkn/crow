@@ -35,7 +35,7 @@ int main(){
 
 ## 示例
 
-#### SSR 服务端渲染
+#### 服务端渲染
 ```c++
   CROW_ROUTE(app,"/")([] {
 	char name[256];gethostname(name,256);

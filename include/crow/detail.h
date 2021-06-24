@@ -1,16 +1,16 @@
 #pragma once
-
 #include <boost/asio.hpp>
 #include <deque>
 #include <functional>
 #include <chrono>
 #include <thread>
-
+#include <fstream>
+#include <iterator>
 #include "crow/logging.h"
 
 namespace crow {
   namespace detail {
-
+    static std::string directory_=CROW_STATIC_DIRECTORY;
     /// Fast timer queue for fixed tick value.
     class dumb_timer_queue {
       public:

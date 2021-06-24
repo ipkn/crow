@@ -15,7 +15,7 @@ namespace crow {
 
 	int code{200};
 	std::string body;
-	json::wvalue json_value;
+	json::value json_value;
 
 	// `headers' stores HTTP headers.
 	ci_map headers;
@@ -41,14 +41,14 @@ namespace crow {
 	Res() {}
 	explicit Res(int code): code(code) {}
 	Res(std::string body): body(std::move(body)) {}
-	Res(json::wvalue&& json_value): json_value(std::move(json_value)) {
+	Res(json::value&& json_value): json_value(std::move(json_value)) {
 	  set_header("Content-Type","application/json");
 	}
 	Res(int code,std::string body): code(code),body(std::move(body)) {}
-	Res(const json::wvalue& json_value): body(json::dump(json_value)) {
+	Res(const json::value& json_value): body(json::dump(json_value)) {
 	  set_header("Content-Type","application/json");
 	}
-	Res(int code,const json::wvalue& json_value): code(code),body(json::dump(json_value)) {
+	Res(int code,const json::value& json_value): code(code),body(json::dump(json_value)) {
 	  set_header("Content-Type","application/json");
 	}
 

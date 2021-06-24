@@ -130,7 +130,6 @@ namespace crow {
         f(ec);
       });
     }
-
     std::unique_ptr<asio::ssl::stream<tcp::socket>> ssl_socket_;
   };
 #endif

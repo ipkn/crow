@@ -40,7 +40,7 @@ int main(){
 
 ## Examples
 
-#### SSR server rendering
+#### Server rendering
 ```c++
   CROW_ROUTE(app,"/")([] {
 	char name[256];gethostname(name,256);

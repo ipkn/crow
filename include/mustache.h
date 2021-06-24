@@ -1,13 +1,14 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <functional>
 #include <fstream>
 #include <iterator>
-#include <functional>
 #include "crow/json.h"
+#include "crow/detail.h"
 namespace crow {
   namespace mustache {
-	using Ctx=json::wvalue;
+	using Ctx=json::value;
 	template_t load(const std::string& filename);
 	class invalid_template_exception : public std::exception {
 	  public:
@@ -81,7 +82,7 @@ namespace crow {
 			  return {true, *view};
 		  }
 		}
-		static json::wvalue empty_str;
+		static json::value empty_str;
 		empty_str="";
 		return {false, empty_str};
 	  }
@@ -430,44 +431,28 @@ namespace crow {
 	inline template_t compile(const std::string& body) {
 	  return template_t(body);
 	}
-	namespace detail {
-	  inline std::string& get_static_base_directory_ref() {
-		static std::string template_base_directory=CROW_STATIC_DIRECTORY;
-		return template_base_directory;
-	  }
-	}
+
 	inline std::string default_loader(const std::string& filename) {
-	  std::string path=detail::get_static_base_directory_ref();
-	  //For performance, just make sure the macro is correct
-	  //if (!(path.back()=='/'||path.back()=='\\'))path+='/';
-	  path+=filename;
+	  std::string path=detail::directory_+filename;
 	  std::ifstream inf(path);
 	  if (!inf) return {};
 	  return {std::istreambuf_iterator<char>(inf), std::istreambuf_iterator<char>()};
 	}
-
-	namespace detail {
-	  inline std::function<std::string(std::string)>& get_loader_ref() {
-		static std::function<std::string(std::string)> loader=default_loader;
-		return loader;
-	  }
+	inline std::function<std::string(std::string)>& get_loader_ref() {
+	  static std::function<std::string(std::string)> loader=default_loader;
+	  return loader;
 	}
 	//The path to run the program relative to the command line, not the path of the program
-	inline void set_directory(const std::string& path) {
-	  auto& base=detail::get_static_base_directory_ref();
-	  base=path;if (base.back()!='\\'&& base.back()!='/') base+='/';
-	}
-
 	inline void set_loader(std::function<std::string(std::string)> loader) {
-	  detail::get_loader_ref()=std::move(loader);
+	  get_loader_ref()=std::move(loader);
 	}
 
 	inline std::string load_text(const std::string& filename) {
-	  return detail::get_loader_ref()(filename);
+	  return get_loader_ref()(filename);
 	}
 
 	inline template_t load(const std::string& filename) {
-	  return compile(detail::get_loader_ref()(filename));
+	  return compile(get_loader_ref()(filename));
 	}
   }
 }

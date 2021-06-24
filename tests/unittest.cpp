@@ -88,22 +88,22 @@ TEST(Rule) {
 }
 
 TEST(ParameterTagging) {
-  static_assert(black_magic::is_valid("<int><int><int>"),"valid url");
-  static_assert(!black_magic::is_valid("<int><int<<int>"),"invalid url");
-  static_assert(!black_magic::is_valid("nt>"),"invalid url");
-  ASSERT_EQUAL(1,black_magic::get_parameter_tag("<int>"));
-  ASSERT_EQUAL(2,black_magic::get_parameter_tag("<uint>"));
-  ASSERT_EQUAL(3,black_magic::get_parameter_tag("<float>"));
-  ASSERT_EQUAL(3,black_magic::get_parameter_tag("<double>"));
-  ASSERT_EQUAL(4,black_magic::get_parameter_tag("<str>"));
-  ASSERT_EQUAL(4,black_magic::get_parameter_tag("<string>"));
-  ASSERT_EQUAL(5,black_magic::get_parameter_tag("<path>"));
-  ASSERT_EQUAL(6*6+6+1,black_magic::get_parameter_tag("<int><int><int>"));
-  ASSERT_EQUAL(6*6+6+2,black_magic::get_parameter_tag("<uint><int><int>"));
-  ASSERT_EQUAL(6*6+6*3+2,black_magic::get_parameter_tag("<uint><double><int>"));
+  static_assert(magic::is_valid("<int><int><int>"),"valid url");
+  static_assert(!magic::is_valid("<int><int<<int>"),"invalid url");
+  static_assert(!magic::is_valid("nt>"),"invalid url");
+  ASSERT_EQUAL(1,magic::get_parameter_tag("<int>"));
+  ASSERT_EQUAL(2,magic::get_parameter_tag("<uint>"));
+  ASSERT_EQUAL(3,magic::get_parameter_tag("<float>"));
+  ASSERT_EQUAL(3,magic::get_parameter_tag("<double>"));
+  ASSERT_EQUAL(4,magic::get_parameter_tag("<str>"));
+  ASSERT_EQUAL(4,magic::get_parameter_tag("<string>"));
+  ASSERT_EQUAL(5,magic::get_parameter_tag("<path>"));
+  ASSERT_EQUAL(6*6+6+1,magic::get_parameter_tag("<int><int><int>"));
+  ASSERT_EQUAL(6*6+6+2,magic::get_parameter_tag("<uint><int><int>"));
+  ASSERT_EQUAL(6*6+6*3+2,magic::get_parameter_tag("<uint><double><int>"));
 
   // url definition parsed in compile time, build into *one number*, and given to template argument
-  static_assert(std::is_same<black_magic::S<uint64_t,double,int64_t>,black_magic::arguments<6*6+6*3+2>::type>::value,"tag to type container");
+  static_assert(std::is_same<magic::S<uint64_t,double,int64_t>,magic::arguments<6*6+6*3+2>::type>::value,"tag to type container");
 }
 
 TEST(PathRouting) {
@@ -486,7 +486,7 @@ TEST(json_read) {
 		"{\"x\":[ null, false, true}",
 	};
 	for (auto s:json_error_tests) {
-	  auto x=json::load(s);
+	  auto x=json::parse(s);
 	  if (x) {
 		fail("should fail to parse ",s);
 		return;
@@ -494,7 +494,7 @@ TEST(json_read) {
 	}
   }
 
-  auto x=json::load(R"({"message":"hello, world"})");
+  auto x=json::parse(R"({"message":"hello, world"})");
   if (!x)
 	fail("fail to parse");
   ASSERT_EQUAL("hello, world",x["message"]);
@@ -506,7 +506,7 @@ TEST(json_read) {
   ASSERT_EQUAL(12,x["message"].size());
 
   std::string s=R"({"int":3,     "ints"  :[1,2,3,4,5],	"bigint":1234567890	})";
-  auto y=json::load(s);
+  auto y=json::parse(s);
   ASSERT_EQUAL(3,y["int"]);
   ASSERT_EQUAL(3.0,y["int"]);
   ASSERT_NOTEQUAL(3.01,y["int"]);
@@ -526,7 +526,7 @@ TEST(json_read) {
   ASSERT_EQUAL(1234567890,y["bigint"]);
 
   std::string s2=R"({"bools":[true, false], "doubles":[1.2, -3.4]})";
-  auto z=json::load(s2);
+  auto z=json::parse(s2);
   ASSERT_EQUAL(2,z["bools"].size());
   ASSERT_EQUAL(2,z["doubles"].size());
   ASSERT_EQUAL(true,z["bools"][0].b());
@@ -535,7 +535,7 @@ TEST(json_read) {
   ASSERT_EQUAL(-3.4,z["doubles"][1].d());
 
   std::string s3=R"({"uint64": 18446744073709551615})";
-  auto z1=json::load(s3);
+  auto z1=json::parse(s3);
   ASSERT_EQUAL(18446744073709551615ull,z1["uint64"].u());
 
   std::ostringstream os;
@@ -560,16 +560,16 @@ TEST(json_read_real) {
   "0.7045386904761904", "0.8016815476190476"};
   for (auto x:v) {
 	CROW_LOG_DEBUG<<x;
-	ASSERT_EQUAL(json::load(x).d(),boost::lexical_cast<double>(x));
+	ASSERT_EQUAL(json::parse(x).d(),boost::lexical_cast<double>(x));
   }
 
-  auto ret=json::load(R"---({"balloons":[{"mode":"ellipse","left":0.036303908355795146,"right":0.18320417789757412,"top":0.05319940476190476,"bottom":0.15224702380952382,"index":"0"},{"mode":"ellipse","left":0.3296201145552561,"right":0.47921580188679247,"top":0.05873511904761905,"bottom":0.1577827380952381,"index":"1"},{"mode":"ellipse","left":0.4996841307277628,"right":0.6425412735849056,"top":0.052113095238095236,"bottom":0.12830357142857143,"index":"2"},{"mode":"ellipse","left":0.7871041105121294,"right":0.954220013477089,"top":0.05869047619047619,"bottom":0.1625,"index":"3"},{"mode":"ellipse","left":0.8144794474393531,"right":0.9721613881401617,"top":0.1399404761904762,"bottom":0.24470238095238095,"index":"4"},{"mode":"ellipse","left":0.04527459568733154,"right":0.2096950808625337,"top":0.35267857142857145,"bottom":0.42791666666666667,"index":"5"},{"mode":"ellipse","left":0.855731974393531,"right":0.9352467991913747,"top":0.3816220238095238,"bottom":0.4282886904761905,"index":"6"},{"mode":"ellipse","left":0.39414167789757415,"right":0.5316079851752021,"top":0.3809375,"bottom":0.4571279761904762,"index":"7"},{"mode":"ellipse","left":0.03522995283018868,"right":0.1915641846361186,"top":0.6164136904761904,"bottom":0.7192708333333333,"index":"8"},{"mode":"ellipse","left":0.05675117924528302,"right":0.21308541105121293,"top":0.7045386904761904,"bottom":0.8016815476190476,"index":"9"}]})---");
+  auto ret=json::parse(R"---({"balloons":[{"mode":"ellipse","left":0.036303908355795146,"right":0.18320417789757412,"top":0.05319940476190476,"bottom":0.15224702380952382,"index":"0"},{"mode":"ellipse","left":0.3296201145552561,"right":0.47921580188679247,"top":0.05873511904761905,"bottom":0.1577827380952381,"index":"1"},{"mode":"ellipse","left":0.4996841307277628,"right":0.6425412735849056,"top":0.052113095238095236,"bottom":0.12830357142857143,"index":"2"},{"mode":"ellipse","left":0.7871041105121294,"right":0.954220013477089,"top":0.05869047619047619,"bottom":0.1625,"index":"3"},{"mode":"ellipse","left":0.8144794474393531,"right":0.9721613881401617,"top":0.1399404761904762,"bottom":0.24470238095238095,"index":"4"},{"mode":"ellipse","left":0.04527459568733154,"right":0.2096950808625337,"top":0.35267857142857145,"bottom":0.42791666666666667,"index":"5"},{"mode":"ellipse","left":0.855731974393531,"right":0.9352467991913747,"top":0.3816220238095238,"bottom":0.4282886904761905,"index":"6"},{"mode":"ellipse","left":0.39414167789757415,"right":0.5316079851752021,"top":0.3809375,"bottom":0.4571279761904762,"index":"7"},{"mode":"ellipse","left":0.03522995283018868,"right":0.1915641846361186,"top":0.6164136904761904,"bottom":0.7192708333333333,"index":"8"},{"mode":"ellipse","left":0.05675117924528302,"right":0.21308541105121293,"top":0.7045386904761904,"bottom":0.8016815476190476,"index":"9"}]})---");
   ASSERT_TRUE(ret);
 }
 
 TEST(json_read_unescaping) {
   {
-	auto x=json::load(R"({"data":"\ud55c\n\t\r"})");
+	auto x=json::parse(R"({"data":"\ud55c\n\t\r"})");
 	if (!x) {
 	  fail("fail to parse");
 	  return;
@@ -579,7 +579,7 @@ TEST(json_read_unescaping) {
   }
   {
 	// multiple r_string instance
-	auto x=json::load(R"({"data":"\ud55c\n\t\r"})");
+	auto x=json::parse(R"({"data":"\ud55c\n\t\r"})");
 	auto a=x["data"].s();
 	auto b=x["data"].s();
 	ASSERT_EQUAL(6,a.size());
@@ -589,7 +589,7 @@ TEST(json_read_unescaping) {
 }
 
 TEST(json_write) {
-  json::wvalue x;
+  json::value x;
   x["message"]="hello world";
   ASSERT_EQUAL(R"({"message":"hello world"})",json::dump(x));
   x["message"]=std::string("string value");
@@ -603,7 +603,7 @@ TEST(json_write) {
   x["message"]=1234567890;
   ASSERT_EQUAL(R"({"message":1234567890})",json::dump(x));
 
-  json::wvalue y;
+  json::value y;
   y["scores"][0]=1;
   y["scores"][1]="king";
   y["scores"][2]=3.5;
@@ -622,9 +622,9 @@ TEST(json_write) {
 }
 
 TEST(json_copy_r_to_w_to_r) {
-  json::rvalue r=json::load(R"({"smallint":2,"bigint":2147483647,"fp":23.43,"fpsc":2.343e1,"str":"a string","trueval":true,"falseval":false,"nullval":null,"listval":[1,2,"foo","bar"],"obj":{"member":23,"other":"baz"}})");
-  json::wvalue w{r};
-  json::rvalue x=json::load(json::dump(w)); // why no copy-ctor wvalue -> rvalue?
+  json::rvalue r=json::parse(R"({"smallint":2,"bigint":2147483647,"fp":23.43,"fpsc":2.343e1,"str":"a string","trueval":true,"falseval":false,"nullval":null,"listval":[1,2,"foo","bar"],"obj":{"member":23,"other":"baz"}})");
+  json::value w{r};
+  json::rvalue x=json::parse(json::dump(w)); // why no copy-ctor value -> rvalue?
   ASSERT_EQUAL(2,x["smallint"]);
   ASSERT_EQUAL(2147483647,x["bigint"]);
   ASSERT_EQUAL(23.43,x["fp"]);
@@ -685,8 +685,8 @@ int testmain() {
   return failed?-1:0;
 }
 
-TEST(black_magic) {
-  using namespace black_magic;
+TEST(magic) {
+  using namespace magic;
   static_assert(std::is_same<void,last_element_type<int,char,void>::type>::value,"last_element_type");
   static_assert(std::is_same<char,pop_back<int,char,void>::rebind<last_element_type>::type>::value,"pop_back");
   static_assert(std::is_same<int,pop_back<int,char,void>::rebind<pop_back>::rebind<last_element_type>::type>::value,"pop_back");

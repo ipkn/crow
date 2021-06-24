@@ -7,7 +7,6 @@
 #include <memory>
 #include <boost/lexical_cast.hpp>
 #include <vector>
-
 #include "crow/common.h"
 #include "crow/http_response.h"
 #include "crow/http_request.h"
@@ -94,43 +93,43 @@ namespace crow {
       struct call {};
 
       template <typename F,int NInt,int NUint,int NDouble,int NString,typename ... Args1,typename ... Args2>
-      struct call<F,NInt,NUint,NDouble,NString,black_magic::S<int64_t,Args1...>,black_magic::S<Args2...>> {
+      struct call<F,NInt,NUint,NDouble,NString,spell::S<int64_t,Args1...>,spell::S<Args2...>> {
         void operator()(F cparams) {
-          using pushed=typename black_magic::S<Args2...>::template push_back<call_pair<int64_t,NInt>>;
+          using pushed=typename spell::S<Args2...>::template push_back<call_pair<int64_t,NInt>>;
           call<F,NInt+1,NUint,NDouble,NString,
-            black_magic::S<Args1...>,pushed>()(cparams);
+            spell::S<Args1...>,pushed>()(cparams);
         }
       };
 
       template <typename F,int NInt,int NUint,int NDouble,int NString,typename ... Args1,typename ... Args2>
-      struct call<F,NInt,NUint,NDouble,NString,black_magic::S<uint64_t,Args1...>,black_magic::S<Args2...>> {
+      struct call<F,NInt,NUint,NDouble,NString,spell::S<uint64_t,Args1...>,spell::S<Args2...>> {
         void operator()(F cparams) {
-          using pushed=typename black_magic::S<Args2...>::template push_back<call_pair<uint64_t,NUint>>;
+          using pushed=typename spell::S<Args2...>::template push_back<call_pair<uint64_t,NUint>>;
           call<F,NInt,NUint+1,NDouble,NString,
-            black_magic::S<Args1...>,pushed>()(cparams);
+            spell::S<Args1...>,pushed>()(cparams);
         }
       };
 
       template <typename F,int NInt,int NUint,int NDouble,int NString,typename ... Args1,typename ... Args2>
-      struct call<F,NInt,NUint,NDouble,NString,black_magic::S<double,Args1...>,black_magic::S<Args2...>> {
+      struct call<F,NInt,NUint,NDouble,NString,spell::S<double,Args1...>,spell::S<Args2...>> {
         void operator()(F cparams) {
-          using pushed=typename black_magic::S<Args2...>::template push_back<call_pair<double,NDouble>>;
+          using pushed=typename spell::S<Args2...>::template push_back<call_pair<double,NDouble>>;
           call<F,NInt,NUint,NDouble+1,NString,
-            black_magic::S<Args1...>,pushed>()(cparams);
+            spell::S<Args1...>,pushed>()(cparams);
         }
       };
 
       template <typename F,int NInt,int NUint,int NDouble,int NString,typename ... Args1,typename ... Args2>
-      struct call<F,NInt,NUint,NDouble,NString,black_magic::S<std::string,Args1...>,black_magic::S<Args2...>> {
+      struct call<F,NInt,NUint,NDouble,NString,spell::S<std::string,Args1...>,spell::S<Args2...>> {
         void operator()(F cparams) {
-          using pushed=typename black_magic::S<Args2...>::template push_back<call_pair<std::string,NString>>;
+          using pushed=typename spell::S<Args2...>::template push_back<call_pair<std::string,NString>>;
           call<F,NInt,NUint,NDouble,NString+1,
-            black_magic::S<Args1...>,pushed>()(cparams);
+            spell::S<Args1...>,pushed>()(cparams);
         }
       };
 
       template <typename F,int NInt,int NUint,int NDouble,int NString,typename ... Args1>
-      struct call<F,NInt,NUint,NDouble,NString,black_magic::S<>,black_magic::S<Args1...>> {
+      struct call<F,NInt,NUint,NDouble,NString,spell::S<>,spell::S<Args1...>> {
         void operator()(F cparams) {
           cparams.handler(
             cparams.req,
@@ -196,19 +195,19 @@ namespace crow {
         template <typename ... Args>
         struct handler_type_helper {
           using type=std::function<void(const crow::Req&,crow::Res&,Args...)>;
-          using args_type=black_magic::S<typename black_magic::promote_t<Args>...>;
+          using args_type=spell::S<typename spell::promote_t<Args>...>;
         };
 
         template <typename ... Args>
         struct handler_type_helper<const Req&,Args...> {
           using type=std::function<void(const crow::Req&,crow::Res&,Args...)>;
-          using args_type=black_magic::S<typename black_magic::promote_t<Args>...>;
+          using args_type=spell::S<typename spell::promote_t<Args>...>;
         };
 
         template <typename ... Args>
         struct handler_type_helper<const Req&,Res&,Args...> {
           using type=std::function<void(const crow::Req&,crow::Res&,Args...)>;
-          using args_type=black_magic::S<typename black_magic::promote_t<Args>...>;
+          using args_type=spell::S<typename spell::promote_t<Args>...>;
         };
 
         typename handler_type_helper<ArgsWrapped...>::type handler_;
@@ -219,7 +218,7 @@ namespace crow {
             decltype(handler_)>,
             0,0,0,0,
             typename handler_type_helper<ArgsWrapped...>::args_type,
-            black_magic::S<>
+            spell::S<>
           >()(
             detail::routing_handler_call_helper::call_params<
             decltype(handler_)>
@@ -237,7 +236,7 @@ namespace crow {
     CatchallRule() {}
 
     template <typename Func>
-    typename std::enable_if<black_magic::CallHelper<Func,black_magic::S<>>::value,void>::type
+    typename std::enable_if<spell::CallHelper<Func,spell::S<>>::value,void>::type
       operator()(Func&& f) {
       static_assert(!std::is_same<void,decltype(f())>::value,
                     "Handler function cannot have void return type; valid return types: string, int, crow::Res, crow::returnable");
@@ -257,8 +256,8 @@ namespace crow {
 
     template <typename Func>
     typename std::enable_if<
-      !black_magic::CallHelper<Func,black_magic::S<>>::value &&
-      black_magic::CallHelper<Func,black_magic::S<crow::Req>>::value,
+      !spell::CallHelper<Func,spell::S<>>::value &&
+      spell::CallHelper<Func,spell::S<crow::Req>>::value,
       void>::type
       operator()(Func&& f) {
       static_assert(!std::is_same<void,decltype(f(std::declval<crow::Req>()))>::value,
@@ -278,9 +277,9 @@ namespace crow {
 
     template <typename Func>
     typename std::enable_if<
-      !black_magic::CallHelper<Func,black_magic::S<>>::value&&
-      !black_magic::CallHelper<Func,black_magic::S<crow::Req>>::value &&
-      black_magic::CallHelper<Func,black_magic::S<crow::Res&>>::value,
+      !spell::CallHelper<Func,spell::S<>>::value&&
+      !spell::CallHelper<Func,spell::S<crow::Req>>::value &&
+      spell::CallHelper<Func,spell::S<crow::Res&>>::value,
       void>::type
       operator()(Func&& f) {
       static_assert(std::is_same<void,decltype(f(std::declval<crow::Res&>()))>::value,
@@ -298,9 +297,9 @@ namespace crow {
 
     template <typename Func>
     typename std::enable_if<
-      !black_magic::CallHelper<Func,black_magic::S<>>::value&&
-      !black_magic::CallHelper<Func,black_magic::S<crow::Req>>::value&&
-      !black_magic::CallHelper<Func,black_magic::S<crow::Res&>>::value,
+      !spell::CallHelper<Func,spell::S<>>::value&&
+      !spell::CallHelper<Func,spell::S<crow::Req>>::value&&
+      !spell::CallHelper<Func,spell::S<crow::Res&>>::value,
       void>::type
       operator()(Func&& f) {
       static_assert(std::is_same<void,decltype(f(std::declval<crow::Req>(),std::declval<crow::Res&>()))>::value,
@@ -439,7 +438,7 @@ namespace crow {
 #else
       using function_t=utility::function_traits<Func>;
 #endif
-      erased_handler_=wrap(std::move(f),black_magic::gen_seq<function_t::arity>());
+      erased_handler_=wrap(std::move(f),spell::gen_seq<function_t::arity>());
     }
 
     // enable_if Arg1 == Req && Arg2 == Res
@@ -451,15 +450,15 @@ namespace crow {
     template <typename Func,unsigned ... Indices>
 #endif
     std::function<void(const Req&,Res&,const routing_params&)>
-      wrap(Func f,black_magic::seq<Indices...>) {
+      wrap(Func f,spell::seq<Indices...>) {
 #ifdef CROW_MSVC_WORKAROUND
       using function_t=utility::function_traits<decltype(&Func::operator())>;
 #else
       using function_t=utility::function_traits<Func>;
 #endif
-      if (!black_magic::is_parameter_tag_compatible(
-        black_magic::get_parameter_tag_runtime(rule_.c_str()),
-        black_magic::compute_parameter_tag_from_args_list<
+      if (!spell::is_parameter_tag_compatible(
+        spell::get_parameter_tag_runtime(rule_.c_str()),
+        spell::compute_parameter_tag_from_args_list<
         typename function_t::template arg<Indices>...>::value)) {
         throw std::runtime_error("route_dynamic: Handler type is mismatched with URL parameters: "+rule_);
       }
@@ -496,10 +495,10 @@ namespace crow {
     }
 
     template <typename Func>
-    typename std::enable_if<black_magic::CallHelper<Func,black_magic::S<Args...>>::value,void>::type
+    typename std::enable_if<spell::CallHelper<Func,spell::S<Args...>>::value,void>::type
       operator()(Func&& f) {
-      static_assert(black_magic::CallHelper<Func,black_magic::S<Args...>>::value||
-                    black_magic::CallHelper<Func,black_magic::S<crow::Req,Args...>>::value,
+      static_assert(spell::CallHelper<Func,spell::S<Args...>>::value||
+                    spell::CallHelper<Func,spell::S<crow::Req,Args...>>::value,
                     "Handler type is mismatched with URL parameters");
       static_assert(!std::is_same<void,decltype(f(std::declval<Args>()...))>::value,
                     "Handler function cannot have void return type; valid return types: string, int, crow::Res, crow::returnable");
@@ -518,12 +517,12 @@ namespace crow {
 
     template <typename Func>
     typename std::enable_if<
-      !black_magic::CallHelper<Func,black_magic::S<Args...>>::value &&
-      black_magic::CallHelper<Func,black_magic::S<crow::Req,Args...>>::value,
+      !spell::CallHelper<Func,spell::S<Args...>>::value &&
+      spell::CallHelper<Func,spell::S<crow::Req,Args...>>::value,
       void>::type
       operator()(Func&& f) {
-      static_assert(black_magic::CallHelper<Func,black_magic::S<Args...>>::value||
-                    black_magic::CallHelper<Func,black_magic::S<crow::Req,Args...>>::value,
+      static_assert(spell::CallHelper<Func,spell::S<Args...>>::value||
+                    spell::CallHelper<Func,spell::S<crow::Req,Args...>>::value,
                     "Handler type is mismatched with URL parameters");
       static_assert(!std::is_same<void,decltype(f(std::declval<crow::Req>(),std::declval<Args>()...))>::value,
                     "Handler function cannot have void return type; valid return types: string, int, crow::Res, crow::returnable");
@@ -542,13 +541,13 @@ namespace crow {
 
     template <typename Func>
     typename std::enable_if<
-      !black_magic::CallHelper<Func,black_magic::S<Args...>>::value&&
-      !black_magic::CallHelper<Func,black_magic::S<crow::Req,Args...>>::value &&
-      black_magic::CallHelper<Func,black_magic::S<crow::Res&,Args...>>::value,
+      !spell::CallHelper<Func,spell::S<Args...>>::value&&
+      !spell::CallHelper<Func,spell::S<crow::Req,Args...>>::value &&
+      spell::CallHelper<Func,spell::S<crow::Res&,Args...>>::value,
       void>::type
       operator()(Func&& f) {
-      static_assert(black_magic::CallHelper<Func,black_magic::S<Args...>>::value||
-                    black_magic::CallHelper<Func,black_magic::S<crow::Res&,Args...>>::value
+      static_assert(spell::CallHelper<Func,spell::S<Args...>>::value||
+                    spell::CallHelper<Func,spell::S<crow::Res&,Args...>>::value
                     ,
                     "Handler type is mismatched with URL parameters");
       static_assert(std::is_same<void,decltype(f(std::declval<crow::Res&>(),std::declval<Args>()...))>::value,
@@ -566,14 +565,14 @@ namespace crow {
 
     template <typename Func>
     typename std::enable_if<
-      !black_magic::CallHelper<Func,black_magic::S<Args...>>::value&&
-      !black_magic::CallHelper<Func,black_magic::S<crow::Req,Args...>>::value&&
-      !black_magic::CallHelper<Func,black_magic::S<crow::Res&,Args...>>::value,
+      !spell::CallHelper<Func,spell::S<Args...>>::value&&
+      !spell::CallHelper<Func,spell::S<crow::Req,Args...>>::value&&
+      !spell::CallHelper<Func,spell::S<crow::Res&,Args...>>::value,
       void>::type
       operator()(Func&& f) {
-      static_assert(black_magic::CallHelper<Func,black_magic::S<Args...>>::value||
-                    black_magic::CallHelper<Func,black_magic::S<crow::Req,Args...>>::value||
-                    black_magic::CallHelper<Func,black_magic::S<crow::Req,crow::Res&,Args...>>::value
+      static_assert(spell::CallHelper<Func,spell::S<Args...>>::value||
+                    spell::CallHelper<Func,spell::S<crow::Req,Args...>>::value||
+                    spell::CallHelper<Func,spell::S<crow::Req,crow::Res&,Args...>>::value
                     ,
                     "Handler type is mismatched with URL parameters");
       static_assert(std::is_same<void,decltype(f(std::declval<crow::Req>(),std::declval<crow::Res&>(),std::declval<Args>()...))>::value,
@@ -593,8 +592,8 @@ namespace crow {
         detail::routing_handler_call_helper::call_params<
         decltype(handler_)>,
         0,0,0,0,
-        black_magic::S<Args...>,
-        black_magic::S<>
+        spell::S<Args...>,
+        spell::S<>
       >()(
         detail::routing_handler_call_helper::call_params<
         decltype(handler_)>
@@ -902,8 +901,8 @@ namespace crow {
     }
 
     template <uint64_t N>
-    typename black_magic::arguments<N>::type::template rebind<TaggedRule>& new_rule_tagged(const std::string& rule) {
-      using RuleT=typename black_magic::arguments<N>::type::template rebind<TaggedRule>;
+    typename spell::arguments<N>::type::template rebind<TaggedRule>& new_rule_tagged(const std::string& rule) {
+      using RuleT=typename spell::arguments<N>::type::template rebind<TaggedRule>;
 
       auto ruleObject=new RuleT(rule);
       all_rules_.emplace_back(ruleObject);

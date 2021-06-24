@@ -1,5 +1,4 @@
 #pragma once
-
 #include <cstdint>
 #include <stdexcept>
 #include <tuple>
@@ -7,11 +6,9 @@
 #include <cstring>
 #include <functional>
 #include <string>
-
 #include "crow/settings.h"
-
 namespace crow {
-  namespace black_magic {
+  namespace spell {
 #ifndef CROW_MSVC_WORKAROUND
     struct OutOfRange {
       OutOfRange(unsigned /*pos*/,unsigned /*length*/) {}
@@ -483,11 +480,8 @@ struct parameter_tag<t> \
       }
       return ret;
     }
-
     inline static std::string base64encode_urlsafe(const char* data,size_t size) {
       return base64encode(data,size,"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_");
     }
-
-
   } // namespace utility
 }

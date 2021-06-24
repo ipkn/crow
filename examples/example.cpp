@@ -1,19 +1,18 @@
 #include "crow.h"
+#include "mustache.h"
 #include "middleware.h"
 #include <sstream>
 using namespace crow;
 class ExampleLogHandler : public ILogHandler {
-  public:
-  void log(std::string /*message*/,LogLevel /*level*/) override {
-	//cerr << "ExampleLogHandler -> " << message;
+  public:void log(std::string /*message*/,LogLevel /*level*/) override {
+	//std::cerr << "ExampleLogHandler -> " << message;
   }
 };
 
 int main() {
   App<ExampleMiddleware,Cors> app;
-  app.get_middleware<ExampleMiddleware>().setMessage("hello");
-  mustache::set_directory("./static");
-  //SSR server rendering
+  app.set_directory("./static").get_middleware<ExampleMiddleware>().setMessage("hello");
+  //Server rendering
   CROW_ROUTE(app,"/")([] {
 	char name[256];gethostname(name,256);
 	mustache::Ctx x;x["servername"]=name;
@@ -32,7 +31,7 @@ int main() {
   // To see it in action enter {ip}:18080/json
   CROW_ROUTE(app,"/json")
 	([] {
-	crow::json::wvalue x;
+	crow::json::value x;
 	x["message"]="Hello, World!";
 	return x;
   });
@@ -77,7 +76,7 @@ int main() {
   CROW_ROUTE(app,"/add_json")
 	.methods("POST"_method)
 	([](const crow::Req& req) {
-	auto x=crow::json::load(req.body);
+	auto x=crow::json::parse(req.body);
 	if (!x)
 	  return crow::Res(400);
 	int sum=x["a"].i()+x["b"].i();

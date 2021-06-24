@@ -37,7 +37,11 @@ crow_all.h
 .vs/
 CppProperties.json
 CMakeSettings.json
-*.bat
+OnceCmake.bat
+RcMake.bat
+start.bat
+*.idb
+*.pdb
 # conan.io
 build/
 .vscode/

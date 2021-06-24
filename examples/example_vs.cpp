@@ -1,20 +1,14 @@
 #include "crow.h"
+#include "mustache.h"
 #include "middleware.h"
 #include <sstream>
 using namespace crow;
-class ExampleLogHandler : public ILogHandler {
-  public:void log(std::string message,LogLevel level) override {
-	//cerr << "ExampleLogHandler -> " << message;
-  }
-};
 int main() {
-  //This is the default and can be omitted, just for demonstration
-  App<ExampleMiddleware,Cors> app;
-  app.get_middleware<ExampleMiddleware>().setMessage("hello");
-  mustache::set_directory("./static");
-  //SSR server rendering
+  App<Cors> app;
+  app.set_directory("./static");
+  //Server rendering
   CROW_ROUTE(app,"/")([] {
-	char name[256];gethostname(name,256);
+	char name[64];gethostname(name,64);
 	mustache::Ctx x;x["servername"]=name;
 	auto page=mustache::load("index.html");
 	return page.render(x);
@@ -28,7 +22,7 @@ int main() {
 	return "Trailing slash test case..";
   });
   app.route_dynamic("/json")([] {
-	json::wvalue x;
+	json::value x;
 	x["message"]="Hello, World!";
 	return x;
   });
@@ -51,7 +45,7 @@ int main() {
   //});
   // more json example
   app.route_dynamic("/add_json").methods(HTTPMethod::POST)([](const Req& req) {
-	auto x=json::load(req.body);
+	auto x=json::parse(req.body);
 	if (!x) return Res(400);
 	auto sum=x["a"].i()+x["b"].i();
 	std::ostringstream os; os<<sum;

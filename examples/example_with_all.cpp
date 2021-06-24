@@ -3,27 +3,22 @@
 int main() {
   crow::SimpleApp app;
 
-  CROW_ROUTE(app,"/")
-	.name("hello")
-	([] {
+  CROW_ROUTE(app,"/").name("hello")([] {
 	return "Hello World!";
   });
 
-  CROW_ROUTE(app,"/about")
-	([]() {
+  CROW_ROUTE(app,"/about")([]() {
 	return "About Crow example.";
   });
 
   // simple json response
-  CROW_ROUTE(app,"/json")
-	([] {
-	crow::json::wvalue x;
+  CROW_ROUTE(app,"/json")([] {
+	crow::json::value x;
 	x["message"]="Hello, World!";
 	return x;
   });
 
-  CROW_ROUTE(app,"/hello/<int>")
-	([](int count) {
+  CROW_ROUTE(app,"/hello/<int>")([](int count) {
 	if (count>100)
 	  return crow::Res(400);
 	std::ostringstream os;
@@ -31,8 +26,7 @@ int main() {
 	return crow::Res(os.str());
   });
 
-  CROW_ROUTE(app,"/add/<int>/<int>")
-	([](const crow::Req& /*req*/,crow::Res& res,int a,int b) {
+  CROW_ROUTE(app,"/add/<int>/<int>")([](const crow::Req&,crow::Res& res,int a,int b) {
 	std::ostringstream os;
 	os<<a+b;
 	res.write(os.str());
@@ -44,11 +38,9 @@ int main() {
   //([](int a, int b){
 	  //return crow::Res(500);
   //});
-
-  // more json example
   CROW_ROUTE(app,"/add_json")
 	([](const crow::Req& req) {
-	auto x=crow::json::load(req.body);
+	auto x=crow::json::parse(req.body);
 	if (!x)
 	  return crow::Res(400);
 	int sum=x["a"].i()+x["b"].i();
@@ -74,7 +66,7 @@ int main() {
 	return crow::Res{os.str()};
   });
   // ignore all log
-  crow::logger::setLogLevel(crow::LogLevel::Debug);
+  crow::logger::setLogLevel(crow::LogLevel::DEBUG);
   //crow::logger::setHandler(std::make_shared<ExampleLogHandler>());
   app.port(8080)
 	.multithreaded()

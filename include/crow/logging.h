@@ -15,12 +15,11 @@ namespace crow {
 	public:virtual void log(std::string message,LogLevel level)=0;
   };
   class CerrLogHandler : public ILogHandler {
-	public:void log(std::string message,LogLevel /*level*/) override { std::cerr<<message; }
+	public:void log(std::string message,LogLevel) override { std::cerr<<message; }
   };
 
   class logger {
 	private:
-	//
 	static std::string timestamp() {
 	  char date[32];
 	  time_t t=time(0);
@@ -67,7 +66,6 @@ namespace crow {
 	  return get_log_level_ref();
 	}
 	private:
-	//
 	static LogLevel& get_log_level_ref() {
 	  static LogLevel current_level=(LogLevel)CROW_LOG_LEVEL;
 	  return current_level;
@@ -77,8 +75,6 @@ namespace crow {
 	  static ILogHandler* current_handler=&default_handler;
 	  return current_handler;
 	}
-
-	//
 	std::ostringstream stringstream_;
 	LogLevel level_;
   };

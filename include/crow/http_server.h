@@ -15,7 +15,7 @@
 
 #include "crow/http_connection.h"
 #include "crow/logging.h"
-#include "crow/dumb_timer_queue.h"
+#include "crow/detail.h"
 
 namespace crow {
   using namespace boost;
@@ -24,7 +24,7 @@ namespace crow {
   template <typename Handler,typename Adaptor=SocketAdaptor,typename ... Middlewares>
   class Server {
     public:
-    Server(Handler* handler,std::string bindaddr,uint16_t port,std::string server_name="Crow/0.3",std::tuple<Middlewares...>* middlewares=nullptr,uint16_t concurrency=1,typename Adaptor::Ctx* adaptor_ctx=nullptr)
+    Server(Handler* handler,std::string bindaddr,uint16_t port,std::string server_name="Crow/0.4",std::tuple<Middlewares...>* middlewares=nullptr,uint16_t concurrency=1,typename Adaptor::Ctx* adaptor_ctx=nullptr)
       : acceptor_(io_service_,tcp::endpoint(boost::asio::ip::address::from_string(bindaddr),port)),
       signals_(io_service_,SIGINT,SIGTERM),
       tick_timer_(io_service_),

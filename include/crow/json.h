@@ -9,9 +9,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/operators.hpp>
 #include <vector>
-
 #include "crow/settings.h"
-
 #if defined(__GNUG__) || defined(__clang__)
 #define crow_json_likely(x) __builtin_expect(x, 1)
 #define crow_json_unlikely(x) __builtin_expect(x, 0)
@@ -20,9 +18,7 @@
 #define crow_json_unlikely(x) x
 #endif
 namespace crow {
-  namespace mustache {
-	class template_t;
-  }
+  namespace mustache { class template_t; }
   namespace json {
 	inline void escape(const std::string& str,std::string& ret) {
 	  ret.reserve(ret.size()+str.size()+str.size()/4);
@@ -88,7 +84,7 @@ namespace crow {
 	};
 
 	class rvalue;
-	rvalue load(const char* data,size_t size);
+	rvalue parse(const char* data,size_t size);
 
 	namespace detail {
 	  struct r_string
@@ -153,7 +149,7 @@ namespace crow {
 		  e_=s_+length;
 		  owned_=1;
 		}
-		friend rvalue crow::json::load(const char* data,size_t size);
+		friend rvalue crow::json::parse(const char* data,size_t size);
 	  };
 
 	  inline bool operator < (const r_string& l,const r_string& r) {
@@ -554,7 +550,7 @@ namespace crow {
 	  mutable uint8_t option_{0};
 
 	  friend rvalue load_nocopy_internal(char* data,size_t size);
-	  friend rvalue load(const char* data,size_t size);
+	  friend rvalue parse(const char* data,size_t size);
 	  friend std::ostream& operator <<(std::ostream& os,const rvalue& r) {
 		switch (r.t_) {
 
@@ -603,9 +599,6 @@ namespace crow {
 		return os;
 	  }
 	};
-	namespace detail {
-	}
-
 	inline bool operator == (const rvalue& l,const std::string& r) {
 	  return l.s()==r;
 	}
@@ -967,7 +960,7 @@ namespace crow {
 	  };
 	  return Parser(data,size).parse();
 	}
-	inline rvalue load(const char* data,size_t size) {
+	inline rvalue parse(const char* data,size_t size) {
 	  char* s=new char[size+1];
 	  memcpy(s,data,size);
 	  s[size]=0;
@@ -979,15 +972,15 @@ namespace crow {
 	  return ret;
 	}
 
-	inline rvalue load(const char* data) {
-	  return load(data,strlen(data));
+	inline rvalue parse(const char* data) {
+	  return parse(data,strlen(data));
 	}
 
-	inline rvalue load(const std::string& str) {
-	  return load(str.data(),str.size());
+	inline rvalue parse(const std::string& str) {
+	  return parse(str.data(),str.size());
 	}
 
-	class wvalue {
+	class value {
 	  friend class crow::mustache::template_t;
 	  public:
 	  type t() const { return t_; }
@@ -1000,13 +993,13 @@ namespace crow {
 		uint64_t ui{};
 	  } num;
 	  std::string s;
-	  std::unique_ptr<std::vector<wvalue>> l;
-	  std::unique_ptr<std::unordered_map<std::string,wvalue>> o;
+	  std::unique_ptr<std::vector<value>> l;
+	  std::unique_ptr<std::unordered_map<std::string,value>> o;
 	  public:
 
-	  wvalue() {}
+	  value() {}
 
-	  wvalue(const rvalue& r) {
+	  value(const rvalue& r) {
 		t_=r.t();
 		switch (r.t()) {
 		  case type::Null:
@@ -1026,27 +1019,27 @@ namespace crow {
 		  s=r.s();
 		  return;
 		  case type::List:
-		  l=std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{});
+		  l=std::unique_ptr<std::vector<value>>(new std::vector<value>{});
 		  l->reserve(r.size());
 		  for (auto it=r.begin(); it!=r.end(); ++it)
 			l->emplace_back(*it);
 		  return;
 		  case type::Object:
 		  o=std::unique_ptr<
-			std::unordered_map<std::string,wvalue>
+			std::unordered_map<std::string,value>
 		  >(
-			new std::unordered_map<std::string,wvalue>{});
+			new std::unordered_map<std::string,value>{});
 		  for (auto it=r.begin(); it!=r.end(); ++it)
 			o->emplace(it->key(),*it);
 		  return;
 		}
 	  }
 
-	  wvalue(wvalue&& r) {
+	  value(value&& r) {
 		*this=std::move(r);
 	  }
 
-	  wvalue& operator = (wvalue&& r) {
+	  value& operator = (value&& r) {
 		t_=r.t_;
 		num=r.num;
 		s=std::move(r.s);
@@ -1065,11 +1058,11 @@ namespace crow {
 		o.reset();
 	  }
 
-	  wvalue& operator = (std::nullptr_t) {
+	  value& operator = (std::nullptr_t) {
 		reset();
 		return *this;
 	  }
-	  wvalue& operator = (bool value) {
+	  value& operator = (bool value) {
 		reset();
 		if (value)
 		  t_=type::True;
@@ -1078,7 +1071,7 @@ namespace crow {
 		return *this;
 	  }
 
-	  wvalue& operator = (double value) {
+	  value& operator = (double value) {
 		reset();
 		t_=type::Number;
 		num.d=value;
@@ -1086,7 +1079,7 @@ namespace crow {
 		return *this;
 	  }
 
-	  wvalue& operator = (unsigned short value) {
+	  value& operator = (unsigned short value) {
 		reset();
 		t_=type::Number;
 		num.ui=value;
@@ -1094,7 +1087,7 @@ namespace crow {
 		return *this;
 	  }
 
-	  wvalue& operator = (short value) {
+	  value& operator = (short value) {
 		reset();
 		t_=type::Number;
 		num.si=value;
@@ -1102,7 +1095,7 @@ namespace crow {
 		return *this;
 	  }
 
-	  wvalue& operator = (long long value) {
+	  value& operator = (long long value) {
 		reset();
 		t_=type::Number;
 		num.si=value;
@@ -1110,7 +1103,7 @@ namespace crow {
 		return *this;
 	  }
 
-	  wvalue& operator = (long value) {
+	  value& operator = (long value) {
 		reset();
 		t_=type::Number;
 		num.si=value;
@@ -1118,7 +1111,7 @@ namespace crow {
 		return *this;
 	  }
 
-	  wvalue& operator = (int value) {
+	  value& operator = (int value) {
 		reset();
 		t_=type::Number;
 		num.si=value;
@@ -1126,7 +1119,7 @@ namespace crow {
 		return *this;
 	  }
 
-	  wvalue& operator = (unsigned long long value) {
+	  value& operator = (unsigned long long value) {
 		reset();
 		t_=type::Number;
 		num.ui=value;
@@ -1134,7 +1127,7 @@ namespace crow {
 		return *this;
 	  }
 
-	  wvalue& operator = (unsigned long value) {
+	  value& operator = (unsigned long value) {
 		reset();
 		t_=type::Number;
 		num.ui=value;
@@ -1142,7 +1135,7 @@ namespace crow {
 		return *this;
 	  }
 
-	  wvalue& operator = (unsigned int value) {
+	  value& operator = (unsigned int value) {
 		reset();
 		t_=type::Number;
 		num.ui=value;
@@ -1150,26 +1143,26 @@ namespace crow {
 		return *this;
 	  }
 
-	  wvalue& operator=(const char* str) {
+	  value& operator=(const char* str) {
 		reset();
 		t_=type::String;
 		s=str;
 		return *this;
 	  }
 
-	  wvalue& operator=(const std::string& str) {
+	  value& operator=(const std::string& str) {
 		reset();
 		t_=type::String;
 		s=str;
 		return *this;
 	  }
 
-	  wvalue& operator=(std::vector<wvalue>&& v) {
+	  value& operator=(std::vector<value>&& v) {
 		if (t_!=type::List)
 		  reset();
 		t_=type::List;
 		if (!l)
-		  l=std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{});
+		  l=std::unique_ptr<std::vector<value>>(new std::vector<value>{});
 		l->clear();
 		l->resize(v.size());
 		size_t idx=0;
@@ -1180,12 +1173,12 @@ namespace crow {
 	  }
 
 	  template <typename T>
-	  wvalue& operator=(const std::vector<T>& v) {
+	  value& operator=(const std::vector<T>& v) {
 		if (t_!=type::List)
 		  reset();
 		t_=type::List;
 		if (!l)
-		  l=std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{});
+		  l=std::unique_ptr<std::vector<value>>(new std::vector<value>{});
 		l->clear();
 		l->resize(v.size());
 		size_t idx=0;
@@ -1195,12 +1188,12 @@ namespace crow {
 		return *this;
 	  }
 
-	  wvalue& operator[](unsigned index) {
+	  value& operator[](unsigned index) {
 		if (t_!=type::List)
 		  reset();
 		t_=type::List;
 		if (!l)
-		  l=std::unique_ptr<std::vector<wvalue>>(new std::vector<wvalue>{});
+		  l=std::unique_ptr<std::vector<value>>(new std::vector<value>{});
 		if (l->size()<index+1)
 		  l->resize(index+1);
 		return (*l)[index];
@@ -1214,15 +1207,15 @@ namespace crow {
 		return o->count(str);
 	  }
 
-	  wvalue& operator[](const std::string& str) {
+	  value& operator[](const std::string& str) {
 		if (t_!=type::Object)
 		  reset();
 		t_=type::Object;
 		if (!o)
 		  o=std::unique_ptr<
-		  std::unordered_map<std::string,wvalue>
+		  std::unordered_map<std::string,value>
 		  >(
-			new std::unordered_map<std::string,wvalue>{});
+			new std::unordered_map<std::string,value>{});
 		return (*o)[str];
 	  }
 
@@ -1270,8 +1263,8 @@ namespace crow {
 		return 1;
 	  }
 
-	  friend void dump_internal(const wvalue& v,std::string& out);
-	  friend std::string dump(const wvalue& v);
+	  friend void dump_internal(const value& v,std::string& out);
+	  friend std::string dump(const value& v);
 	};
 
 	inline void dump_string(const std::string& str,std::string& out) {
@@ -1279,7 +1272,7 @@ namespace crow {
 	  escape(str,out);
 	  out.push_back('"');
 	}
-	inline void dump_internal(const wvalue& v,std::string& out) {
+	inline void dump_internal(const value& v,std::string& out) {
 	  switch (v.t_) {
 		case type::Null: out+="null"; break;
 		case type::False: out+="false"; break;
@@ -1341,14 +1334,14 @@ namespace crow {
 	  }
 	}
 
-	inline std::string dump(const wvalue& v) {
+	inline std::string dump(const value& v) {
 	  std::string ret;
 	  ret.reserve(v.estimate_length());
 	  dump_internal(v,ret);
 	  return ret;
 	}
 
-	//std::vector<boost::asio::const_buffer> dump_ref(wvalue& v)
+	//std::vector<boost::asio::const_buffer> dump_ref(value& v)
 	//{
 	//}
   }
