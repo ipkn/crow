@@ -8,7 +8,6 @@ class ExampleLogHandler : public ILogHandler {
 	//std::cerr << "ExampleLogHandler -> " << message;
   }
 };
-
 int main() {
   App<ExampleMiddleware,Cors> app;
   app.set_directory("./static").get_middleware<ExampleMiddleware>().setMessage("hello");

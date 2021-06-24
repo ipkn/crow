@@ -591,40 +591,40 @@ TEST(json_read_unescaping) {
 TEST(json_write) {
   json::value x;
   x["message"]="hello world";
-  ASSERT_EQUAL(R"({"message":"hello world"})",json::dump(x));
+  ASSERT_EQUAL(R"({"message":"hello world"})",x.dump());
   x["message"]=std::string("string value");
-  ASSERT_EQUAL(R"({"message":"string value"})",json::dump(x));
+  ASSERT_EQUAL(R"({"message":"string value"})",x.dump());
   x["message"]["x"]=3;
-  ASSERT_EQUAL(R"({"message":{"x":3}})",json::dump(x));
+  ASSERT_EQUAL(R"({"message":{"x":3}})",x.dump());
   x["message"]["y"]=5;
-  ASSERT_TRUE(R"({"message":{"x":3,"y":5}})"==json::dump(x)||R"({"message":{"y":5,"x":3}})"==json::dump(x));
+  ASSERT_TRUE(R"({"message":{"x":3,"y":5}})"==x.dump()||R"({"message":{"y":5,"x":3}})"==x.dump());
   x["message"]=5.5;
-  ASSERT_EQUAL(R"({"message":5.5})",json::dump(x));
+  ASSERT_EQUAL(R"({"message":5.5})",x.dump());
   x["message"]=1234567890;
-  ASSERT_EQUAL(R"({"message":1234567890})",json::dump(x));
+  ASSERT_EQUAL(R"({"message":1234567890})",x.dump());
 
   json::value y;
   y["scores"][0]=1;
   y["scores"][1]="king";
   y["scores"][2]=3.5;
-  ASSERT_EQUAL(R"({"scores":[1,"king",3.5]})",json::dump(y));
+  ASSERT_EQUAL(R"({"scores":[1,"king",3.5]})",y.dump());
 
   y["scores"][2][0]="real";
   y["scores"][2][1]=false;
   y["scores"][2][2]=true;
-  ASSERT_EQUAL(R"({"scores":[1,"king",["real",false,true]]})",json::dump(y));
+  ASSERT_EQUAL(R"({"scores":[1,"king",["real",false,true]]})",y.dump());
 
   y["scores"]["a"]["b"]["c"]=nullptr;
-  ASSERT_EQUAL(R"({"scores":{"a":{"b":{"c":null}}}})",json::dump(y));
+  ASSERT_EQUAL(R"({"scores":{"a":{"b":{"c":null}}}})",y.dump());
 
   y["scores"]=std::vector<int>{1,2,3};
-  ASSERT_EQUAL(R"({"scores":[1,2,3]})",json::dump(y));
+  ASSERT_EQUAL(R"({"scores":[1,2,3]})",y.dump());
 }
 
 TEST(json_copy_r_to_w_to_r) {
   json::rvalue r=json::parse(R"({"smallint":2,"bigint":2147483647,"fp":23.43,"fpsc":2.343e1,"str":"a string","trueval":true,"falseval":false,"nullval":null,"listval":[1,2,"foo","bar"],"obj":{"member":23,"other":"baz"}})");
   json::value w{r};
-  json::rvalue x=json::parse(json::dump(w)); // why no copy-ctor value -> rvalue?
+  json::rvalue x=json::parse(w.dump()); // why no copy-ctor value -> rvalue?
   ASSERT_EQUAL(2,x["smallint"]);
   ASSERT_EQUAL(2147483647,x["bigint"]);
   ASSERT_EQUAL(23.43,x["fp"]);

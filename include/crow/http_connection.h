@@ -200,10 +200,9 @@ namespace crow {
 	  adaptor_.start([this](const boost::system::error_code& ec) {
 		if (!ec) {
 		  start_deadline();
-
 		  do_read();
 		} else {
-		  check_destroy();
+		  delete this;
 		}
 	  });
 	}
@@ -350,8 +349,8 @@ namespace crow {
 	  res.complete_request_handler_=nullptr;
 
 	  if (!adaptor_.is_open()) {
-		//CROW_LOG_DEBUG << this << " delete (socket is closed) " << is_reading << ' ' << is_writing;
-		//delete this;
+		CROW_LOG_DEBUG << this << " delete (socket is closed) " << is_reading << ' ' << is_writing;
+		delete this;
 		return;
 	  }
 
@@ -439,10 +438,8 @@ namespace crow {
 	}
 
 	void do_write_static() {
-	  is_writing=true;
 	  boost::asio::write(adaptor_.socket(),buffers_);
 	  res.do_stream_file(adaptor_);
-
 	  res.end();
 	  res.clear();
 	  buffers_.clear();
@@ -452,9 +449,7 @@ namespace crow {
 	  if (res.body.length()<res_stream_threshold_) {
 		res_body_copy_.swap(res.body);
 		buffers_.emplace_back(res_body_copy_.data(),res_body_copy_.size());
-
 		do_write();
-
 		if (need_to_start_read_after_complete_) {
 		  need_to_start_read_after_complete_=false;
 		  start_deadline();
@@ -464,7 +459,6 @@ namespace crow {
 		is_writing=true;
 		boost::asio::write(adaptor_.socket(),buffers_);
 		res.do_stream_body(adaptor_);
-
 		res.end();
 		res.clear();
 		buffers_.clear();
@@ -489,9 +483,7 @@ namespace crow {
 		  parser_.done();
 		  adaptor_.shutdown_read();
 		  adaptor_.close();
-		  is_reading=false;
-		  CROW_LOG_DEBUG<<this<<" from read(1)";
-		  check_destroy();
+		  delete this;
 		} else if (close_connection_) {
 		  cancel_deadline_timer();
 		  parser_.done();
@@ -524,8 +516,7 @@ namespace crow {
 			check_destroy();
 		  }
 		} else {
-		  CROW_LOG_DEBUG<<this<<" from write(2)";
-		  check_destroy();
+		  delete this;
 		}
 	  });
 	}
@@ -536,6 +527,7 @@ namespace crow {
 		CROW_LOG_DEBUG<<this<<" delete (idle) ";
 		delete this;
 	  }
+	  //delete this;
 	}
 
 	void cancel_deadline_timer() {

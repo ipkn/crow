@@ -1218,7 +1218,6 @@ namespace crow {
 			new std::unordered_map<std::string,value>{});
 		return (*o)[str];
 	  }
-
 	  std::vector<std::string> keys() const {
 		if (t_!=type::Object)
 		  return {};
@@ -1262,9 +1261,15 @@ namespace crow {
 		}
 		return 1;
 	  }
-
+	  //asciphx
+	  std::string dump() const {
+		if (t_!=type::Object)return {};
+		std::string ret;
+		ret.reserve(this->estimate_length());
+		dump_internal(*this,ret);
+		return ret;
+	  }
 	  friend void dump_internal(const value& v,std::string& out);
-	  friend std::string dump(const value& v);
 	};
 
 	inline void dump_string(const std::string& str,std::string& out) {
@@ -1333,14 +1338,6 @@ namespace crow {
 		break;
 	  }
 	}
-
-	inline std::string dump(const value& v) {
-	  std::string ret;
-	  ret.reserve(v.estimate_length());
-	  dump_internal(v,ret);
-	  return ret;
-	}
-
 	//std::vector<boost::asio::const_buffer> dump_ref(value& v)
 	//{
 	//}

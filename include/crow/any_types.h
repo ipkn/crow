@@ -2,7 +2,7 @@
 #include <unordered_map>
 #include <string>
 namespace crow {
-std::unordered_map<std::string, std::string> any_types {
+static std::unordered_map<std::string, std::string> any_types {
 {"123","application/vnd.lotus-1-2-3"},
 {"3dml","text/vnd.in3d.3dml"},
 {"3ds","image/x-3ds"},

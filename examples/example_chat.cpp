@@ -1,4 +1,5 @@
 #include "crow.h"
+#include "mustache.h"
 #include <string>
 #include <vector>
 #include <chrono>
@@ -14,7 +15,7 @@ void broadcast(const string& msg)
     crow::json::value x;
     x["msgs"][0] = msgs.back();
     x["last"] = msgs.size();
-    string body = crow::json::dump(x);
+    string body =x.dump();
     for(auto p : ress)
     {
         auto* res = p.first;
@@ -27,7 +28,7 @@ void broadcast(const string& msg)
 int main()
 {
     crow::SimpleApp app;
-    crow::mustache::set_directory(".");
+    app.set_directory(".");
 
     CROW_ROUTE(app, "/")
     ([]{
@@ -57,7 +58,7 @@ int main()
                 x["msgs"][i-after] = msgs[i];
             x["last"] = msgs.size();
 
-            res.write(crow::json::dump(x));
+            res.write(x.dump());
             res.end();
         }
         else

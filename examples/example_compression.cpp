@@ -5,7 +5,7 @@
 int main() {
   crow::SimpleApp app;
   //crow::App<crow::CompressionGzip> app;
-  CROW_ROUTE(app,"/hello")([&](const crow::request&,crow::response& res) {
+  CROW_ROUTE(app,"/hello")([&](const crow::Req&,crow::Res& res) {
 	res.compressed=false;
 	res.body="Hello World! This is uncompressed!";
 	res.end();
@@ -17,7 +17,7 @@ int main() {
   app.port(8080)
 	.use_compression(crow::compression::algorithm::DEFLATE)
 	//.use_compression(crow::compression::algorithm::GZIP)
-	.loglevel(crow::LogLevel::Debug)
+	.loglevel(crow::LogLevel::DEBUG)
 	.multithreaded()
 	.run();
 }

@@ -128,7 +128,7 @@ namespace crow {
 			  auto& ctx=optional_ctx.second;
 			  switch (ctx.t()) {
 				case json::type::Number:
-				out+=json::dump(ctx);
+				out+=ctx.dump();
 				break;
 				case json::type::String:
 				if (action.t==ActionType::Tag)
@@ -438,21 +438,22 @@ namespace crow {
 	  if (!inf) return {};
 	  return {std::istreambuf_iterator<char>(inf), std::istreambuf_iterator<char>()};
 	}
-	inline std::function<std::string(std::string)>& get_loader_ref() {
-	  static std::function<std::string(std::string)> loader=default_loader;
-	  return loader;
+	namespace detail {
+	  inline std::function<std::string(std::string)>& get_loader_ref() {
+		static std::function<std::string(std::string)> loader=default_loader;
+		return loader;
+	  }
 	}
-	//The path to run the program relative to the command line, not the path of the program
 	inline void set_loader(std::function<std::string(std::string)> loader) {
-	  get_loader_ref()=std::move(loader);
+	  detail::get_loader_ref()=std::move(loader);
 	}
 
 	inline std::string load_text(const std::string& filename) {
-	  return get_loader_ref()(filename);
+	  return detail::get_loader_ref()(filename);
 	}
 
 	inline template_t load(const std::string& filename) {
-	  return compile(get_loader_ref()(filename));
+	  return compile(detail::get_loader_ref()(filename));
 	}
   }
 }

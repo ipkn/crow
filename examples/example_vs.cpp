@@ -15,7 +15,7 @@ int main() {
   });
   //Single path access to files
   app.route_dynamic("/cat")([](const Req&,Res& res) {
-	res.set_static_file_info("1.jpg");res.end();
+	res.set_static_file_info("static/1.jpg");res.end();
   });
   // a request to /path should be forwarded to /path/
   app.route_dynamic("/path/")([]() {
@@ -64,7 +64,7 @@ int main() {
 	for (const auto& countVal:count) os<<" - "<<countVal<<'\n';
 	return Res{os.str()};
   });
-  logger::setLogLevel(LogLevel::INFO);
+  //logger::setLogLevel(LogLevel::WARNING);
   //logger::setHandler(std::make_shared<ExampleLogHandler>());
   app.port(8080).multithreaded().run();
 }
