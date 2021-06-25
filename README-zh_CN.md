@@ -1,8 +1,9 @@
-![ÎÚÑ»±êÖ¾](http://i.imgur.com/wqivvjK.jpg)
+ï»¿![ä¹Œé¸¦æ ‡å¿—](http://i.imgur.com/wqivvjK.jpg)
 
-ÎÚÑ»ÊÇWebµÄC++Î¢·þÎñ¿ò¼Ü£¬Ö§³Ömac,linux,windows,Èý´óÆ½Ì¨£¬¿ª·¢ËÙ¶È×î¿ì×îÑ¸ËÙ×îÃÍÁÒ£¬ÏÂÒ»²½Õý´òËãÖ§³ÖÊý¾Ý¿â£¬ÒÔ¼°ORM¡£
+ä¹Œé¸¦æ˜¯Webçš„C++å¾®æœåŠ¡æ¡†æž¶ï¼Œæ”¯æŒmac,linux,windows,ä¸‰å¤§å¹³å°ï¼Œå¼€å‘é€Ÿåº¦æœ€å¿«æœ€è¿…é€Ÿæœ€çŒ›çƒˆï¼Œä¸‹ä¸€æ­¥æ­£æ‰“ç®—æ”¯æŒæ•°æ®åº“ï¼Œä»¥åŠORMã€‚
 
-£¨Áé¸ÐÀ´×Ô Python Flask£©[ÓÉAsciphxÌá¹©µÄ·ÖÖ§]
+### [ç¤ºä¾‹(example_vs)](http://8.129.58.72:8080/)ðŸš€
+ï¼ˆçµæ„Ÿæ¥è‡ª Python Flaskï¼‰[ç”±Asciphxæä¾›çš„åˆ†æ”¯]
 
 [![Travis Build](https://travis-ci.org/ipkn/crow.svg?branch=master)](https://travis-ci.org/ipkn/crow)
 [![Coverage Status](https://coveralls.io/repos/ipkn/crow/badge.svg?branch=master)](https://coveralls.io/r/ipkn/crow?branch=master)
@@ -18,24 +19,24 @@ int main(){
 }
 ```
 
-## ÌØµã
-- ¼òÒ×Â·ÓÉ£¬ÀàËÆÓÚPython Flask
-- ÀàÐÍ°²È«´¦Àí³ÌÐò£¨²Î¼ûÊ¾Àý£©£¬·Ç³£¿ì
- ![»ù×¼½á¹û](./Benchmark.png)
-- ¸ü¶à¹ØÓÚ[crow benchmark]µÄÊý¾Ý(https://github.com/ipkn/crow-benchmark)
-- ¿ìËÙÄÚÖÃJSON½âÎöÆ÷£¨crow:£ºJSON£©
-- Ò²¿ÉÒÔÊ¹ÓÃ[json11](https://github.com/dropbox/json11)»ò[rapidjson](https://github.com/miloyip/rapidjson)ÎªÁË¸üºÃµÄËÙ¶È»ò¿É¶ÁÐÔ
-- [Mustache](http://mustache.github.io/)»ùÓÚÄ£°å¿â£¨crow:£ºmustache£©
-- ½öÒ³Ã¼µÄÃ¿Ò»Ïî¹¦ÄÜ [`crow_all.h`](https://github.com/ipkn/crow/releases/download/v0.1/crow_all.h) with every features ([Download from here](https://github.com/ipkn/crow/releases/download/v0.1/crow_all.h))
-- ÖÐ¼ä¼þÖ§³Ö£¬WebsocketÖ§³Ö
-- Ö§³Ö¾²Ì¬×ÊÔ´,²¢ÇÒÄ¬ÈÏÔÚ'static/'Ä¿Â¼
-## ÈÔÔÚ¿ª·¢ÖÐ
--~~ÄÚÖÃORM~~
--¼ì²é[sqlpp11](https://github.com/rbock/sqlpp11)Èç¹ûÄãÏëÒªµÄ»°¡£
+## ç‰¹ç‚¹
+- ç®€æ˜“è·¯ç”±ï¼Œç±»ä¼¼äºŽPython Flask
+- ç±»åž‹å®‰å…¨å¤„ç†ç¨‹åºï¼ˆå‚è§ç¤ºä¾‹ï¼‰ï¼Œéžå¸¸å¿«
+ ![åŸºå‡†ç»“æžœ](./Benchmark.png)
+- æ›´å¤šå…³äºŽ[crow benchmark]çš„æ•°æ®(https://github.com/ipkn/crow-benchmark)
+- å¿«é€Ÿå†…ç½®JSONè§£æžå™¨ï¼ˆcrow:ï¼šJSONï¼‰
+- ä¹Ÿå¯ä»¥ä½¿ç”¨[json11](https://github.com/dropbox/json11)æˆ–[rapidjson](https://github.com/miloyip/rapidjson)ä¸ºäº†æ›´å¥½çš„é€Ÿåº¦æˆ–å¯è¯»æ€§
+- [Mustache](http://mustache.github.io/)åŸºäºŽæ¨¡æ¿åº“ï¼ˆcrow:ï¼šmustacheï¼‰
+- ä»…é¡µçœ‰çš„æ¯ä¸€é¡¹åŠŸèƒ½ [`crow_all.h`](https://github.com/ipkn/crow/releases/download/v0.1/crow_all.h) with every features ([Download from here](https://github.com/ipkn/crow/releases/download/v0.1/crow_all.h))
+- ä¸­é—´ä»¶æ”¯æŒï¼ŒWebsocketæ”¯æŒ
+- æ”¯æŒé™æ€èµ„æº,å¹¶ä¸”é»˜è®¤åœ¨'static/'ç›®å½•
+## ä»åœ¨å¼€å‘ä¸­
+-~~å†…ç½®ORM~~
+-æ£€æŸ¥[sqlpp11](https://github.com/rbock/sqlpp11)å¦‚æžœä½ æƒ³è¦çš„è¯ã€‚
 
-## Ê¾Àý
+## ç¤ºä¾‹
 
-#### ·þÎñ¶ËäÖÈ¾
+#### æœåŠ¡ç«¯æ¸²æŸ“
 ```c++
   CROW_ROUTE(app,"/")([] {
 	char name[256];gethostname(name,256);
@@ -45,7 +46,7 @@ int main(){
   });
 ```
 
-#### JSONÏìÓ¦
+#### JSONå“åº”
 ```c++
 CROW_ROUTE(app, "/json")([]{
     crow::json::wvalue x;
@@ -54,7 +55,7 @@ CROW_ROUTE(app, "/json")([]{
 });
 ```
 
-#### ÂÛ¾Ý
+#### è®ºæ®
 ```c++
 CROW_ROUTE(app,"/hello/<int>")([](int count){
     if (count > 100) return crow::Res(400);
@@ -63,15 +64,15 @@ CROW_ROUTE(app,"/hello/<int>")([](int count){
     return crow::Res(os.str());
 });
 ```
-±àÒëÊ±µÄ´¦Àí³ÌÐò²ÎÊýÀàÐÍ¼ì²é 
+ç¼–è¯‘æ—¶çš„å¤„ç†ç¨‹åºå‚æ•°ç±»åž‹æ£€æŸ¥ 
 ```c++
-// ±àÒë´íÎó£¬ÏûÏ¢"´¦Àí³ÌÐòÀàÐÍÓëURL²ÎÊý²»Æ¥Åä"
+// ç¼–è¯‘é”™è¯¯ï¼Œæ¶ˆæ¯"å¤„ç†ç¨‹åºç±»åž‹ä¸ŽURLå‚æ•°ä¸åŒ¹é…"
 CROW_ROUTE(app,"/another/<int>")([](int a, int b){
     return crow::Res(500);
 });
 ```
 
-#### ´¦ÀíJSONÇëÇó
+#### å¤„ç†JSONè¯·æ±‚
 ```c++
 CROW_ROUTE(app, "/add_json").methods("POST"_method)
 ([](const crow::Req& req){
@@ -85,18 +86,18 @@ CROW_ROUTE(app, "/add_json").methods("POST"_method)
 });
 ```
 
-## ÈçºÎ¹¹½¨
-Èç¹ûÄúÖ»ÏëÊ¹ÓÃcrow£¬Çë¸´ÖÆamalgamate/crow_all.h ²¢°üº¬Ëü¡£
+## å¦‚ä½•æž„å»º
+å¦‚æžœæ‚¨åªæƒ³ä½¿ç”¨crowï¼Œè¯·å¤åˆ¶amalgamate/crow_all.h å¹¶åŒ…å«å®ƒã€‚
 
-### ÒªÇó
-- C++ ±àÒëÆ÷£¬Ö§³ÖC++ 11£¨ÓÃG++²âÊÔ>=4.8£©
-- ÈÎºÎ°æ±¾µÄboost¿â
-- ¹¹½¨Ê¾ÀýµÄCMake
-- ½¨ÒéÓëtcmalloc/jemallocÁ´½ÓÒÔÌá¸ßËÙ¶È¡£
-- ÏÖÔÚÖ§³ÖVS2019£¬¹¦ÄÜÓÐÏÞ£¨Ö»ÓÐurlµÄÔËÐÐÊ±¼ì²é¿ÉÓÃ¡££©
+### è¦æ±‚
+- C++ ç¼–è¯‘å™¨ï¼Œæ”¯æŒC++ 11ï¼ˆç”¨G++æµ‹è¯•>=4.8ï¼‰
+- ä»»ä½•ç‰ˆæœ¬çš„booståº“
+- æž„å»ºç¤ºä¾‹çš„CMake
+- å»ºè®®ä¸Žtcmalloc/jemallocé“¾æŽ¥ä»¥æé«˜é€Ÿåº¦ã€‚
+- çŽ°åœ¨æ”¯æŒVS2019ï¼ŒåŠŸèƒ½æœ‰é™ï¼ˆåªæœ‰urlçš„è¿è¡Œæ—¶æ£€æŸ¥å¯ç”¨ã€‚ï¼‰
 
-### ½¨Öþ£¨²âÊÔ¡¢Ê¾Àý£©
-½¨ÒéÊ¹ÓÃCMake½øÐÐÔ´´úÂëÍâ¹¹½¨¡£
+### å»ºç­‘ï¼ˆæµ‹è¯•ã€ç¤ºä¾‹ï¼‰
+å»ºè®®ä½¿ç”¨CMakeè¿›è¡Œæºä»£ç å¤–æž„å»ºã€‚
 ```
 mkdir build
 cd build
@@ -104,13 +105,13 @@ cmake ..
 make
 ```
 
-¿ÉÒÔÊ¹ÓÃÒÔÏÂÃüÁîÔËÐÐ²âÊÔ£º
+å¯ä»¥ä½¿ç”¨ä»¥ä¸‹å‘½ä»¤è¿è¡Œæµ‹è¯•ï¼š
 
 ```
 ctest
 ```
 
-### °²×°È±ÉÙµÄÒÀÀµÏî
+### å®‰è£…ç¼ºå°‘çš„ä¾èµ–é¡¹
 #### Ubuntu
     sudo apt-get install build-essential libtcmalloc-minimal4 && sudo ln -s /usr/lib/libtcmalloc_minimal.so.4 /usr/lib/libtcmalloc_minimal.so
 #### OSX
@@ -118,53 +119,53 @@ ctest
 
 #### windows
 
->Ê×´Î°²×°boost
+>é¦–æ¬¡å®‰è£…boost
 
->µÚ¶þ´ÎÐÞ¸ÄCmakeLists.txt
+>ç¬¬äºŒæ¬¡ä¿®æ”¹CmakeLists.txt
 
-##### CmakeLists.txt[Ê¾Àý]
+##### CmakeLists.txt[ç¤ºä¾‹]
 
 ```cmake
 SET(BOOST_ROOT "E:/Code/boost_1_75_0") #Installation address of decompressed version
 set(Boost_USE_STATIC_LIBS ON) #Support anything else
 ```
 
-### ¹éÊô
-CrowÊ¹ÓÃÒÔÏÂ¿â¡£  
-http½âÎöÆ÷ https://github.com/nodejs/http-parser
+### å½’å±ž
+Crowä½¿ç”¨ä»¥ä¸‹åº“ã€‚  
+httpè§£æžå™¨ https://github.com/nodejs/http-parser
 
-http_parser.c »ùÓÚNGINX°æÈ¨ËùÓÐÒÁ¸ê¶û¡¤Î÷Ë÷Ò®·òµÄ src/http/ngx_http_parse.c 
-ÆäËû¸ü¸ÄµÄÐí¿ÉÌõ¿îÓëNGINXºÍ°æÈ¨ËùÓÐJoyent£¬Inc.ºÍÆäËû½Úµã¹±Ï×Õß¡£°æÈ¨ËùÓÐ¡£
-×ÈÃâ·Ñ×¼ÐíÈÎºÎÈËÈ¡µÃ¸±±¾
-±¾Èí¼þ¼°Ïà¹ØÎÄµµÎÄ¼þ£¨¡°Èí¼þ¡±£©£¬ÒÔ
-²»ÊÜÏÞÖÆµØ¾­ÓªÈí¼þ£¬°üÀ¨µ«²»ÏÞÓÚ
-Ê¹ÓÃ¡¢¸´ÖÆ¡¢ÐÞ¸Ä¡¢ºÏ²¢¡¢·¢²¼¡¢·Ö·¢¡¢ÔÙÐí¿ÉºÍ/»ò
-ÏúÊÛÈí¼þµÄ¸±±¾£¬²¢ÔÊÐíÈí¼þµÄÊ¹ÓÃÕß
-°´ÕÕÒÔÏÂÌõ¼þÌá¹©£º
-ÉÏÊö°æÈ¨ÉùÃ÷ºÍ±¾Ðí¿ÉÉùÃ÷Ó¦°üº¬ÔÚ
-Èí¼þµÄËùÓÐ¸±±¾»òÖ÷Òª²¿·Ö¡£
-±¾Èí¼þ°´¡°Ô­Ñù¡±Ìá¹©£¬²»Ìá¹©ÈÎºÎÐÎÊ½µÄÃ÷Ê¾»òÃ÷Ê¾µ£±£
-Ä¬Ê¾£¬°üÀ¨µ«²»ÏÞÓÚÊÊÏúÐÔ±£Ö¤£¬
-ÊÊÓÃÓÚÌØ¶¨Ä¿µÄºÍ·ÇÇÖ·¸ÐÔ¡£ÔÚÈÎºÎÇé¿öÏÂ
-×÷Õß»ò°æÈ¨³ÖÓÐÈË¶ÔÈÎºÎË÷Åâ¡¢Ëðº¦»òÆäËû
-ÔðÈÎ£¬ÎÞÂÛÊÇÔÚºÏÍ¬ËßËÏ¡¢ÇÖÈ¨ËßËÏ»òÆäËûËßËÏÖÐ²úÉúµÄ
-À´×Ô¡¢À´×Ô»òÓëÈí¼þ¡¢Ê¹ÓÃ»òÆäËû½»Ò×ÓÐ¹Ø
-ÔÚÈí¼þÖÐ¡£
+http_parser.c åŸºäºŽNGINXç‰ˆæƒæ‰€æœ‰ä¼Šæˆˆå°”Â·è¥¿ç´¢è€¶å¤«çš„ src/http/ngx_http_parse.c 
+å…¶ä»–æ›´æ”¹çš„è®¸å¯æ¡æ¬¾ä¸ŽNGINXå’Œç‰ˆæƒæ‰€æœ‰Joyentï¼ŒInc.å’Œå…¶ä»–èŠ‚ç‚¹è´¡çŒ®è€…ã€‚ç‰ˆæƒæ‰€æœ‰ã€‚
+å…¹å…è´¹å‡†è®¸ä»»ä½•äººå–å¾—å‰¯æœ¬
+æœ¬è½¯ä»¶åŠç›¸å…³æ–‡æ¡£æ–‡ä»¶ï¼ˆâ€œè½¯ä»¶â€ï¼‰ï¼Œä»¥
+ä¸å—é™åˆ¶åœ°ç»è¥è½¯ä»¶ï¼ŒåŒ…æ‹¬ä½†ä¸é™äºŽ
+ä½¿ç”¨ã€å¤åˆ¶ã€ä¿®æ”¹ã€åˆå¹¶ã€å‘å¸ƒã€åˆ†å‘ã€å†è®¸å¯å’Œ/æˆ–
+é”€å”®è½¯ä»¶çš„å‰¯æœ¬ï¼Œå¹¶å…è®¸è½¯ä»¶çš„ä½¿ç”¨è€…
+æŒ‰ç…§ä»¥ä¸‹æ¡ä»¶æä¾›ï¼š
+ä¸Šè¿°ç‰ˆæƒå£°æ˜Žå’Œæœ¬è®¸å¯å£°æ˜Žåº”åŒ…å«åœ¨
+è½¯ä»¶çš„æ‰€æœ‰å‰¯æœ¬æˆ–ä¸»è¦éƒ¨åˆ†ã€‚
+æœ¬è½¯ä»¶æŒ‰â€œåŽŸæ ·â€æä¾›ï¼Œä¸æä¾›ä»»ä½•å½¢å¼çš„æ˜Žç¤ºæˆ–æ˜Žç¤ºæ‹…ä¿
+é»˜ç¤ºï¼ŒåŒ…æ‹¬ä½†ä¸é™äºŽé€‚é”€æ€§ä¿è¯ï¼Œ
+é€‚ç”¨äºŽç‰¹å®šç›®çš„å’Œéžä¾µçŠ¯æ€§ã€‚åœ¨ä»»ä½•æƒ…å†µä¸‹
+ä½œè€…æˆ–ç‰ˆæƒæŒæœ‰äººå¯¹ä»»ä½•ç´¢èµ”ã€æŸå®³æˆ–å…¶ä»–
+è´£ä»»ï¼Œæ— è®ºæ˜¯åœ¨åˆåŒè¯‰è®¼ã€ä¾µæƒè¯‰è®¼æˆ–å…¶ä»–è¯‰è®¼ä¸­äº§ç”Ÿçš„
+æ¥è‡ªã€æ¥è‡ªæˆ–ä¸Žè½¯ä»¶ã€ä½¿ç”¨æˆ–å…¶ä»–äº¤æ˜“æœ‰å…³
+åœ¨è½¯ä»¶ä¸­ã€‚
 
 qs_parse https://github.com/bartgrantham/qs_parse  
-°æÈ¨ËùÓÐ£¨c£©2010 Bart Grantham
-×ÈÃâ·Ñ×¼ÐíÈÎºÎÈËÈ¡µÃ¸±±¾
-±¾Èí¼þ¼°Ïà¹ØÎÄµµÎÄ¼þ£¨¡°Èí¼þ¡±£©£¬ÒÔ´¦Àí
-ÔÚÈí¼þÖÐ²»ÊÜÏÞÖÆ£¬°üÀ¨µ«²»ÏÞÓÚÈ¨Àû
-Ê¹ÓÃ¡¢¸´ÖÆ¡¢ÐÞ¸Ä¡¢ºÏ²¢¡¢·¢²¼¡¢·Ö·¢¡¢ÔÙÐí¿ÉºÍ/»òÏúÊÛ
-Èí¼þµÄ¸±±¾£¬²¢ÔÊÐíÊ¹ÓÃÈí¼þµÄÈËÔ±
-°´ÕÕÒÔÏÂÌõ¼þÌá¹©£º
-ÉÏÊö°æÈ¨ÉùÃ÷ºÍ±¾Ðí¿ÉÉùÃ÷Ó¦°üº¬ÔÚ
-Èí¼þµÄËùÓÐ¸±±¾»òÖ÷Òª²¿·Ö¡£
+ç‰ˆæƒæ‰€æœ‰ï¼ˆcï¼‰2010 Bart Grantham
+å…¹å…è´¹å‡†è®¸ä»»ä½•äººå–å¾—å‰¯æœ¬
+æœ¬è½¯ä»¶åŠç›¸å…³æ–‡æ¡£æ–‡ä»¶ï¼ˆâ€œè½¯ä»¶â€ï¼‰ï¼Œä»¥å¤„ç†
+åœ¨è½¯ä»¶ä¸­ä¸å—é™åˆ¶ï¼ŒåŒ…æ‹¬ä½†ä¸é™äºŽæƒåˆ©
+ä½¿ç”¨ã€å¤åˆ¶ã€ä¿®æ”¹ã€åˆå¹¶ã€å‘å¸ƒã€åˆ†å‘ã€å†è®¸å¯å’Œ/æˆ–é”€å”®
+è½¯ä»¶çš„å‰¯æœ¬ï¼Œå¹¶å…è®¸ä½¿ç”¨è½¯ä»¶çš„äººå‘˜
+æŒ‰ç…§ä»¥ä¸‹æ¡ä»¶æä¾›ï¼š
+ä¸Šè¿°ç‰ˆæƒå£°æ˜Žå’Œæœ¬è®¸å¯å£°æ˜Žåº”åŒ…å«åœ¨
+è½¯ä»¶çš„æ‰€æœ‰å‰¯æœ¬æˆ–ä¸»è¦éƒ¨åˆ†ã€‚
 
 TinySHA1 https://github.com/mohaps/TinySHA1
 
-TinySHA1-SHA1Ëã·¨µÄÒ»¸öÖ»°üº¬±¨Í·µÄÊµÏÖ¡£»ùÓÚboost::uuid::detailsÖÐµÄÊµÏÖ
+TinySHA1-SHA1ç®—æ³•çš„ä¸€ä¸ªåªåŒ…å«æŠ¥å¤´çš„å®žçŽ°ã€‚åŸºäºŽboost::uuid::detailsä¸­çš„å®žçŽ°
 Cmohaps@gmail.com
-ÌØ´ËÊÚÓè³öÓÚÈÎºÎÄ¿µÄÊ¹ÓÃ¡¢¸´ÖÆ¡¢ÐÞ¸ÄºÍ·Ö·¢±¾Èí¼þµÄÐí¿É£¬ÎÞÂÛÊÇ·ñÊÕ·Ñ£¬Ç°ÌáÊÇÉÏÊö°æÈ¨ÉùÃ÷ºÍ±¾Ðí¿ÉÉùÃ÷³öÏÖÔÚËùÓÐ¸±±¾ÖÐ¡£
-±¾Èí¼þ°´¡°Ô­Ñù¡±Ìá¹©£¬×÷Õß²»³Ðµ£Óë±¾Èí¼þÓÐ¹ØµÄËùÓÐ±£Ö¤£¬°üÀ¨¶ÔÊÊÏúÐÔºÍÊÊÓÃÐÔµÄËùÓÐ°µÊ¾±£Ö¤¡£Ò»
+ç‰¹æ­¤æŽˆäºˆå‡ºäºŽä»»ä½•ç›®çš„ä½¿ç”¨ã€å¤åˆ¶ã€ä¿®æ”¹å’Œåˆ†å‘æœ¬è½¯ä»¶çš„è®¸å¯ï¼Œæ— è®ºæ˜¯å¦æ”¶è´¹ï¼Œå‰ææ˜¯ä¸Šè¿°ç‰ˆæƒå£°æ˜Žå’Œæœ¬è®¸å¯å£°æ˜Žå‡ºçŽ°åœ¨æ‰€æœ‰å‰¯æœ¬ä¸­ã€‚
+æœ¬è½¯ä»¶æŒ‰â€œåŽŸæ ·â€æä¾›ï¼Œä½œè€…ä¸æ‰¿æ‹…ä¸Žæœ¬è½¯ä»¶æœ‰å…³çš„æ‰€æœ‰ä¿è¯ï¼ŒåŒ…æ‹¬å¯¹é€‚é”€æ€§å’Œé€‚ç”¨æ€§çš„æ‰€æœ‰æš—ç¤ºä¿è¯ã€‚ä¸€
