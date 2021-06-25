@@ -365,8 +365,6 @@ namespace crow {
 		  {302, "HTTP/1.1 302 Found\r\n"},
 		  {303, "HTTP/1.1 303 See Other\r\n"},
 		  {304, "HTTP/1.1 304 Not Modified\r\n"},
-		  {307, "HTTP/1.1 307 Temporary Redirect\r\n"},
-		  {308, "HTTP/1.1 308 Permanent Redirect\r\n"},
 
 		  {400, "HTTP/1.1 400 Bad Request\r\n"},
 		  {401, "HTTP/1.1 401 Unauthorized\r\n"},

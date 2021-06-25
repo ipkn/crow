@@ -313,7 +313,7 @@ namespace crow {
     private:
     uint16_t port_=80;
     uint16_t concurrency_=1;
-    std::string server_name_="Crow/0.4";
+    std::string server_name_="Crow/0.5";
     std::string bindaddr_="0.0.0.0";
     Router router_;
 

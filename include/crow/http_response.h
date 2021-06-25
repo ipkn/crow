@@ -6,17 +6,16 @@
 #include "crow/any_types.h"
 #include "crow/ci_map.h"
 //response
+static char CT[13]="Content-Type",AJ[17]="application/json",CL[15]="Content-Length",TP[11]="text/plain",Loc[9]="Location";
 namespace crow {
   template <typename Adaptor,typename Handler,typename ... Middlewares>
   class Connection;
   struct Res {
 	template <typename Adaptor,typename Handler,typename ... Middlewares>
 	friend class crow::Connection;
-
 	int code{200};
 	std::string body;
 	json::value json_value;
-
 	// `headers' stores HTTP headers.
 	ci_map headers;
 #ifdef CROW_ENABLE_COMPRESSION
@@ -32,7 +31,12 @@ namespace crow {
 	void add_header(std::string key,std::string value) {
 	  headers.emplace(std::move(key),std::move(value));
 	}
-
+	void add_header_s(std::string&&key,std::string&&value) {
+	  headers.emplace(key,value);
+	}
+	void add_header_t(std::string&&key,std::string value) {
+	  headers.emplace(key,std::move(value));
+	}
 	const std::string& get_header_value(const std::string& key) {
 	  return crow::get_header_value(headers,key);
 	}
@@ -40,14 +44,14 @@ namespace crow {
 	explicit Res(int code): code(code) {}
 	Res(std::string body): body(std::move(body)) {}
 	Res(int code,std::string body): code(code),body(std::move(body)) {}
-	Res(json::value&& json_value):body(json_value.dump()) {
-	  set_header("Content-Type","application/json");
+	Res(json::value&& json_value): body(json_value.dump()) {
+	  headers.erase(CT);headers.emplace(CT,AJ);
 	}
 	Res(const json::value& json_value): body(json_value.dump()) {
-	  set_header("Content-Type","application/json");
+	  headers.erase(CT);headers.emplace(CT,AJ);
 	}
 	Res(int code,const json::value& json_value): code(code),body(json_value.dump()) {
-	  set_header("Content-Type","application/json");
+	  headers.erase(CT);headers.emplace(CT,AJ);
 	}
 	Res(Res&& r) { *this=std::move(r); }
 	Res& operator = (const Res& r)=delete;
@@ -68,20 +72,24 @@ namespace crow {
 	  headers.clear();
 	  completed_=false;
 	}
-	void redirect(const std::string& location) {
-	  code=301;
-	  set_header("Location",location);
-	}
-	void write(const std::string& body_part) {
-	  body+=body_part;
-	}
 
+	/// Return a "Temporary Redirect" Res.
+	/// Location can either be a route or a full URL.
+	void redirect(const std::string& location) {
+	  code=301;headers.erase(Loc);
+	  headers.emplace(Loc,std::move(location));
+	}
+	/// Return a "See Other" Res.
+	void redirect_perm(const std::string& location) {
+	  code=303;headers.erase(Loc);
+	  headers.emplace(Loc,std::move(location));
+	}
+	void write(const std::string& body_part) { body+=body_part; }
 	void end() {
 	  if (!completed_) {
 		completed_=true;
 		if (is_head_response) {
-		  std::cout<<2<<std::endl;
-		  set_header("Content-Length",std::to_string(body.size()));
+		  headers.erase(CL);headers.emplace(CL,std::move(std::to_string(body.size())));
 		  body="";
 		  manual_length_header=true;
 		}
@@ -90,20 +98,10 @@ namespace crow {
 		}
 	  }
 	}
-
-	void end(const std::string& body_part) {
-	  body+=body_part;
-	  end();
-	}
-
-	bool is_alive() {
-	  return is_alive_helper_&&is_alive_helper_();
-	}
-
+	void end(const std::string& body_part) { body+=body_part; end(); }
+	bool is_alive() { return is_alive_helper_&&is_alive_helper_();}
 	/// Check whether the response has a static file defined.
-	bool is_static_type() {
-	  return path_.size();
-	}
+	bool is_static_type() { return path_.size(); }
 	///Return a static file as the response body
 	void set_static_file_info(std::string path) {
 	  path_=detail::directory_+path;
@@ -114,16 +112,13 @@ namespace crow {
 	  if (statResult_==0) {
 		code=200;
 		std::size_t last_dot=path.find_last_of(".");
-		std::string extension=std::move(path).substr(last_dot+1);
-		this->add_header("Content-length",std::to_string(statbuf_.st_size));
-		if (extension!="") {
-		  std::string types="";types=any_types[std::move(extension)];
-		  if (types!="")
-			this->add_header("Content-Type",types);
-		  else
-			this->add_header("content-Type","text/plain");
-		  types.clear();
-		}
+		std::string extension=path.substr(last_dot+1);
+		this->add_header_t(CL,std::to_string(statbuf_.st_size));
+		std::string types="";types=any_types[extension];
+		if (types!="")
+		  this->add_header_t(CT,types);
+		else
+		  this->add_header_s(CT,TP);
 	  } else {
 		code=404;this->end();
 	  }
@@ -136,7 +131,6 @@ namespace crow {
 		write_streamed(is,adaptor);
 	  }
 	}
-
 	/// Stream the response body (send the body in chunks).
 	template<typename Adaptor>
 	void do_stream_body(Adaptor& adaptor) {
@@ -144,7 +138,6 @@ namespace crow {
 		write_streamed_string(body,adaptor);
 	  }
 	}
-
 	private:
 	std::string path_="";
 	int statResult_;

@@ -7,14 +7,11 @@ namespace crow {
   /// Find and return the value associated with the key. (returns an empty string if nothing is found)
   template <typename T>
   inline const std::string& get_header_value(const T& headers,const std::string& key) {
-    if (headers.count(key)) {
-      return headers.find(key)->second;
-    }
+    if (headers.count(key)) return headers.find(key)->second;
     static std::string empty;
     return empty;
   }
   struct DetachHelper;
-  /// An HTTP request.
   struct Req {
     HTTPMethod method;
     std::string raw_url; ///< The full URL containing the `?` and URL parameters.
@@ -23,7 +20,6 @@ namespace crow {
     ci_map headers;
     std::string body;
     std::string remoteIpAddress; ///< The IP address from which the request was sent.
-
     void* middleware_context{};
     boost::asio::io_service* io_service{};
 
