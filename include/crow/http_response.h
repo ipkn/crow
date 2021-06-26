@@ -14,6 +14,7 @@ namespace crow {
 	template <typename Adaptor,typename Handler,typename ... Middlewares>
 	friend class crow::Connection;
 	int code{200};
+	int is_file{0};// Check whether the response has a static file defined.
 	std::string body;
 	json::value json_value;
 	// `headers' stores HTTP headers.
@@ -100,8 +101,6 @@ namespace crow {
 	}
 	void end(const std::string& body_part) { body+=body_part; end(); }
 	bool is_alive() { return is_alive_helper_&&is_alive_helper_();}
-	/// Check whether the response has a static file defined.
-	bool is_static_type() { return path_.size(); }
 	///Return a static file as the response body
 	void set_static_file_info(std::string path) {
 	  path_=detail::directory_+path;
@@ -116,7 +115,7 @@ namespace crow {
 		this->add_header_t(CL,std::to_string(statbuf_.st_size));
 		std::string types="";types=any_types[extension];
 		if (types!="")
-		  this->add_header_t(CT,types);
+		  this->add_header_t(CT,types),is_file=1;
 		else
 		  this->add_header_s(CT,TP);
 	  } else {
@@ -168,7 +167,7 @@ namespace crow {
 	  }
 	  //Collect whatever is left (less than 16KB) and send it down the socket
 	  //buf.reserve(is.length());
-	  buf.clear();
+	  //buf.clear();
 	  push_and_write(buffers,is,adaptor);
 	}
 
@@ -185,7 +184,7 @@ namespace crow {
 		if (!ec) {
 		  return false;
 		} else {
-		  CROW_LOG_ERROR<<ec<<" - happened while sending buffers";
+		  //CROW_LOG_ERROR<<ec<<" - happened while sending buffers";
 		  this->end();
 		  return true;
 		}

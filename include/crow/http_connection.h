@@ -289,7 +289,6 @@ namespace crow {
 	/// Call the after handle middleware and send the write the Res to the connection.
 	void complete_request() {
 	  CROW_LOG_INFO<<"Response: "<<this<<' '<<req_.raw_url<<' '<<res.code<<' '<<close_connection_;
-
 	  if (need_to_call_after_handlers_) {
 		need_to_call_after_handlers_=false;
 
@@ -333,8 +332,7 @@ namespace crow {
 	  }
 
 	  prepare_buffers();
-
-	  if (res.is_static_type()) {
+	  if (res.is_file) {
 		do_write_static();
 	  } else {
 		do_write_general();
