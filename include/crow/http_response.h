@@ -107,7 +107,6 @@ namespace crow {
 		else {
 		  code=404;this->headers.clear();this->end();
 		}
-		//else this->add_header_s(RES_CT,RES_TP);
 	  } else {
 		code=404;this->end();
 	  }
