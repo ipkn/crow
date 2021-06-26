@@ -151,9 +151,6 @@ namespace crow {
 	}
   }
 
-#ifdef CROW_ENABLE_DEBUG
-  static std::atomic<int> connectionCount;
-#endif
   /// An HTTP connection.
   template <typename Adaptor,typename Handler,typename ... Middlewares>
   class Connection {
@@ -175,19 +172,11 @@ namespace crow {
 	  middlewares_(middlewares),
 	  get_cached_date_str(get_cached_date_str_f),
 	  timer_queue(timer_queue) {
-#ifdef CROW_ENABLE_DEBUG
-	  connectionCount++;
-	  CROW_LOG_DEBUG<<"Connection open, total "<<connectionCount<<", "<<this;
-#endif
 	}
 
 	~Connection() {
 	  res.complete_request_handler_=nullptr;
 	  cancel_deadline_timer();
-#ifdef CROW_ENABLE_DEBUG
-	  connectionCount--;
-	  CROW_LOG_DEBUG<<"Connection closed, total "<<connectionCount<<", "<<this;
-#endif
 	}
 
 	/// The TCP socket on top of which the connection is established.

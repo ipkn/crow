@@ -53,7 +53,7 @@ namespace crow {
             x.second();
           }
           dq_.pop_front();
-          step_++;
+          ++step_;
         }
       }
 

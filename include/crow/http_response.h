@@ -59,11 +59,7 @@ namespace crow {
 	}
 	bool is_completed() const noexcept { return completed_; }
 	void clear() {
-	  body.clear();
-	  json_value.clear();
-	  path_.clear();
-	  code=200;
-	  headers.clear();
+	  //body.clear();json_value.clear();code=200;headers.clear();
 	  completed_=false;
 	}
 
@@ -102,16 +98,13 @@ namespace crow {
 	  compressed=false;
 #endif
 	  if (statResult_==0) {
-		code=200;
 		std::size_t last_dot=path.find_last_of(".");
 		std::string extension=path.substr(last_dot+1);
 		this->add_header_t(RES_CL,std::to_string(statbuf_.st_size));
 		std::string types="";types=content_types[extension];
 		if (types!="")
-		  this->add_header_t(RES_CT,types);
-		else
-		  this->add_header_s(RES_CT,RES_TP);
-		is_file=1;
+		  this->add_header_t(RES_CT,types),is_file=1;
+		//else this->add_header_s(RES_CT,RES_TP);
 	  } else {
 		code=404;this->end();
 	  }
@@ -132,7 +125,7 @@ namespace crow {
 	  }
 	}
 	private:
-	std::string path_="";
+	std::string path_;
 	int statResult_;
 	struct stat statbuf_;
 	bool completed_{};
@@ -161,7 +154,7 @@ namespace crow {
 	  }
 	  //Collect whatever is left (less than 16KB) and send it down the socket
 	  //buf.reserve(is.length());
-	  buf.clear();
+	  //buf.clear();
 	  push_and_write(buffers,is,adaptor);
 	}
 

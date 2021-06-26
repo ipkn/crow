@@ -61,23 +61,23 @@ namespace crow {
         // thread local date string get function
         auto last=std::chrono::steady_clock::now();
         std::string date_str;
-        auto update_date_str=[&] {
-          auto last_time_t=time(0);
-          tm my_tm;
-#if defined(_MSC_VER) || defined(__MINGW32__)
-          localtime_s(&my_tm,&last_time_t);
-#else
-          localtime_r(&last_time_t,&my_tm);
-#endif
-          date_str.resize(0x20);
-          size_t date_str_sz=strftime(&date_str[0],0x1f,"%a, %d %b %Y %H:%M:%S GMT",&my_tm);
-          date_str.resize(date_str_sz);
-        };
-        update_date_str();
+        auto last_time_t=time(0);
+//        tm my_tm;
+//#if defined(_MSC_VER) || defined(__MINGW32__)
+//          gmtime_s(&my_tm,&last_time_t);
+//          localtime_s(&my_tm,&last_time_t);
+//#else
+//        gmtime_r(&last_time_t,&my_tm);
+//        localtime_r(&last_time_t,&my_tm);
+//#endif
+        date_str.resize(0x20);
+        date_str.resize(strftime(&date_str[0],0x1f,"%a, %d %b %Y %H:%M:%S GMT",localtime(&last_time_t)));
         get_cached_date_str_pool_[i]=[&]()->std::string {
           if (std::chrono::steady_clock::now()-last>=std::chrono::seconds(1)) {
             last=std::chrono::steady_clock::now();
-            update_date_str();
+            //update_date_str();
+            date_str.resize(0x20);
+            date_str.resize(strftime(&date_str[0],0x1f,"%a, %d %b %Y %H:%M:%S GMT",localtime(&last_time_t)));
           }
           return date_str;
         };
