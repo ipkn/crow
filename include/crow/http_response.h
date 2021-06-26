@@ -161,7 +161,7 @@ namespace crow {
 	  }
 	  //Collect whatever is left (less than 16KB) and send it down the socket
 	  //buf.reserve(is.length());
-	  //buf.clear();
+	  buf.clear();
 	  push_and_write(buffers,is,adaptor);
 	}
 
