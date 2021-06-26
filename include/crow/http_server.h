@@ -1,5 +1,4 @@
 #pragma once
-
 #include <chrono>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/asio.hpp>
@@ -10,9 +9,7 @@
 #include <atomic>
 #include <future>
 #include <vector>
-
 #include <memory>
-
 #include "crow/http_connection.h"
 #include "crow/logging.h"
 #include "crow/detail.h"
@@ -45,8 +42,7 @@ namespace crow {
       tick_function_();
       tick_timer_.expires_from_now(boost::posix_time::milliseconds(tick_interval_.count()));
       tick_timer_.async_wait([this](const boost::system::error_code& ec) {
-        if (ec)
-          return;
+        if (ec) return;
         on_tick();
       });
     }
@@ -62,33 +58,29 @@ namespace crow {
       for (uint16_t i=0; i<concurrency_; i++)
         v.push_back(
           std::async(std::launch::async,[this,i,&init_count] {
-
         // thread local date string get function
         auto last=std::chrono::steady_clock::now();
-
         std::string date_str;
-        auto update_date_str=[&] {
-          auto last_time_t=time(0);
-          tm my_tm;
-
-#if defined(_MSC_VER) || defined(__MINGW32__)
-          gmtime_s(&my_tm,&last_time_t);
-#else
-          gmtime_r(&last_time_t,&my_tm);
-#endif
-          date_str.resize(100);
-          size_t date_str_sz=strftime(&date_str[0],99,"%a, %d %b %Y %H:%M:%S GMT",&my_tm);
-          date_str.resize(date_str_sz);
-        };
-        update_date_str();
+        auto last_time_t=time(0);
+//        tm my_tm;
+//#if defined(_MSC_VER) || defined(__MINGW32__)
+//          gmtime_s(&my_tm,&last_time_t);
+//          localtime_s(&my_tm,&last_time_t);
+//#else
+//        gmtime_r(&last_time_t,&my_tm);
+//        localtime_r(&last_time_t,&my_tm);
+//#endif
+        date_str.resize(0x20);
+        date_str.resize(strftime(&date_str[0],0x1f,"%a, %d %b %Y %H:%M:%S GMT",localtime(&last_time_t)));
         get_cached_date_str_pool_[i]=[&]()->std::string {
           if (std::chrono::steady_clock::now()-last>=std::chrono::seconds(1)) {
             last=std::chrono::steady_clock::now();
-            update_date_str();
+            //update_date_str();
+            date_str.resize(0x20);
+            date_str.resize(strftime(&date_str[0],0x1f,"%a, %d %b %Y %H:%M:%S GMT",localtime(&last_time_t)));
           }
           return date_str;
         };
-
         // initializing timer queue
         detail::dumb_timer_queue timer_queue;
         timer_queue_pool_[i]=&timer_queue;

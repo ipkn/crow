@@ -108,9 +108,10 @@ namespace crow {
 		this->add_header_t(RES_CL,std::to_string(statbuf_.st_size));
 		std::string types="";types=content_types[extension];
 		if (types!="")
-		  this->add_header_t(RES_CT,types),is_file=1;
+		  this->add_header_t(RES_CT,types);
 		else
 		  this->add_header_s(RES_CT,RES_TP);
+		is_file=1;
 	  } else {
 		code=404;this->end();
 	  }

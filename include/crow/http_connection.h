@@ -275,8 +275,7 @@ namespace crow {
 		  res.complete_request_handler_=[this] { this->complete_request(); };
 		  need_to_call_after_handlers_=true;
 		  handler_->handle(req,res);
-		  if (add_keep_alive_)
-			res.set_header("connection","Keep-Alive");
+		  if (add_keep_alive_)res.set_header("connection","Keep-Alive");
 		} else {
 		  complete_request();
 		}
@@ -331,12 +330,7 @@ namespace crow {
 	  }
 
 	  prepare_buffers();
-	  if (res.is_file) {
-		do_write_static();
-	  } else {
-		do_write_general();
-	  }
-
+	  if (res.is_file) do_write_static();else do_write_general();
 	}
 
 	private:

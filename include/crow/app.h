@@ -28,7 +28,7 @@
 #define CROW_CATCHALL_ROUTE(app) app.catchall_route()
 
 namespace crow {
-  int detail::dumb_timer_queue::tick=5;
+  int detail::dumb_timer_queue::tick=3;//Maximum seconds of lazy loading
 #ifdef CROW_ENABLE_SSL
   using ssl_context_t=boost::asio::ssl::context;
 #endif
