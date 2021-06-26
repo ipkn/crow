@@ -6,15 +6,15 @@
 #include "crow/any_types.h"
 #include "crow/ci_map.h"
 //response
-static char CT[13]="Content-Type",AJ[17]="application/json",CL[15]="Content-Length",TP[11]="text/plain",Loc[9]="Location";
+static char RES_CT[13]="Content-Type",RES_AJ[17]="application/json",RES_CL[15]="Content-Length",RES_TP[11]="text/plain",
+  RES_Loc[9]="Location";
 namespace crow {
   template <typename Adaptor,typename Handler,typename ... Middlewares>
   class Connection;
   struct Res {
 	template <typename Adaptor,typename Handler,typename ... Middlewares>
 	friend class crow::Connection;
-	int code{200};
-	int is_file{0};// Check whether the response has a static file defined.
+	int code{200},is_file{0};// Check whether the response has a static file defined.
 	std::string body;
 	json::value json_value;
 	// `headers' stores HTTP headers.
@@ -26,18 +26,11 @@ namespace crow {
 	bool manual_length_header=false; //< Whether Crow should automatically add a "Content-Length" header.
 
 	void set_header(std::string key,std::string value) {
-	  headers.erase(key);
-	  headers.emplace(std::move(key),std::move(value));
+	  headers.erase(key); headers.emplace(std::move(key),std::move(value));
 	}
-	void add_header(std::string key,std::string value) {
-	  headers.emplace(std::move(key),std::move(value));
-	}
-	void add_header_s(std::string&&key,std::string&&value) {
-	  headers.emplace(key,value);
-	}
-	void add_header_t(std::string&&key,std::string value) {
-	  headers.emplace(key,std::move(value));
-	}
+	void add_header(std::string key,std::string value) { headers.emplace(std::move(key),std::move(value)); }
+	void add_header_s(std::string&&key,std::string&&value) { headers.emplace(key,value); }
+	void add_header_t(std::string&&key,std::string value) { headers.emplace(key,std::move(value)); }
 	const std::string& get_header_value(const std::string& key) {
 	  return crow::get_header_value(headers,key);
 	}
@@ -46,13 +39,13 @@ namespace crow {
 	Res(std::string body): body(std::move(body)) {}
 	Res(int code,std::string body): code(code),body(std::move(body)) {}
 	Res(json::value&& json_value): body(json_value.dump()) {
-	  headers.erase(CT);headers.emplace(CT,AJ);
+	  headers.erase(RES_CT);headers.emplace(RES_CT,RES_AJ);
 	}
 	Res(const json::value& json_value): body(json_value.dump()) {
-	  headers.erase(CT);headers.emplace(CT,AJ);
+	  headers.erase(RES_CT);headers.emplace(RES_CT,RES_AJ);
 	}
 	Res(int code,const json::value& json_value): code(code),body(json_value.dump()) {
-	  headers.erase(CT);headers.emplace(CT,AJ);
+	  headers.erase(RES_CT);headers.emplace(RES_CT,RES_AJ);
 	}
 	Res(Res&& r) { *this=std::move(r); }
 	Res& operator = (const Res& r)=delete;
@@ -77,20 +70,20 @@ namespace crow {
 	/// Return a "Temporary Redirect" Res.
 	/// Location can either be a route or a full URL.
 	void redirect(const std::string& location) {
-	  code=301;headers.erase(Loc);
-	  headers.emplace(Loc,std::move(location));
+	  code=301;headers.erase(RES_Loc);
+	  headers.emplace(RES_Loc,std::move(location));
 	}
 	/// Return a "See Other" Res.
 	void redirect_perm(const std::string& location) {
-	  code=303;headers.erase(Loc);
-	  headers.emplace(Loc,std::move(location));
+	  code=303;headers.erase(RES_Loc);
+	  headers.emplace(RES_Loc,std::move(location));
 	}
 	void write(const std::string& body_part) { body+=body_part; }
 	void end() {
 	  if (!completed_) {
 		completed_=true;
 		if (is_head_response) {
-		  headers.erase(CL);headers.emplace(CL,std::move(std::to_string(body.size())));
+		  headers.erase(RES_CL);headers.emplace(RES_CL,std::move(std::to_string(body.size())));
 		  body="";
 		  manual_length_header=true;
 		}
@@ -112,12 +105,12 @@ namespace crow {
 		code=200;
 		std::size_t last_dot=path.find_last_of(".");
 		std::string extension=path.substr(last_dot+1);
-		this->add_header_t(CL,std::to_string(statbuf_.st_size));
-		std::string types="";types=any_types[extension];
+		this->add_header_t(RES_CL,std::to_string(statbuf_.st_size));
+		std::string types="";types=content_types[extension];
 		if (types!="")
-		  this->add_header_t(CT,types),is_file=1;
+		  this->add_header_t(RES_CT,types),is_file=1;
 		else
-		  this->add_header_s(CT,TP);
+		  this->add_header_s(RES_CT,RES_TP);
 	  } else {
 		code=404;this->end();
 	  }

@@ -17,7 +17,6 @@
 #include "crow/middleware_context.h"
 #include "crow/socket_adaptors.h"
 #include "crow/compression.h"
-
 namespace crow {
   using namespace boost;
   using tcp=asio::ip::tcp;
@@ -341,7 +340,9 @@ namespace crow {
 	}
 
 	private:
-
+	inline static char server_tag[9]="Server: ",keep_alive_tag[23]="Connection: Keep-Alive",content_length_tag[17]="Content-Length: ";
+	inline static char date_tag[7]="Date: ",content_length[15]="content-length",RES_Ser[7]="server",RES_Dat[5]="date";
+	inline static char seperator[3]=": ",crlf[3]="\r\n";
 	void prepare_buffers() {
 	  //auto self = this->shared_from_this();
 	  res.complete_request_handler_=nullptr;
@@ -379,9 +380,7 @@ namespace crow {
 		  {503, "HTTP/1.1 503 Service Unavailable\r\n"},
 	  };
 
-	  static std::string seperator=": ";
-	  static std::string crlf="\r\n";
-
+	  //if (res.body.empty()) {}//res.body
 	  buffers_.clear();
 	  buffers_.reserve(4*(res.headers.size()+5)+3);
 
@@ -392,44 +391,40 @@ namespace crow {
 		buffers_.emplace_back(status.data(),status.size());
 	  }
 
-	  if (res.code>=400&&res.body.empty())
+	  if (res.code>399&&res.body.empty())
 		res.body=statusCodes[res.code].substr(9);
 
 	  for (auto& kv:res.headers) {
 		buffers_.emplace_back(kv.first.data(),kv.first.size());
-		buffers_.emplace_back(seperator.data(),seperator.size());
+		buffers_.emplace_back(seperator,2);
 		buffers_.emplace_back(kv.second.data(),kv.second.size());
-		buffers_.emplace_back(crlf.data(),crlf.size());
+		buffers_.emplace_back(crlf,2);
 
 	  }
 
-	  if (!res.manual_length_header&&!res.headers.count("content-length")) {
+	  if (!res.manual_length_header&&!res.headers.count(content_length)) {
 		content_length_=std::to_string(res.body.size());
-		static std::string content_length_tag="Content-Length: ";
-		buffers_.emplace_back(content_length_tag.data(),content_length_tag.size());
+		buffers_.emplace_back(content_length_tag,16);
 		buffers_.emplace_back(content_length_.data(),content_length_.size());
-		buffers_.emplace_back(crlf.data(),crlf.size());
+		buffers_.emplace_back(crlf,2);
 	  }
-	  if (!res.headers.count("server")) {
-		static std::string server_tag="Server: ";
-		buffers_.emplace_back(server_tag.data(),server_tag.size());
+	  if (!res.headers.count(RES_Ser)) {
+		buffers_.emplace_back(server_tag,8);
 		buffers_.emplace_back(server_name_.data(),server_name_.size());
-		buffers_.emplace_back(crlf.data(),crlf.size());
+		buffers_.emplace_back(crlf,2);
 	  }
-	  if (!res.headers.count("date")) {
-		static std::string date_tag="Date: ";
+	  if (!res.headers.count(RES_Dat)) {
 		date_str_=get_cached_date_str();
-		buffers_.emplace_back(date_tag.data(),date_tag.size());
+		buffers_.emplace_back(date_tag,6);
 		buffers_.emplace_back(date_str_.data(),date_str_.size());
-		buffers_.emplace_back(crlf.data(),crlf.size());
+		buffers_.emplace_back(crlf,2);
 	  }
 	  if (add_keep_alive_) {
-		static std::string keep_alive_tag="Connection: Keep-Alive";
-		buffers_.emplace_back(keep_alive_tag.data(),keep_alive_tag.size());
-		buffers_.emplace_back(crlf.data(),crlf.size());
+		buffers_.emplace_back(keep_alive_tag,22);
+		buffers_.emplace_back(crlf,2);
 	  }
 
-	  buffers_.emplace_back(crlf.data(),crlf.size());
+	  buffers_.emplace_back(crlf,2);
 
 	}
 

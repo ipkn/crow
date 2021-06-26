@@ -4,8 +4,8 @@
 #include <sstream>
 using namespace crow;
 int main() {
-  App<Cors> app;
-  app.set_directory("./static");
+  App<Cors> app;//Global Middleware
+  app.set_directory("./static").set_types({"html","ico","css","js","json","svg","png","jpg","gif","txt"});//default config
   //Server rendering
   CROW_ROUTE(app,"/")([] {
 	char name[64];gethostname(name,64);

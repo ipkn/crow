@@ -6,14 +6,14 @@ namespace crow {
   struct Cors {
 	struct Ctx {};
 	void before_handle(Req& req,Res& res,Ctx&) {
-	  res.set_header("Access-Control-Allow-Origin","*");//Cross domain request
+	  res.set_header("Access-Control-Allow-Credentials","true");
 	  res.set_header("Access-Control-Allow-Headers","content-type,cache-control,x-requested-with,authorization");
 	  if (req.method==HTTPMethod::OPTIONS) { res.code=204;res.end(); }
 	}
 	void after_handle(Req&,Res& res,Ctx&) {
-	  res.set_header("Access-Control-Allow-Credentials","true");
+	  res.set_header("Access-Control-Allow-Origin","*");//Cross domain request
 	  if (res.is_file) {
-		res.set_header("cache-control","max-age=314,immutable");//Static resource cache seconds
+		res.set_header("cache-control","max-age=300,immutable");//Static resource cache seconds(= 5 minute)
 		res.set_header("X-Content-Type-Options","nosniff");
 	  }
 	}

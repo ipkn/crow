@@ -1,5 +1,4 @@
 #pragma once
-
 #include <chrono>
 #include <string>
 #include <functional>
@@ -107,10 +106,23 @@ namespace crow {
       bindaddr_=bindaddr;
       return *this;
     }
-    //Set static directory 
+    //Set static directory
     self_t& set_directory(std::string path) {
       if (path.back()!='\\'&&path.back()!='/') path+='/';
       detail::directory_=path;
+      return *this;
+    }
+    self_t& set_home_page(std::string path) {
+      home_page_=path;
+      return *this;
+    }
+    //Set content types 
+    self_t& set_types(const std::vector<std::string> &line) {
+      for (auto iter=line.cbegin(); iter!=line.cend(); iter++) {
+        std::string types="";types=content_any_types[*iter];
+        if (types!="") content_types.emplace(*iter,types);
+      }
+      is_not_set_types=false;
       return *this;
     }
     ///Run the server on multiple threads using all available threads
@@ -174,6 +186,10 @@ namespace crow {
 
     ///Run the server
     void run() {
+      if (is_not_set_types) {
+        this->set_types({"html","ico","css","js","json","svg","png","jpg","gif","txt"});//default types
+        is_not_set_types=false;
+      }
 #ifndef CROW_DISABLE_STATIC_DIR
       route<crow::spell::get_parameter_tag(CROW_STATIC_ENDPOINT)>(CROW_STATIC_ENDPOINT)
         ([](crow::Res& res,std::string file_path_partial) {
@@ -315,8 +331,9 @@ namespace crow {
     uint16_t concurrency_=1;
     std::string server_name_="Crow/0.5";
     std::string bindaddr_="0.0.0.0";
+    std::string home_page_="index.html";
     Router router_;
-
+    bool is_not_set_types=true;
 #ifdef CROW_ENABLE_COMPRESSION
     compression::algorithm comp_algorithm_;
 #endif
