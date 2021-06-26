@@ -283,7 +283,6 @@ namespace crow {
 		complete_request();
 	  }
 	}
-
 	/// Call the after handle middleware and send the write the Res to the connection.
 	void complete_request() {
 	  CROW_LOG_INFO<<"Response: "<<this<<' '<<req_.raw_url<<' '<<res.code<<' '<<close_connection_;
@@ -342,8 +341,8 @@ namespace crow {
 	  res.complete_request_handler_=nullptr;
 
 	  if (!adaptor_.is_open()) {
-		CROW_LOG_DEBUG << this << " delete (socket is closed) " << is_reading << ' ' << is_writing;
-		delete this;
+		//CROW_LOG_DEBUG << this << " delete (socket is closed) " << is_reading << ' ' << is_writing;
+		//delete this;
 		return;
 	  }
 

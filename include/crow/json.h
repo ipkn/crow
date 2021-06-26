@@ -1,5 +1,5 @@
 #pragma once
-#define CROW_JSON_NO_ERROR_CHECK
+//#define CROW_JSON_NO_ERROR_CHECK
 #include <string>
 #include <unordered_map>
 #include <iostream>

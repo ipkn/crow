@@ -9,8 +9,9 @@ class ExampleLogHandler : public ILogHandler {
   }
 };
 int main() {
-  App<ExampleMiddleware,Cors> app;
-  app.set_directory("./static").get_middleware<ExampleMiddleware>().setMessage("hello");
+  App<ExampleMiddleware,Cors> app;//Global Middleware,and default config
+  app.set_directory("./static").set_types({"html","ico","css","js","json","svg","png","jpg","gif","txt"})
+	.get_middleware<ExampleMiddleware>().setMessage("hello");
   //Server rendering
   CROW_ROUTE(app,"/")([] {
 	char name[256];gethostname(name,256);
