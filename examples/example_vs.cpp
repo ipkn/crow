@@ -1,6 +1,7 @@
 #include "crow.h"
 #include "mustache.h"
 #include "middleware.h"
+#include "module.h"
 #include <sstream>
 using namespace crow;
 int main() {
@@ -22,9 +23,21 @@ int main() {
   app.route_dynamic("/path/")([]() {
 	return "Trailing slash test case..";
   });
+  app.route_dynamic("/list")([]() {
+	List list=json::parse(R"({"user":{"is":false,"age":25,"weight":50.6,"name":"www","state":null},"userList":[{"is":true,"weight":52.0,"age":23,"state":true,"name":"wwzzgg"},
+	{"is":true,"weight":51.0,"name":"best","age":26}]})").get<List>();
+	json json_output=json(list);
+	return json_output.dump(2);
+  });
   app.route_dynamic("/json")([] {
-	json::value x;
+	json x;
 	x["message"]="Hello, World!";
+	x["double"]=3.1415926;
+	x["int"]=2352352;
+	x["true"]=true;
+	x["false"]=false;
+	x["null"]=nullptr;
+	x["bignumber"]=2353464586543265455;
 	return x;
   });
   app.route_dynamic("/hello/<int>")([](int count) {
@@ -45,11 +58,10 @@ int main() {
 	  //return response(500);
   //});
   // more json example
-  app.route_dynamic("/add_json").methods(HTTPMethod::POST)([](const Req& req) {
+  app.route_dynamic("/parse_json").methods(HTTPMethod::POST)([](const Req& req) {
 	auto x=json::parse(req.body);
 	if (!x) return Res(400);
-	auto sum=x["a"].i()+x["b"].i();
-	std::ostringstream os; os<<sum;
+	std::ostringstream os; os<<x;
 	return Res{os.str()};
   });
   app.route_dynamic("/params")([](const Req& req) {

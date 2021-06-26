@@ -1,4 +1,5 @@
 #include "crow.h"
+#include "mustache.h"
 #include <unordered_set>
 #include <mutex>
 int main() {

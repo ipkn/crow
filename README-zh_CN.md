@@ -24,22 +24,31 @@ int main(){
 - 类型安全处理程序（参见示例），非常快
  ![基准结果](./Benchmark.png)
 - 更多关于[crow benchmark]的数据(https://github.com/ipkn/crow-benchmark)
-- 快速内置JSON解析器（crow:：JSON）
-- 也可以使用[json11](https://github.com/dropbox/json11)或[rapidjson](https://github.com/miloyip/rapidjson)为了更好的速度或可读性
-- [Mustache](http://mustache.github.io/)基于模板库（crow:：mustache）
+- 第三方JSON解析器nlohmann(crow::json)用于静态反射，输出json。
+- 快速内置JSON解析器（crow:：Cjson）但用于[Mustache](http://mustache.github.io/)基于模板库（crow:：mustache）
 - 仅页眉的每一项功能 [`crow_all.h`](https://github.com/ipkn/crow/releases/download/v0.1/crow_all.h) with every features ([Download from here](https://github.com/ipkn/crow/releases/download/v0.1/crow_all.h))
 - 中间件支持，Websocket支持
 - 支持静态资源,并且默认在'static/'目录
+- 模块化开发，效率非常高，代码极简
 ## 仍在开发中
 -~~内置ORM~~
 -检查[sqlpp11](https://github.com/rbock/sqlpp11)如果你想要的话。
 
 ## 示例
-
+#### 静态反射
+```c++
+  app.route_dynamic("/list")([]() {
+	List list=json::parse(R"({"user":{"is":false,"age":25,"weight":50.6,"name":"www","state":null},
+            "userList":[{"is":true,"weight":52.0,"age":23,"state":true,"name":"wwzzgg"},
+	    {"is":true,"weight":51.0,"name":"best","age":26}]})").get<List>();
+	json json_output=json(list);
+	return json_output.dump(2);
+  });
+```
 #### 服务端渲染
 ```c++
   CROW_ROUTE(app,"/")([] {
-	char name[256];gethostname(name,256);
+	char name[64];gethostname(name,64);
 	mustache::Ctx x;x["servername"]=name;
 	auto page=mustache::load("index.html");
 	return page.render(x);
@@ -49,8 +58,14 @@ int main(){
 #### JSON响应
 ```c++
 CROW_ROUTE(app, "/json")([]{
-    crow::json::wvalue x;
-    x["message"] = "Hello, World!";
+    crow::json x;
+	x["message"]="Hello, World!";
+	x["double"]=3.1415926;
+	x["int"]=2352352;
+	x["true"]=true;
+	x["false"]=false;
+	x["null"]=nullptr;
+	x["bignumber"]=2353464586543265455;
     return x;
 });
 ```
@@ -90,7 +105,7 @@ CROW_ROUTE(app, "/add_json").methods("POST"_method)
 如果您只想使用crow，请复制amalgamate/crow_all.h 并包含它。
 
 ### 要求
-- C++ 编译器，支持C++ 11（用G++测试>=4.8）
+- C++ 编译器，支持C++ 17（用G++测试>7.1）
 - 任何版本的boost库
 - 构建示例的CMake
 - 建议与tcmalloc/jemalloc链接以提高速度。
@@ -134,9 +149,10 @@ set(Boost_USE_STATIC_LIBS ON) #Support anything else
 Crow使用以下库。  
 http解析器 https://github.com/nodejs/http-parser
 
-http_parser.c 基于NGINX版权所有伊戈尔·西索耶夫的 src/http/ngx_http_parse.c 
+http_parser.c 基于NGINX版权所有Igor Sysoev的 src/http/ngx_http_parse.c 
+
 其他更改的许可条款与NGINX和版权所有Joyent，Inc.和其他节点贡献者。版权所有。
-兹免费准许任何人取得副本
+在这里，任何获得副本的人都可以免费获得许可
 本软件及相关文档文件（“软件”），以
 不受限制地经营软件，包括但不限于
 使用、复制、修改、合并、发布、分发、再许可和/或
@@ -154,7 +170,8 @@ http_parser.c 基于NGINX版权所有伊戈尔·西索耶夫的 src/http/ngx_htt
 
 qs_parse https://github.com/bartgrantham/qs_parse  
 版权所有（c）2010 Bart Grantham
-兹免费准许任何人取得副本
+
+在这里，任何获得副本的人都可以免费获得许可
 本软件及相关文档文件（“软件”），以处理
 在软件中不受限制，包括但不限于权利
 使用、复制、修改、合并、发布、分发、再许可和/或销售
@@ -168,4 +185,23 @@ TinySHA1 https://github.com/mohaps/TinySHA1
 TinySHA1-SHA1算法的一个只包含报头的实现。基于boost::uuid::details中的实现
 Cmohaps@gmail.com
 特此授予出于任何目的使用、复制、修改和分发本软件的许可，无论是否收费，前提是上述版权声明和本许可声明出现在所有副本中。
-本软件按“原样”提供，作者不承担与本软件有关的所有保证，包括对适销性和适用性的所有暗示保证。一
+本软件按“原样”提供，作者不承担与本软件有关的所有保证，包括对适销性和适用性的所有暗示保证。
+
+json https://github.com/nlohmann/json
+
+版权所有（c）2013-2021 Niels Lohmann
+在这里，任何获得副本的人都可以免费获得许可
+本软件及相关文档文件（“软件”），以处理
+在软件中不受限制，包括但不限于权利
+使用、复制、修改、合并、发布、分发、再许可和/或销售
+软件的副本，并允许使用软件的人员
+按照以下条件提供：
+上述版权声明和本许可声明应包含在所有
+软件的副本或大部分。
+本软件按“原样”提供，不提供任何形式的明示或明示担保
+默示，包括但不限于适销性保证，
+适用于特定目的和非侵犯性。在任何情况下
+作者或版权持有人对任何索赔、损害或其他
+无论是在合同诉讼、侵权诉讼或其他诉讼中，
+不属于或与本软件有关，或与本软件的使用或其他交易有关
+软件。

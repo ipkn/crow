@@ -19,7 +19,7 @@
 #endif
 namespace crow {
   namespace mustache { class template_t; }
-  namespace json {
+  namespace Cjson {
 	inline void escape(const std::string& str,std::string& ret) {
 	  ret.reserve(ret.size()+str.size()+str.size()/4);
 	  for (char c:str) {
@@ -54,37 +54,35 @@ namespace crow {
 	  return ret;
 	}
 
-	enum class type : char {
-	  Null,
+	enum class value_t : char {
+	  null,
 	  False,
 	  True,
-	  Number,
-	  String,
-	  List,
-	  Object,
+	  number_integer,
+	  number_unsigned,
+	  number_float,
+	  string,
+	  array,
+	  object,
 	};
 
-	inline const char* get_type_str(type t) {
+	inline const char* get_type_str(value_t t) {
 	  switch (t) {
-		case type::Number: return "Number";
-		case type::False: return "False";
-		case type::True: return "True";
-		case type::List: return "List";
-		case type::String: return "String";
-		case type::Object: return "Object";
+		case value_t::number_integer: return "Number";
+		case value_t::number_float: return "Number";
+		case value_t::number_unsigned: return "Number";
+		case value_t::False: return "False";
+		case value_t::True: return "True";
+		case value_t::array: return "List";
+		case value_t::string: return "String";
+		case value_t::object: return "Object";
+		case value_t::null: return "Null";
 		default: return "Unknown";
 	  }
 	}
 
-	enum class num_type : char {
-	  Signed_integer,
-	  Unsigned_integer,
-	  Floating_point,
-	  Null
-	};
-
 	class rvalue;
-	rvalue parse(const char* data,size_t size);
+	rvalue load(const char* data,size_t size);
 
 	namespace detail {
 	  struct r_string
@@ -149,7 +147,7 @@ namespace crow {
 		  e_=s_+length;
 		  owned_=1;
 		}
-		friend rvalue crow::json::parse(const char* data,size_t size);
+		friend rvalue crow::Cjson::load(const char* data,size_t size);
 	  };
 
 	  inline bool operator < (const r_string& l,const r_string& r) {
@@ -178,10 +176,10 @@ namespace crow {
 	  static const int error_bit=4;
 	  public:
 	  rvalue() noexcept: option_{error_bit} {}
-	  rvalue(type t) noexcept
+	  rvalue(value_t t) noexcept
 		: lsize_{},lremain_{},t_{t}
 	  {}
-	  rvalue(type t,char* s,char* e)  noexcept
+	  rvalue(value_t t,char* s,char* e)  noexcept
 		: start_{s},
 		end_{e},
 		t_{t}
@@ -194,7 +192,6 @@ namespace crow {
 		end_(r.end_),
 		key_(r.key_),
 		t_(r.t_),
-		nt_(r.nt_),
 		option_(r.option_) {
 		copy_l(r);
 	  }
@@ -208,7 +205,6 @@ namespace crow {
 		end_=r.end_;
 		key_=r.key_;
 		t_=r.t_;
-		nt_=r.nt_;
 		option_=r.option_;
 		copy_l(r);
 		return *this;
@@ -221,7 +217,6 @@ namespace crow {
 		lsize_=r.lsize_;
 		lremain_=r.lremain_;
 		t_=r.t_;
-		nt_=r.nt_;
 		option_=r.option_;
 		return *this;
 	  }
@@ -242,7 +237,7 @@ namespace crow {
 		return (int)i();
 	  }
 
-	  type t() const {
+	  value_t type() const {
 #ifndef CROW_JSON_NO_ERROR_CHECK
 		if (option_&error_bit) {
 		  throw std::runtime_error("invalid json object");
@@ -251,24 +246,15 @@ namespace crow {
 		return t_;
 	  }
 
-	  num_type nt() const {
-#ifndef CROW_JSON_NO_ERROR_CHECK
-		if (option_&error_bit) {
-		  throw std::runtime_error("invalid json object");
-		}
-#endif
-		return nt_;
-	  }
-
 	  int64_t i() const {
 #ifndef CROW_JSON_NO_ERROR_CHECK
-		switch (t()) {
-		  case type::Number:
-		  case type::String:
+		switch (type()) {
+		  case value_t::number_integer:
+		  case value_t::string:
 		  return boost::lexical_cast<int64_t>(start_,end_-start_);
 		  default:
 		  const std::string msg="expected number, got: "
-			+std::string(get_type_str(t()));
+			+std::string(get_type_str(type()));
 		  throw std::runtime_error(msg);
 		}
 #endif
@@ -277,12 +263,12 @@ namespace crow {
 
 	  uint64_t u() const {
 #ifndef CROW_JSON_NO_ERROR_CHECK
-		switch (t()) {
-		  case type::Number:
-		  case type::String:
+		switch (type()) {
+		  case value_t::number_integer:
+		  case value_t::string:
 		  return boost::lexical_cast<uint64_t>(start_,end_-start_);
 		  default:
-		  throw std::runtime_error(std::string("expected number, got: ")+get_type_str(t()));
+		  throw std::runtime_error(std::string("expected number, got: ")+get_type_str(type()));
 		}
 #endif
 		return boost::lexical_cast<uint64_t>(start_,end_-start_);
@@ -290,7 +276,7 @@ namespace crow {
 
 	  double d() const {
 #ifndef CROW_JSON_NO_ERROR_CHECK
-		if (t()!=type::Number)
+		if (type()!=value_t::number_integer)
 		  throw std::runtime_error("value is not number");
 #endif
 		return boost::lexical_cast<double>(start_,end_-start_);
@@ -298,10 +284,10 @@ namespace crow {
 
 	  bool b() const {
 #ifndef CROW_JSON_NO_ERROR_CHECK
-		if (t()!=type::True&&t()!=type::False)
-		  throw std::runtime_error("value is not boolean");
+		if (type()!=value_t::True&&type()!=value_t::False)
+		  throw std::runtime_error("value is not False");
 #endif
-		return t()==type::True;
+		return type()==value_t::True;
 	  }
 
 	  void unescape() const {
@@ -359,7 +345,7 @@ namespace crow {
 
 	  detail::r_string s() const {
 #ifndef CROW_JSON_NO_ERROR_CHECK
-		if (t()!=type::String)
+		if (type()!=value_t::string)
 		  throw std::runtime_error("value is not string");
 #endif
 		unescape();
@@ -396,14 +382,14 @@ namespace crow {
 
 	  rvalue* begin() const {
 #ifndef CROW_JSON_NO_ERROR_CHECK
-		if (t()!=type::Object&&t()!=type::List)
+		if (type()!=value_t::object&&type()!=value_t::array)
 		  throw std::runtime_error("value is not a container");
 #endif
 		return l_.get();
 	  }
 	  rvalue* end() const {
 #ifndef CROW_JSON_NO_ERROR_CHECK
-		if (t()!=type::Object&&t()!=type::List)
+		if (type()!=value_t::object&&type()!=value_t::array)
 		  throw std::runtime_error("value is not a container");
 #endif
 		return l_.get()+lsize_;
@@ -414,10 +400,10 @@ namespace crow {
 	  }
 
 	  size_t size() const {
-		if (t()==type::String)
+		if (type()==value_t::string)
 		  return s().size();
 #ifndef CROW_JSON_NO_ERROR_CHECK
-		if (t()!=type::Object&&t()!=type::List)
+		if (type()!=value_t::object&&type()!=value_t::array)
 		  throw std::runtime_error("value is not a container");
 #endif
 		return lsize_;
@@ -425,7 +411,7 @@ namespace crow {
 
 	  const rvalue& operator[](int index) const {
 #ifndef CROW_JSON_NO_ERROR_CHECK
-		if (t()!=type::List)
+		if (type()!=value_t::array)
 		  throw std::runtime_error("value is not a list");
 		if (index>=(int)lsize_||index<0)
 		  throw std::runtime_error("list out of bound");
@@ -435,7 +421,7 @@ namespace crow {
 
 	  const rvalue& operator[](size_t index) const {
 #ifndef CROW_JSON_NO_ERROR_CHECK
-		if (t()!=type::List)
+		if (type()!=value_t::array)
 		  throw std::runtime_error("value is not a list");
 		if (index>=lsize_)
 		  throw std::runtime_error("list out of bound");
@@ -449,7 +435,7 @@ namespace crow {
 
 	  const rvalue& operator[](const std::string& str) const {
 #ifndef CROW_JSON_NO_ERROR_CHECK
-		if (t()!=type::Object)
+		if (type()!=value_t::object)
 		  throw std::runtime_error("value is not an object");
 #endif
 		struct Pred {
@@ -493,7 +479,7 @@ namespace crow {
 		option_|=cached_bit;
 	  }
 	  void copy_l(const rvalue& r) {
-		if (r.t()!=type::Object&&r.t()!=type::List)
+		if (r.type()!=value_t::object&&r.type()!=value_t::array)
 		  return;
 		lsize_=r.lsize_;
 		lremain_=0;
@@ -521,8 +507,8 @@ namespace crow {
 
 	  // determines num_type from the string
 	  void determine_num_type() {
-		if (t_!=type::Number) {
-		  nt_=num_type::Null;
+		if (t_!=value_t::number_integer) {
+		  t_=value_t::null;
 		  return;
 		}
 
@@ -532,11 +518,11 @@ namespace crow {
 		  ||std::memchr(start_,'E',len)!=nullptr;
 		const bool has_dec_sep=std::memchr(start_,'.',len)!=nullptr;
 		if (has_dec_sep||has_e)
-		  nt_=num_type::Floating_point;
+		  t_=value_t::number_float;
 		else if (has_minus)
-		  nt_=num_type::Signed_integer;
+		  t_=value_t::number_integer;
 		else
-		  nt_=num_type::Unsigned_integer;
+		  t_=value_t::number_unsigned;
 	  }
 
 	  mutable char* start_;
@@ -545,30 +531,22 @@ namespace crow {
 	  std::unique_ptr<rvalue[]> l_;
 	  uint32_t lsize_;
 	  uint16_t lremain_;
-	  type t_;
-	  num_type nt_{num_type::Null};
+	  value_t t_;
 	  mutable uint8_t option_{0};
 
 	  friend rvalue load_nocopy_internal(char* data,size_t size);
-	  friend rvalue parse(const char* data,size_t size);
+	  friend rvalue load(const char* data,size_t size);
 	  friend std::ostream& operator <<(std::ostream& os,const rvalue& r) {
 		switch (r.t_) {
 
-		  case type::Null: os<<"null"; break;
-		  case type::False: os<<"false"; break;
-		  case type::True: os<<"true"; break;
-		  case type::Number:
-		  {
-			switch (r.nt()) {
-			  case num_type::Floating_point: os<<r.d(); break;
-			  case num_type::Signed_integer: os<<r.i(); break;
-			  case num_type::Unsigned_integer: os<<r.u(); break;
-			  case num_type::Null: throw std::runtime_error("Number with num_type Null");
-			}
-		  }
-		  break;
-		  case type::String: os<<'"'<<r.s()<<'"'; break;
-		  case type::List:
+		  case value_t::null: os<<"null"; break;
+		  case value_t::False: os<<"false"; break;
+		  case value_t::True: os<<"true"; break;
+		  case value_t::number_float:os<<r.d(); break;
+		  case value_t::number_unsigned:os<<r.u(); break;
+		  case value_t::number_integer:os<<r.i(); break;
+		  case value_t::string: os<<'"'<<r.s()<<'"'; break;
+		  case value_t::array:
 		  {
 			os<<'[';
 			bool first=true;
@@ -581,7 +559,7 @@ namespace crow {
 			os<<']';
 		  }
 		  break;
-		  case type::Object:
+		  case value_t::object:
 		  {
 			os<<'{';
 			bool first=true;
@@ -661,7 +639,7 @@ namespace crow {
 			  *data=0;
 			  *(start-1)=has_escaping;
 			  data++;
-			  return {type::String, start, data-1};
+			  return {value_t::string, start, data-1};
 			} else if (*data=='\\') {
 			  has_escaping=1;
 			  data++;
@@ -702,7 +680,7 @@ namespace crow {
 		}
 
 		rvalue decode_list() {
-		  rvalue ret(type::List);
+		  rvalue ret(value_t::array);
 		  if (crow_json_unlikely(!consume('['))) {
 			ret.set_error();
 			return ret;
@@ -838,7 +816,7 @@ namespace crow {
 								   state==NumberParsingState::Digits||
 								   state==NumberParsingState::DigitsAfterPoints||
 								   state==NumberParsingState::DigitsAfterE))
-				return {type::Number, start, data};
+				return {value_t::number_integer, start, data};
 			  else
 				return {};
 			}
@@ -862,7 +840,7 @@ namespace crow {
 				data[2]=='u'&&
 				data[3]=='e') {
 			  data+=4;
-			  return {type::True};
+			  return {value_t::True};
 			} else
 			  return {};
 			case 'f':
@@ -872,7 +850,7 @@ namespace crow {
 				data[3]=='s'&&
 				data[4]=='e') {
 			  data+=5;
-			  return {type::False};
+			  return {value_t::False};
 			} else
 			  return {};
 			case 'n':
@@ -881,7 +859,7 @@ namespace crow {
 				data[2]=='l'&&
 				data[3]=='l') {
 			  data+=4;
-			  return {type::Null};
+			  return {value_t::null};
 			} else
 			  return {};
 			//case '1': case '2': case '3': 
@@ -895,7 +873,7 @@ namespace crow {
 		}
 
 		rvalue decode_object() {
-		  rvalue ret(type::Object);
+		  rvalue ret(value_t::object);
 		  if (crow_json_unlikely(!consume('{'))) {
 			ret.set_error();
 			return ret;
@@ -947,7 +925,7 @@ namespace crow {
 		  return ret;
 		}
 
-		rvalue parse() {
+		rvalue load() {
 		  ws_skip();
 		  auto ret=decode_value(); // or decode object?
 		  ws_skip();
@@ -958,9 +936,9 @@ namespace crow {
 
 		char* data;
 	  };
-	  return Parser(data,size).parse();
+	  return Parser(data,size).load();
 	}
-	inline rvalue parse(const char* data,size_t size) {
+	inline rvalue load(const char* data,size_t size) {
 	  char* s=new char[size+1];
 	  memcpy(s,data,size);
 	  s[size]=0;
@@ -972,21 +950,20 @@ namespace crow {
 	  return ret;
 	}
 
-	inline rvalue parse(const char* data) {
-	  return parse(data,strlen(data));
+	inline rvalue load(const char* data) {
+	  return load(data,strlen(data));
 	}
 
-	inline rvalue parse(const std::string& str) {
-	  return parse(str.data(),str.size());
+	inline rvalue load(const std::string& str) {
+	  return load(str.data(),str.size());
 	}
 
 	class value {
 	  friend class crow::mustache::template_t;
 	  public:
-	  type t() const { return t_; }
+	  value_t type() const { return t_; }
 	  private:
-	  type t_{type::Null};
-	  num_type nt{num_type::Null};
+	  value_t t_{value_t::null};
 	  union {
 		double d;
 		int64_t si;
@@ -1000,31 +977,26 @@ namespace crow {
 	  value() {}
 
 	  value(const rvalue& r) {
-		t_=r.t();
-		switch (r.t()) {
-		  case type::Null:
-		  case type::False:
-		  case type::True:
+		t_=r.type();
+		switch (r.type()) {
+		  case value_t::null:
+		  case value_t::False:
+		  case value_t::True:
 		  return;
-		  case type::Number:
-		  nt=r.nt();
-		  if (nt==num_type::Floating_point)
-			num.d=r.d();
-		  else if (nt==num_type::Signed_integer)
-			num.si=r.i();
-		  else
-			num.ui=r.u();
-		  return;
-		  case type::String:
+		  case value_t::number_integer:num.si=r.i();
+		  case value_t::number_unsigned:num.si=r.u();
+		  case value_t::number_float:num.si=r.d();
+			return;
+		  case value_t::string:
 		  s=r.s();
 		  return;
-		  case type::List:
+		  case value_t::array:
 		  l=std::unique_ptr<std::vector<value>>(new std::vector<value>{});
 		  l->reserve(r.size());
 		  for (auto it=r.begin(); it!=r.end(); ++it)
 			l->emplace_back(*it);
 		  return;
-		  case type::Object:
+		  case value_t::object:
 		  o=std::unique_ptr<
 			std::unordered_map<std::string,value>
 		  >(
@@ -1053,7 +1025,7 @@ namespace crow {
 	  }
 
 	  void reset() {
-		t_=type::Null;
+		t_=value_t::null;
 		l.reset();
 		o.reset();
 	  }
@@ -1065,102 +1037,93 @@ namespace crow {
 	  value& operator = (bool value) {
 		reset();
 		if (value)
-		  t_=type::True;
+		  t_=value_t::True;
 		else
-		  t_=type::False;
+		  t_=value_t::False;
 		return *this;
 	  }
 
 	  value& operator = (double value) {
 		reset();
-		t_=type::Number;
+		t_=value_t::number_float;
 		num.d=value;
-		nt=num_type::Floating_point;
 		return *this;
 	  }
 
 	  value& operator = (unsigned short value) {
 		reset();
-		t_=type::Number;
+		t_=value_t::number_unsigned;
 		num.ui=value;
-		nt=num_type::Unsigned_integer;
 		return *this;
 	  }
 
 	  value& operator = (short value) {
 		reset();
-		t_=type::Number;
+		t_=value_t::number_integer;
 		num.si=value;
-		nt=num_type::Signed_integer;
 		return *this;
 	  }
 
 	  value& operator = (long long value) {
 		reset();
-		t_=type::Number;
+		t_=value_t::number_integer;
 		num.si=value;
-		nt=num_type::Signed_integer;
 		return *this;
 	  }
 
 	  value& operator = (long value) {
 		reset();
-		t_=type::Number;
+		t_=value_t::number_integer;
 		num.si=value;
-		nt=num_type::Signed_integer;
 		return *this;
 	  }
 
 	  value& operator = (int value) {
 		reset();
-		t_=type::Number;
+		t_=value_t::number_integer;
 		num.si=value;
-		nt=num_type::Signed_integer;
 		return *this;
 	  }
 
 	  value& operator = (unsigned long long value) {
 		reset();
-		t_=type::Number;
+		t_=value_t::number_unsigned;
 		num.ui=value;
-		nt=num_type::Unsigned_integer;
 		return *this;
 	  }
 
 	  value& operator = (unsigned long value) {
 		reset();
-		t_=type::Number;
+		t_=value_t::number_unsigned;
 		num.ui=value;
-		nt=num_type::Unsigned_integer;
 		return *this;
 	  }
 
 	  value& operator = (unsigned int value) {
 		reset();
-		t_=type::Number;
+		t_=value_t::number_unsigned;
 		num.ui=value;
-		nt=num_type::Unsigned_integer;
 		return *this;
 	  }
 
 	  value& operator=(const char* str) {
 		reset();
-		t_=type::String;
+		t_=value_t::string;
 		s=str;
 		return *this;
 	  }
 
 	  value& operator=(const std::string& str) {
 		reset();
-		t_=type::String;
+		t_=value_t::string;
 		s=str;
 		return *this;
 	  }
 
 	  value& operator=(std::vector<value>&& v) {
-		if (t_!=type::List)
+		if (t_!=value_t::array)
 		  reset();
-		t_=type::List;
+		t_=value_t::array;
 		if (!l)
 		  l=std::unique_ptr<std::vector<value>>(new std::vector<value>{});
 		l->clear();
@@ -1174,9 +1137,9 @@ namespace crow {
 
 	  template <typename T>
 	  value& operator=(const std::vector<T>& v) {
-		if (t_!=type::List)
+		if (t_!=value_t::array)
 		  reset();
-		t_=type::List;
+		t_=value_t::array;
 		if (!l)
 		  l=std::unique_ptr<std::vector<value>>(new std::vector<value>{});
 		l->clear();
@@ -1189,9 +1152,9 @@ namespace crow {
 	  }
 
 	  value& operator[](unsigned index) {
-		if (t_!=type::List)
+		if (t_!=value_t::array)
 		  reset();
-		t_=type::List;
+		t_=value_t::array;
 		if (!l)
 		  l=std::unique_ptr<std::vector<value>>(new std::vector<value>{});
 		if (l->size()<index+1)
@@ -1200,7 +1163,7 @@ namespace crow {
 	  }
 
 	  int count(const std::string& str) {
-		if (t_!=type::Object)
+		if (t_!=value_t::object)
 		  return 0;
 		if (!o)
 		  return 0;
@@ -1208,9 +1171,9 @@ namespace crow {
 	  }
 
 	  value& operator[](const std::string& str) {
-		if (t_!=type::Object)
+		if (t_!=value_t::object)
 		  reset();
-		t_=type::Object;
+		t_=value_t::object;
 		if (!o)
 		  o=std::unique_ptr<
 		  std::unordered_map<std::string,value>
@@ -1219,7 +1182,7 @@ namespace crow {
 		return (*o)[str];
 	  }
 	  std::vector<std::string> keys() const {
-		if (t_!=type::Object)
+		if (t_!=value_t::object)
 		  return {};
 		std::vector<std::string> result;
 		for (auto& kv:*o) {
@@ -1230,12 +1193,12 @@ namespace crow {
 
 	  size_t estimate_length() const {
 		switch (t_) {
-		  case type::Null: return 4;
-		  case type::False: return 5;
-		  case type::True: return 4;
-		  case type::Number: return 30;
-		  case type::String: return 2+s.size()+s.size()/2;
-		  case type::List:
+		  case value_t::null: return 4;
+		  case value_t::False: return 5;
+		  case value_t::True: return 4;
+		  case value_t::number_integer: return 30;
+		  case value_t::string: return 2+s.size()+s.size()/2;
+		  case value_t::array:
 		  {
 			size_t sum{};
 			if (l) {
@@ -1246,7 +1209,7 @@ namespace crow {
 			}
 			return sum+2;
 		  }
-		  case type::Object:
+		  case value_t::object:
 		  {
 			size_t sum{};
 			if (o) {
@@ -1263,7 +1226,7 @@ namespace crow {
 	  }
 	  //asciphx
 	  std::string dump() const {
-		if (t_!=type::Object)return {};
+		if (t_!=value_t::object)return {};
 		std::string ret;
 		ret.reserve(this->estimate_length());
 		dump_internal(*this,ret);
@@ -1279,30 +1242,24 @@ namespace crow {
 	}
 	inline void dump_internal(const value& v,std::string& out) {
 	  switch (v.t_) {
-		case type::Null: out+="null"; break;
-		case type::False: out+="false"; break;
-		case type::True: out+="true"; break;
-		case type::Number:
-		{
-		  if (v.nt==num_type::Floating_point) {
+		case value_t::null: out+="null"; break;
+		case value_t::False: out+="false"; break;
+		case value_t::True: out+="true"; break;
+		case value_t::number_float:
 #ifdef _MSC_VER
 #define MSC_COMPATIBLE_SPRINTF(BUFFER_PTR, FORMAT_PTR, VALUE) sprintf_s((BUFFER_PTR), 128, (FORMAT_PTR), (VALUE))
 #else
 #define MSC_COMPATIBLE_SPRINTF(BUFFER_PTR, FORMAT_PTR, VALUE) sprintf((BUFFER_PTR), (FORMAT_PTR), (VALUE))
 #endif
-			char outbuf[128];
-			MSC_COMPATIBLE_SPRINTF(outbuf,"%g",v.num.d);
-			out+=outbuf;
+		char outbuf[128];
+		MSC_COMPATIBLE_SPRINTF(outbuf,"%g",v.num.d);
+		out+=outbuf;
 #undef MSC_COMPATIBLE_SPRINTF
-		  } else if (v.nt==num_type::Signed_integer) {
-			out+=std::to_string(v.num.si);
-		  } else {
-			out+=std::to_string(v.num.ui);
-		  }
-		}
 		break;
-		case type::String: dump_string(v.s,out); break;
-		case type::List:
+		case value_t::number_integer:out+=std::to_string(v.num.si);break;
+		case value_t::number_unsigned:out+=std::to_string(v.num.ui);break;
+		case value_t::string: dump_string(v.s,out); break;
+		case value_t::array:
 		{
 		  out.push_back('[');
 		  if (v.l) {
@@ -1318,7 +1275,7 @@ namespace crow {
 		  out.push_back(']');
 		}
 		break;
-		case type::Object:
+		case value_t::object:
 		{
 		  out.push_back('{');
 		  if (v.o) {

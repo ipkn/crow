@@ -4,11 +4,11 @@
 #include <functional>
 #include <fstream>
 #include <iterator>
-#include "crow/json.h"
+#include "json.h"
 #include "crow/detail.h"
 namespace crow {
   namespace mustache {
-	using Ctx=json::value;
+	using Ctx=Cjson::value;
 	template_t load(const std::string& filename);
 	class invalid_template_exception : public std::exception {
 	  public:
@@ -48,7 +48,7 @@ namespace crow {
 		int dotPosition=name.find(".");
 		if (dotPosition==(int)name.npos) {
 		  for (auto it=stack.rbegin(); it!=stack.rend(); ++it) {
-			if ((*it)->t()==json::type::Object) {
+			if ((*it)->type()==Cjson::value_t::object) {
 			  if ((*it)->count(name))
 				return {true, (**it)[name]};
 			}
@@ -70,7 +70,7 @@ namespace crow {
 			Ctx* view=*it;
 			bool found=true;
 			for (auto jt=names.begin(); jt!=names.end(); ++jt) {
-			  if (view->t()==json::type::Object&&
+			  if (view->type()==Cjson::value_t::object&&
 				  view->count(*jt)) {
 				view=&(*view)[*jt];
 			  } else {
@@ -82,7 +82,7 @@ namespace crow {
 			  return {true, *view};
 		  }
 		}
-		static json::value empty_str;
+		static Cjson::value empty_str;
 		empty_str="";
 		return {false, empty_str};
 	  }
@@ -126,18 +126,18 @@ namespace crow {
 			{
 			  auto optional_ctx=find_context(tag_name(action),stack);
 			  auto& ctx=optional_ctx.second;
-			  switch (ctx.t()) {
-				case json::type::Number:
+			  switch (ctx.type()) {
+				case Cjson::value_t::number_integer:
 				out+=ctx.dump();
 				break;
-				case json::type::String:
+				case Cjson::value_t::string:
 				if (action.t==ActionType::Tag)
 				  escape(ctx.s,out);
 				else
 				  out+=ctx.s;
 				break;
 				default:
-				throw std::runtime_error("not implemented tag type"+boost::lexical_cast<std::string>((int)ctx.t()));
+				throw std::runtime_error("not implemented tag type"+boost::lexical_cast<std::string>((int)ctx.type()));
 			  }
 			}
 			break;
@@ -151,15 +151,15 @@ namespace crow {
 			  }
 
 			  auto& ctx=optional_ctx.second;
-			  switch (ctx.t()) {
-				case json::type::List:
+			  switch (ctx.type()) {
+				case Cjson::value_t::array:
 				if (ctx.l&&!ctx.l->empty())
 				  current=action.pos;
 				else
 				  stack.emplace_back(&nullContext);
 				break;
-				case json::type::False:
-				case json::type::Null:
+				case Cjson::value_t::False:
+				case Cjson::value_t::null:
 				stack.emplace_back(&nullContext);
 				break;
 				default:
@@ -176,8 +176,8 @@ namespace crow {
 				break;
 			  }
 			  auto& ctx=optional_ctx.second;
-			  switch (ctx.t()) {
-				case json::type::List:
+			  switch (ctx.type()) {
+				case Cjson::value_t::array:
 				if (ctx.l)
 				  for (auto it=ctx.l->begin(); it!=ctx.l->end(); ++it) {
 					stack.push_back(&*it);
@@ -186,18 +186,20 @@ namespace crow {
 				  }
 				current=action.pos;
 				break;
-				case json::type::Number:
-				case json::type::String:
-				case json::type::Object:
-				case json::type::True:
+				case Cjson::value_t::number_integer:
+				case Cjson::value_t::number_float:
+				case Cjson::value_t::number_unsigned:
+				case Cjson::value_t::string:
+				case Cjson::value_t::object:
 				stack.push_back(&ctx);
 				break;
-				case json::type::False:
-				case json::type::Null:
+				case Cjson::value_t::True:
+				case Cjson::value_t::False:
+				case Cjson::value_t::null:
 				current=action.pos;
 				break;
 				default:
-				throw std::runtime_error("{{#: not implemented context type: "+boost::lexical_cast<std::string>((int)ctx.t()));
+				throw std::runtime_error("{{#: not implemented context type: "+boost::lexical_cast<std::string>((int)ctx.type()));
 				break;
 			  }
 			  break;

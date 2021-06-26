@@ -26,25 +26,33 @@ int main(){
  - Very Fast
    - ![https://docs.google.com/spreadsheets/d/1KidO9XpuwCRZ2p_JRDJj2aep61H8Sh_KDOhApizv4LE/pubchart?oid=2041467789&format=image](./Benchmark.png)
    - More data on [crow-benchmark](https://github.com/ipkn/crow-benchmark)
- - Fast built-in JSON parser (crow::json)
-   - You can also use [json11](https://github.com/dropbox/json11) or [rapidjson](https://github.com/miloyip/rapidjson) for better speed or readability
- - [Mustache](http://mustache.github.io/) based templating library (crow::mustache)
+ -  The third-party JSON parser nlohmann (Crow::json) is used for static reflection and outputs JSON.
+ - Fast built-in JSON parser (crow::Cjson) for[Mustache](http://mustache.github.io/) based templating library (crow::mustache)
  - Header only
  - Provide an amalgamated header file [`crow_all.h`](https://github.com/ipkn/crow/releases/download/v0.1/crow_all.h) with every features ([Download from here](https://github.com/ipkn/crow/releases/download/v0.1/crow_all.h))
  - Middleware support
  - Websocket support
  - Support static resources and the default is in the 'static/' directory
-
+ - Modular development, high efficiency, simple code
 ## Still in development
  - ~~Built-in ORM~~
    - Check [sqlpp11](https://github.com/rbock/sqlpp11) if you want one.
 
 ## Examples
-
+#### Static reflection
+```c++
+  app.route_dynamic("/list")([]() {
+	List list=json::parse(R"({"user":{"is":false,"age":25,"weight":50.6,"name":"www","state":null},
+            "userList":[{"is":true,"weight":52.0,"age":23,"state":true,"name":"wwzzgg"},
+	    {"is":true,"weight":51.0,"name":"best","age":26}]})").get<List>();
+	json json_output=json(list);
+	return json_output.dump(2);
+  });
+```
 #### Server rendering
 ```c++
   CROW_ROUTE(app,"/")([] {
-	char name[256];gethostname(name,256);
+	char name[64];gethostname(name,64);
 	mustache::Ctx x;x["servername"]=name;
 	auto page=mustache::load("index.html");
 	return page.render(x);
@@ -54,8 +62,14 @@ int main(){
 #### JSON Response
 ```c++
 CROW_ROUTE(app, "/json")([]{
-    crow::json::wvalue x;
-    x["message"] = "Hello, World!";
+    crow::json x;
+	x["message"]="Hello, World!";
+	x["double"]=3.1415926;
+	x["int"]=2352352;
+	x["true"]=true;
+	x["false"]=false;
+	x["null"]=nullptr;
+	x["bignumber"]=2353464586543265455;
     return x;
 });
 ```
@@ -185,3 +199,26 @@ Crow uses the following libraries.
     Copyright (c) 2012-22 SAURAV MOHAPATRA mohaps@gmail.com
     Permission to use, copy, modify, and distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
     THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+    json 
+
+    https://github.com/nlohmann/json
+
+    Copyright (c) 2013-2021 Niels Lohmann
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.

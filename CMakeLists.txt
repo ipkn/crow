@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 project (crow_all)
 IF (WIN32)
-	MESSAGE(STATUS "Now is windows")
 	SET(BOOST_ROOT "E:/Code/boost_1_75_0")
 	set(Boost_USE_STATIC_LIBS ON)
 ENDIF ()
@@ -9,6 +8,7 @@ if(EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 endif()
+add_compile_options("/std:c++17")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/")
 
@@ -42,7 +42,6 @@ else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++1y -pedantic -Wextra")
 	find_package( Boost 1.52 COMPONENTS system thread REQUIRED )
 endif()
-
 include_directories( ${Boost_INCLUDE_DIR} )
 
 set(PROJECT_INCLUDE_DIR

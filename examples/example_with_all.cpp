@@ -13,7 +13,7 @@ int main() {
 
   // simple json response
   CROW_ROUTE(app,"/json")([] {
-	crow::json::value x;
+	crow::json x;
 	x["message"]="Hello, World!";
 	return x;
   });

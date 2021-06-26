@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <unordered_map>
-#include "crow/json.h"
+#include "crow/json.hpp"
 #include "crow/http_request.h"
 #include "crow/any_types.h"
 #include "crow/ci_map.h"
@@ -9,6 +9,7 @@
 static char RES_CT[13]="Content-Type",RES_AJ[17]="application/json",RES_CL[15]="Content-Length",RES_TP[11]="text/plain",
   RES_Loc[9]="Location";
 namespace crow {
+  using json=nlohmann::json;
   template <typename Adaptor,typename Handler,typename ... Middlewares>
   class Connection;
   struct Res {
@@ -16,7 +17,7 @@ namespace crow {
 	friend class crow::Connection;
 	int code{200},is_file{0};// Check whether the response has a static file defined.
 	std::string body;
-	json::value json_value;
+	json json_value;
 	// `headers' stores HTTP headers.
 	ci_map headers;
 #ifdef CROW_ENABLE_COMPRESSION
@@ -38,13 +39,16 @@ namespace crow {
 	explicit Res(int code): code(code) {}
 	Res(std::string body): body(std::move(body)) {}
 	Res(int code,std::string body): code(code),body(std::move(body)) {}
-	Res(json::value&& json_value): body(json_value.dump()) {
+	Res(json&& json_value): body(json_value.dump()) {
 	  headers.erase(RES_CT);headers.emplace(RES_CT,RES_AJ);
 	}
-	Res(const json::value& json_value): body(json_value.dump()) {
+	Res(const char* && char_value): body(char_value) {
+	  headers.erase(RES_CT);headers.emplace(RES_CT,RES_TP);
+	}
+	Res(const json& json_value): body(json_value.dump()) {
 	  headers.erase(RES_CT);headers.emplace(RES_CT,RES_AJ);
 	}
-	Res(int code,const json::value& json_value): code(code),body(json_value.dump()) {
+	Res(int code,const json& json_value): code(code),body(json_value.dump()) {
 	  headers.erase(RES_CT);headers.emplace(RES_CT,RES_AJ);
 	}
 	Res(Res&& r) { *this=std::move(r); }

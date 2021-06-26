@@ -1,6 +1,7 @@
 #include "crow.h"
 #include "mustache.h"
 #include "middleware.h"
+#include "module.h"
 #include <sstream>
 using namespace crow;
 class ExampleLogHandler : public ILogHandler {
@@ -14,7 +15,7 @@ int main() {
 	.get_middleware<ExampleMiddleware>().setMessage("hello");
   //Server rendering
   CROW_ROUTE(app,"/")([] {
-	char name[256];gethostname(name,256);
+	char name[64];gethostname(name,64);
 	mustache::Ctx x;x["servername"]=name;
 	auto page=mustache::load("index.html");
 	return page.render(x);
@@ -25,17 +26,23 @@ int main() {
 	([]() {
 	return "Trailing slash test case..";
   });
-
-
-  // simple json response
-  // To see it in action enter {ip}:18080/json
-  CROW_ROUTE(app,"/json")
-	([] {
-	crow::json::value x;
+  app.route_dynamic("/list")([]() {
+	List list=json::parse(R"({"user":{"is":false,"age":25,"weight":50.6,"name":"www","state":null},"userList":[{"is":true,"weight":52.0,"age":23,"state":true,"name":"wwzzgg"},
+	{"is":true,"weight":51.0,"name":"best","age":26}]})").get<List>();
+	json json_output=json(list);
+	return json_output.dump(2);
+  });
+  app.route_dynamic("/json")([] {
+	json x;
 	x["message"]="Hello, World!";
+	x["double"]=3.1415926;
+	x["int"]=2352352;
+	x["true"]=true;
+	x["false"]=false;
+	x["null"]=nullptr;
+	x["bignumber"]=2353464586543265455;
 	return x;
   });
-
   // To see it in action enter {ip}:18080/hello/{integer_between -2^32 and 100} and you should receive
   // {integer_between -2^31 and 100} bottles of beer!
   CROW_ROUTE(app,"/hello/<int>")
@@ -79,9 +86,8 @@ int main() {
 	auto x=crow::json::parse(req.body);
 	if (!x)
 	  return crow::Res(400);
-	int sum=x["a"].i()+x["b"].i();
 	std::ostringstream os;
-	os<<sum;
+	os<<x;
 	return crow::Res{os.str()};
   });
 
