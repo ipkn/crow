@@ -22,13 +22,13 @@ int main() {
   });
 
   // a request to /path should be forwarded to /path/
-  CROW_ROUTE(app,"/path/")
-	([]() {
+  CROW_ROUTE(app,"/path/")([]() {
 	return "Trailing slash test case..";
   });
   app.route_dynamic("/list")([]() {
-	List list=json::parse(R"({"user":{"is":false,"age":25,"weight":50.6,"name":"www","state":null},"userList":[{"is":true,"weight":52.0,"age":23,"state":true,"name":"wwzzgg"},
-	{"is":true,"weight":51.0,"name":"best","age":26}]})").get<List>();
+	List list=json::parse(R"({"user":{"is":false,"age":25,"weight":50.6,"name":"www","state":null},
+	  "userList":[{"is":true,"weight":52.0,"age":23,"state":true,"name":"wwzzgg"},
+	  {"is":true,"weight":51.0,"name":"best","age":26}]})").get<List>();
 	json json_output=json(list);
 	return json_output.dump(2);
   });

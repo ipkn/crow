@@ -48,7 +48,7 @@ namespace crow {
 		int dotPosition=name.find(".");
 		if (dotPosition==(int)name.npos) {
 		  for (auto it=stack.rbegin(); it!=stack.rend(); ++it) {
-			if ((*it)->type()==Cjson::value_t::object) {
+			if ((*it)->t()==Cjson::value_t::object) {
 			  if ((*it)->count(name))
 				return {true, (**it)[name]};
 			}
@@ -70,7 +70,7 @@ namespace crow {
 			Ctx* view=*it;
 			bool found=true;
 			for (auto jt=names.begin(); jt!=names.end(); ++jt) {
-			  if (view->type()==Cjson::value_t::object&&
+			  if (view->t()==Cjson::value_t::object&&
 				  view->count(*jt)) {
 				view=&(*view)[*jt];
 			  } else {
@@ -126,7 +126,7 @@ namespace crow {
 			{
 			  auto optional_ctx=find_context(tag_name(action),stack);
 			  auto& ctx=optional_ctx.second;
-			  switch (ctx.type()) {
+			  switch (ctx.t()) {
 				case Cjson::value_t::number_integer:
 				out+=ctx.dump();
 				break;
@@ -137,7 +137,7 @@ namespace crow {
 				  out+=ctx.s;
 				break;
 				default:
-				throw std::runtime_error("not implemented tag type"+boost::lexical_cast<std::string>((int)ctx.type()));
+				throw std::runtime_error("not implemented tag type"+boost::lexical_cast<std::string>((int)ctx.t()));
 			  }
 			}
 			break;
@@ -151,7 +151,7 @@ namespace crow {
 			  }
 
 			  auto& ctx=optional_ctx.second;
-			  switch (ctx.type()) {
+			  switch (ctx.t()) {
 				case Cjson::value_t::array:
 				if (ctx.l&&!ctx.l->empty())
 				  current=action.pos;
@@ -176,7 +176,7 @@ namespace crow {
 				break;
 			  }
 			  auto& ctx=optional_ctx.second;
-			  switch (ctx.type()) {
+			  switch (ctx.t()) {
 				case Cjson::value_t::array:
 				if (ctx.l)
 				  for (auto it=ctx.l->begin(); it!=ctx.l->end(); ++it) {
@@ -199,7 +199,7 @@ namespace crow {
 				current=action.pos;
 				break;
 				default:
-				throw std::runtime_error("{{#: not implemented context type: "+boost::lexical_cast<std::string>((int)ctx.type()));
+				throw std::runtime_error("{{#: not implemented context type: "+boost::lexical_cast<std::string>((int)ctx.t()));
 				break;
 			  }
 			  break;
@@ -455,7 +455,7 @@ namespace crow {
 	  get_loader_ref()=std::move(loader);
 	}
 
-	inline std::string load_text(const std::string& filename) {
+	inline std::string loadOnly(const std::string& filename) {
 	  return get_loader_ref()(filename);
 	}
 
