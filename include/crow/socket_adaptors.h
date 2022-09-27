@@ -85,13 +85,15 @@ namespace crow
 
         bool is_open()
         {
-            return raw_socket().is_open();
+            return ssl_socket_ ? raw_socket().is_open() : false;
         }
 
         void close()
         {
-            boost::system::error_code ec;
-            raw_socket().close(ec);
+            if (ssl_socket_) {
+                boost::system::error_code ec;
+                raw_socket().close(ec);
+            }
         }
 
         boost::asio::io_service& get_io_service()
