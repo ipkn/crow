@@ -164,7 +164,11 @@ int main()
     });
 
     // enables all log
+#ifndef ERROR
     app.loglevel(crow::LogLevel::DEBUG);
+#else
+    app.loglevel(crow::LogLevel::Debug);
+#endif
     //crow::logger::setHandler(std::make_shared<ExampleLogHandler>());
 
     app.port(18080)
