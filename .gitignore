@@ -36,3 +36,6 @@ crow_all.h
 
 # conan.io
 build/
+
+.idea
+cmake-build-debug

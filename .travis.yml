@@ -28,7 +28,7 @@ addons:
       - g++-4.9
       - g++-5
       - clang-3.6
-      - libboost1.55-all-dev
+      - libboost-all-dev
       - python-pip
 
 install:
