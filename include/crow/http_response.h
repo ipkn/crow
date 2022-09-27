@@ -110,6 +110,11 @@ namespace crow
             }
         }
 
+        void end(const int &_code) {
+            code = _code;
+            end();
+        }
+
         void end(const std::string& body_part)
         {
             body += body_part;
