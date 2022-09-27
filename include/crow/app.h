@@ -267,4 +267,51 @@ namespace crow
     template <typename ... Middlewares>
     using App = Crow<Middlewares...>;
     using SimpleApp = Crow<>;
+    
+    template <typename ... Middlewares>
+    class LocalCrow : public Crow<Middlewares...>
+    {
+    public:
+        using self_t = LocalCrow;
+        using server_t = LocalServer<LocalCrow, UnixSocketAdaptor, Middlewares...>;
+        
+        self_t& path(std::string path)
+        {
+            path_ = path;
+            return *this;
+        }
+        
+        void validate()
+        {
+            Crow<Middlewares...>::validate();
+        }
+        
+        void notify_server_start()
+        {
+            Crow<Middlewares...>::notify_server_start();
+        }
+        
+        void run()
+        {
+            validate();
+            {
+                server_ = std::move(std::unique_ptr<server_t>(new server_t(this, path_, &middlewares_, concurrency_, nullptr)));
+                server_->set_tick_function(tick_interval_, tick_function_);
+                notify_server_start();
+                server_->run();
+            }
+        }
+            
+    private:
+        std::string path_ = "/tmp/crowsock";
+        uint16_t concurrency_ = 1;
+
+        std::chrono::milliseconds tick_interval_;
+        std::function<void()> tick_function_;
+        
+        std::tuple<Middlewares...> middlewares_;
+        std::unique_ptr<server_t> server_;
+    };
+        
+    using LocalApp = LocalCrow<>;
 }

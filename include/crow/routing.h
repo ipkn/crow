@@ -43,6 +43,11 @@ namespace crow
             res = response(404);
             res.end();
         }
+        virtual void handle_upgrade(const request&, response& res, UnixSocketAdaptor&&) 
+        {
+            res = response(404);
+            res.end();
+        }
 #ifdef CROW_ENABLE_SSL
         virtual void handle_upgrade(const request&, response& res, SSLAdaptor&&) 
         {
