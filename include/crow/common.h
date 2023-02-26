@@ -10,7 +10,7 @@ namespace crow
 {
     enum class HTTPMethod
     {
-#ifndef DELETE
+#ifndef CROW_DELETE
         DELETE = 0,
         GET,
         HEAD,
